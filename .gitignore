@@ -1,0 +1,10 @@
+.bake_cache
+.DS_Store
+# .vscode
+gcov
+bin
+bazel*
+MODULE.bazel.lock
+external
+.cache
+compile_commands.json

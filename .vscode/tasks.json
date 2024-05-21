@@ -1,0 +1,42 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "bazel-build",
+			"type": "shell",
+			"command": "bazel",
+			"args": [
+				"build",
+				"-c",
+				"dbg",
+				// "--copt=-g",
+				// "--strip=never",
+				"//:${fileBasenameNoExtension}"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"windows": {
+				"args": [
+					"build",
+					"-c",
+					"dbg",
+					// "--copt=-g",
+					// "--strip=never",
+					"//:${fileBasenameNoExtension}"
+				]
+			},
+			"osx": {
+				"args": [
+					"build",
+					"-c",
+					"dbg",
+					// "--copt=-g",
+					// "--strip=never",
+					"//:${fileBasenameNoExtension}"
+				]
+			}
+		}
+	]
+}
