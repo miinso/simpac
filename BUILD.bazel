@@ -39,7 +39,8 @@ cc_library(
     linkstatic = True,
     visibility = ["//visibility:public"],
     deps = [
-        "@cglm",
+        # "@cglm",
+        ":graphics",
         "@flecs",
     ],
 )
@@ -52,7 +53,7 @@ cc_library(
     linkstatic = True,
     visibility = ["//visibility:public"],
     deps = [
-        "@cglm",
+        ":cglm",
         "@flecs",
     ],
 )
@@ -65,7 +66,8 @@ cc_library(
     linkstatic = True,
     visibility = ["//visibility:public"],
     deps = [
-        "@cglm",
+        # ":cglm",
+        ":graphics",
         "@flecs",
     ],
 )
@@ -78,7 +80,7 @@ cc_library(
     linkstatic = True,
     visibility = ["//visibility:public"],
     deps = [
-        "@cglm",
+        ":cglm",
         "@flecs",
     ],
 )
@@ -91,7 +93,8 @@ cc_library(
     linkstatic = True,
     visibility = ["//visibility:public"],
     deps = [
-        "@cglm",
+        ":cglm",
+        ":transform",
         "@flecs",
     ],
 )
@@ -104,7 +107,9 @@ cc_library(
     linkstatic = True,
     visibility = ["//visibility:public"],
     deps = [
-        "@cglm",
+        # "@cglm",
+        # ":graphics",
+        ":graphics",
         "@flecs",
     ],
 )
@@ -117,7 +122,13 @@ cc_library(
     linkstatic = True,
     visibility = ["//visibility:public"],
     deps = [
-        "@cglm",
+        # "@cglm",
+        ":input",
+        ":gui",
+        ":transform",
+        ":geometry",
+        ":physics",
+        ":physics2",
         "@flecs",
     ],
 )
@@ -130,7 +141,9 @@ cc_library(
     linkstatic = True,
     visibility = ["//visibility:public"],
     deps = [
-        "@cglm",
+        # "@cglm",
+        ":transform",
+        ":graphics",
         "@flecs",
     ],
 )
@@ -143,7 +156,11 @@ cc_library(
     linkstatic = True,
     visibility = ["//visibility:public"],
     deps = [
-        "@cglm",
+        # "@cglm",
+        ":transform",
+        ":geometry",
+        ":physics",
+        ":cglm",
         "@flecs",
     ],
 )
@@ -156,7 +173,13 @@ cc_library(
     linkstatic = True,
     visibility = ["//visibility:public"],
     deps = [
-        "@cglm",
+        # "@cglm",
+        ":gui",
+        ":input",
+        ":transform",
+        ":transform2",
+        ":game",
+        ":geometry",
         "@flecs",
     ],
 )
@@ -195,7 +218,7 @@ cc_binary(
 
 cc_binary(
     name = "example2",
-    srcs = ["example2.cpp"],
+    srcs = ["src/example2.cpp"],
     deps = [
         ":deps",
         "@cglm",
@@ -257,7 +280,7 @@ cc_binary(
 
 cc_binary(
     name = "glfw",
-    srcs = ["src/glfw.cpp"],
+    srcs = ["glfw.cpp"],
     deps = [
         ":deps",
         # "@eigen",
@@ -287,4 +310,29 @@ cc_binary(
         "@platforms//os:windows": [],
         "@bazel_tools//src/conditions:darwin": [],
     }),
+)
+
+cc_library(
+    name = "m_graphics",
+    hdrs = ["deps/module_graphics.hpp"],
+    # includes = ["deps/"],
+    # linkstatic = True,
+    visibility = ["//visibility:public"],
+    deps = [
+        "@glm",
+        "@glfw",
+        "//glad",
+        # "@flecs",
+    ],
+)
+
+cc_binary(
+    name = "test3",
+    srcs = ["src/test3.cpp"],
+    deps = [
+        # ":deps",
+        # "@eigen",
+        ":m_graphics",
+        "@flecs",
+    ],
 )

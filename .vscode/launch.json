@@ -3,7 +3,7 @@
     "configurations": [
         {
             "name": "Bazel Run",
-            "type": "cppdbg",
+            "type": "lldb",
             "request": "launch",
             "program": "${workspaceFolder}/bazel-bin/${fileBasenameNoExtension}",
             "args": [],
