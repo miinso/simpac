@@ -2,21 +2,16 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Bazel Run",
-            "type": "lldb",
+            "name": "Bazel Debug",
+            "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/bazel-bin/${fileBasenameNoExtension}",
+            "program": "${workspaceFolder}/bazel-bin/${relativeFileDirname}/${fileBasenameNoExtension}",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "environment": [],
             "externalConsole": false,
             "preLaunchTask": "bazel-build",
-            "windows": {
-                "type": "cppvsdbg",
-                "program": "${workspaceFolder}/bazel-bin/${fileBasenameNoExtension}.exe",
-                "externalConsole": true,
-            },
             "linux": {
                 "MIMode": "gdb",
                 "miDebuggerPath": "/usr/bin/gdb",
@@ -28,9 +23,14 @@
                     }
                 ]
             },
+            "windows": {
+                "type": "cppvsdbg",
+                "program": "${workspaceFolder}/bazel-bin/${relativeFileDirname}/${fileBasenameNoExtension}.exe",
+                "externalConsole": true
+            },
             "osx": {
                 "type": "lldb",
-                "externalConsole": true,
+                "externalConsole": true
             }
         }
     ]

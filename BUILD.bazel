@@ -210,7 +210,7 @@ cc_binary(
 
 cc_binary(
     name = "example",
-    srcs = ["example.cpp"],
+    srcs = ["src/example.cpp"],
     deps = [
         "@flecs",
     ],
@@ -239,7 +239,7 @@ cc_binary(
 
 cc_binary(
     name = "example4",
-    srcs = ["example4.cpp"],
+    srcs = ["src/example4.cpp"],
     deps = [
         ":deps",
         "@eigen",
@@ -247,40 +247,40 @@ cc_binary(
     ],
 )
 
-cc_binary(
-    name = "main",
-    srcs = ["main.cpp"],
-    deps = [
-        "@flecs",
-        # "@cglm//:cglm",
-        ":deps",
-    ],
-    # data = glob(["etc/**"]),
-)
+# cc_binary(
+#     name = "main",
+#     srcs = ["main.cpp"],
+#     deps = [
+#         "@flecs",
+#         # "@cglm//:cglm",
+#         ":deps",
+#     ],
+#     # data = glob(["etc/**"]),
+# )
 
-cc_binary(
-    name = "hinge",
-    srcs = ["hinge.cpp"],
-    deps = [
-        ":deps",
-        "@eigen",
-        "@flecs",
-    ],
-)
+# cc_binary(
+#     name = "hinge",
+#     srcs = ["hinge.cpp"],
+#     deps = [
+#         ":deps",
+#         "@eigen",
+#         "@flecs",
+#     ],
+# )
 
-cc_binary(
-    name = "simple_line",
-    srcs = ["src/simple_line.cpp"],
-    deps = [
-        ":deps",
-        "@eigen",
-        "@flecs",
-    ],
-)
+# cc_binary(
+#     name = "simple_line",
+#     srcs = ["src/simple_line.cpp"],
+#     deps = [
+#         ":deps",
+#         "@eigen",
+#         "@flecs",
+#     ],
+# )
 
 cc_binary(
     name = "glfw",
-    srcs = ["glfw.cpp"],
+    srcs = ["src/glfw.cpp"],
     deps = [
         ":deps",
         # "@eigen",
@@ -296,33 +296,33 @@ cc_binary(
     }),
 )
 
-cc_binary(
-    name = "main2",
-    srcs = [
-        "linmath.h",
-        "main.cpp",
-    ],
-    deps = [
-        "//glad",
-        "@glfw",
-    ] + select({
-        "@platforms//os:linux": ["@system_libs//:x11"],
-        "@platforms//os:windows": [],
-        "@bazel_tools//src/conditions:darwin": [],
-    }),
-)
+# cc_binary(
+#     name = "main2",
+#     srcs = [
+#         "linmath.h",
+#         "main.cpp",
+#     ],
+#     deps = [
+#         "//glad",
+#         "@glfw",
+#     ] + select({
+#         "@platforms//os:linux": ["@system_libs//:x11"],
+#         "@platforms//os:windows": [],
+#         "@bazel_tools//src/conditions:darwin": [],
+#     }),
+# )
 
 cc_library(
     name = "m_graphics",
     hdrs = ["deps/module_graphics.hpp"],
     # includes = ["deps/"],
-    # linkstatic = True,
+    linkstatic = True,
     visibility = ["//visibility:public"],
     deps = [
         "@glm",
-        "@glfw",
         "//glad",
-        # "@flecs",
+        "@glfw",
+        "@flecs",
     ],
 )
 
@@ -335,4 +335,23 @@ cc_binary(
         ":m_graphics",
         "@flecs",
     ],
+)
+
+
+###
+alias(
+    name = "raylib",
+    actual = select({
+        "@platforms//os:windows": "@raylib_windows//:raylib",
+        "@platforms//os:macos": "@raylib_macos//:raylib",
+        "@platforms//os:linux": "@raylib_linux//:raylib",
+        "@platforms//os:emscripten": "@raylib_emscripten//:raylib",
+    }),
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "all_resources",
+    srcs = glob(["resources/**"]),
+    visibility = ["//visibility:public"],
 )

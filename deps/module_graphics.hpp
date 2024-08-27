@@ -2,6 +2,8 @@
 
 #include <flecs.h>
 
+#include "glm/glm.hpp"
+
 // clang-format off
 #include "glad/glad.h"
 #include "GLFW/glfw3.h"
@@ -11,10 +13,20 @@
 #include <map>
 #include <vector>
 
-#include "glm/glm.hpp"
 
 namespace simple
 {
+
+// struct device {
+// 	static struct device_info {
+// 		flecs::entity entity;
+// 		GLFWwindow* id;
+// 	};
+
+// 	static device_info create() {
+// 		GLFWwindow window;
+// 	};
+// };
 
 struct InputState {
 	std::map<int, bool> keyboard;
@@ -85,7 +97,7 @@ struct GraphicsModule {
 				glfwSetWindowCloseCallback(w, [](GLFWwindow* window) {
 					std::cout << "close\n";
 					auto ptr = static_cast<flecs::entity*>(glfwGetWindowUserPointer(window));
-					
+
 					// glfwDestroyWindow(window);
 					ptr->remove<WindowInstance>();
 				});
