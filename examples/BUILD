@@ -46,7 +46,7 @@ c_file_names = glob(["*.c"])
 cc_binary(
     name = "window-test",
     srcs = [
-        "test_window.cpp",
+        "test_window_with_module.cpp",
     ],
     copts = select({
         "@platforms//os:emscripten": ["-DPLATFORM_WEB"],
@@ -57,13 +57,9 @@ cc_binary(
             "-sWASM=1",
             "-sALLOW_MEMORY_GROWTH=1",
             "-sNO_EXIT_RUNTIME=0",
-            # "-sASSERTIONS=1",
             "-sSTACK_SIZE=1000000",
             "-sSINGLE_FILE",
             "-Os",
-            # "-fno-rtti",
-            # "-fno-exceptions",
-            # "-flto",
         ],
         "//conditions:default": [],
     }),
