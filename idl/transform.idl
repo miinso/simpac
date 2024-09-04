@@ -1,5 +1,9 @@
-interface module {
-    void
+interface model {
+    void build();
+    void add_particle();
+    void add_rigidbody();
+    void add_joint();
+    void add_constraint();
 }
 
 interface Transform {

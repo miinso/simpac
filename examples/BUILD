@@ -46,7 +46,7 @@ c_file_names = glob(["*.c"])
 cc_binary(
     name = "window-test",
     srcs = [
-        "test_window_with_module.cpp",
+        "test_particle1.cpp",
     ],
     copts = select({
         "@platforms//os:emscripten": ["-DPLATFORM_WEB"],
@@ -59,7 +59,7 @@ cc_binary(
             "-sNO_EXIT_RUNTIME=0",
             "-sSTACK_SIZE=1000000",
             "-sSINGLE_FILE",
-            "-Os",
+            # "-Os",
         ],
         "//conditions:default": [],
     }),

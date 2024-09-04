@@ -43,19 +43,6 @@ namespace graphics {
 		Camera3D camera;
 	};
 
-	// struct graphics {
-	// 	graphics(flecs::world& world); // Ctor that loads the module
-	// };
-
-	// // Free function to initialize graphics
-	// void
-	// init_graphics(flecs::world& world, int width, int height, const char* title, int targetFPS);
-
-	// void init_window(flecs::world& world, int width, int height, const char* title);
-
-	// bool window_should_close();
-	// void update_draw_frame();
-	// void close_window();
 	class graphics
 	{
 	public:

@@ -147,6 +147,10 @@ namespace graphics {
 		if(s_world && !window_should_close())
 		{
 			// run pre hook here
+			// if(s_pre_func)
+			// {
+			// 	s_pre_func();
+			// }
 
 			// update_draw_frame(*s_world);
 			update_draw_frame2();
