@@ -73,6 +73,60 @@ namespace graphics {
 
 				DrawSphere(Vector3{2, 0, 0}, 0.1, GREEN);
 			});
+
+		ecs.system("graphics::begin").kind(flecs::OnStore).run([](flecs::iter& it) {
+			// begin, clear, begin3d, draw_particle, end3d, draw_ui, end
+			BeginDrawing();
+
+			ClearBackground(RAYWHITE);
+			DrawFPS(20, 20);
+
+			DrawText("Whoop! You've created your first window!", 190, 200, 20, LIGHTGRAY);
+
+			char buf1[50];
+
+			snprintf(buf1, 50, "%f", it.delta_time());
+			DrawText(buf1, 10, 300, 20, RED);
+			EndDrawing();
+		});
+
+		ecs.system("graphics::init_camera").kind(flecs::OnStart).run([this](flecs::iter& it) {
+			camera.position = Vector3{5.0f, 5.0f, 5.0f};
+			camera.target = Vector3{0.0f, 0.0f, 0.0f};
+			camera.up = Vector3{0.0f, 1.0f, 0.0f};
+			camera.fovy = 60.0f;
+			camera.projection = CAMERA_PERSPECTIVE;
+		});
+
+		ecs.system("graphics::update_camera").kind(flecs::PreUpdate).run([this](flecs::iter& it) {
+			if(IsMouseButtonDown(MOUSE_LEFT_BUTTON))
+			{
+				UpdateCamera(&camera, CAMERA_THIRD_PERSON);
+			}
+
+			if(GetMouseWheelMove())
+			{
+				UpdateCamera(&camera, CAMERA_THIRD_PERSON);
+			}
+		});
+
+		ecs.system("graphics::begin").kind(flecs::OnStore).run([](flecs::iter& it) {
+			BeginDrawing();
+		});
+		ecs.system("graphics::clear").kind(flecs::OnStore).run([](flecs::iter& it) {
+			ClearBackground(RAYWHITE);
+		});
+		ecs.system("graphics::begin_mode_3d").kind(flecs::OnStore).run([this](flecs::iter& it) {
+			BeginMode3D(camera);
+		});
+		ecs.system("graphics::draw_particle_3d").kind(flecs::OnStore).run([this](flecs::iter& it) {
+			// query particles and draw
+			DrawGrid(10, 1.0f);
+		});
+		ecs.system("graphics::end_mode_3d").kind(flecs::OnStore).run([](flecs::iter& it) {
+			EndMode3D();
+		});
+		ecs.system("graphics::end").kind(flecs::OnStore).run([](flecs::iter& it) { EndDrawing(); });
 	}
 
 	void init_graphics(flecs::world& world, int width, int height, const char* title, int targetFPS)
@@ -142,10 +196,27 @@ namespace graphics {
 		return CloseWindow();
 	}
 
-	void graphics::main_loop_body(void* arg)
+	void graphics::main_loop_native(void* arg)
 	{
 		if(s_world && !window_should_close())
 		{
+			// flecs owns the main loop
+			if(s_world)
+			{
+				// calling progress will invoke registered systems including
+				// render loop. (clear-draw-swapchain)
+				s_world->progress();
+			}
+
+			// BeginDrawing();
+
+			// ClearBackground(RAYWHITE);
+			// DrawFPS(20, 20);
+
+			// DrawText("Whoop! You've created your first window!", 190, 200, 20, LIGHTGRAY);
+
+			// EndDrawing();
+
 			// run pre hook here
 			// if(s_pre_func)
 			// {
@@ -153,7 +224,7 @@ namespace graphics {
 			// }
 
 			// update_draw_frame(*s_world);
-			update_draw_frame2();
+			// update_draw_frame2();
 
 			// run post hook here
 			if(s_update_func)
@@ -171,14 +242,14 @@ namespace graphics {
 #if defined(__EMSCRIPTEN__)
 		std::cout << "graphics::invoking emscripten rAF loop" << std::endl;
 		// emscripten_set_main_loop_arg(main_loop_body, nullptr, 0, 1);
-		emscripten_set_main_loop(update_draw_frame2, 0, 1);
+		emscripten_set_main_loop(main_loop_rAF, 0, 1);
 		std::cout << "graphics::destroying emscripten rAF loop" << std::endl;
 #else
 		SetTargetFPS(60);
 		std::cout << "graphics::invoking native while loop" << std::endl;
 		while(!window_should_close())
 		{
-			main_loop_body(nullptr);
+			main_loop_native(nullptr);
 		}
 		std::cout << "graphics::destroying native while loop" << std::endl;
 #endif

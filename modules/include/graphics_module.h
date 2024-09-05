@@ -56,9 +56,12 @@ namespace graphics {
 		static void run_main_loop(flecs::world& world, std::function<void()> update_func);
 
 	private:
-		static void main_loop_body(void* arg);
+		static void main_loop_native(void* arg);
+		static void main_loop_rAF(void* arg);
 		static flecs::world* s_world;
 		static std::function<void()> s_update_func;
+
+		Camera3D camera;
 	};
 } // namespace graphics
 
