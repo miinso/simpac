@@ -17,13 +17,13 @@ extern "C" {
 
 namespace graphics {
 
-	struct Position {
-		double x, y;
-	};
+	// struct Position {
+	// 	double x, y;
+	// };
 
-	struct Velocity {
-		double x, y;
-	};
+	// struct Velocity {
+	// 	double x, y;
+	// };
 
 	struct RaylibWindow {
 		int width;
@@ -54,14 +54,19 @@ namespace graphics {
 		static void update_draw_frame2();
 		static void close_window();
 		static void run_main_loop(flecs::world& world, std::function<void()> update_func);
+		static void main_loop_rAF();
+
+		static void begin_mode_3d();
+		static void end_mode_3d();
 
 	private:
-		static void main_loop_native(void* arg);
-		static void main_loop_rAF(void* arg);
+		// static void main_loop_native(void* arg);
+		// static void main_loop_rAF(void* arg);
+		static void main_loop_native();
 		static flecs::world* s_world;
 		static std::function<void()> s_update_func;
 
-		Camera3D camera;
+		static Camera3D camera;
 	};
 } // namespace graphics
 

@@ -4,20 +4,11 @@
 
 #include "Eigen/Dense"
 #include <iostream>
+#include <random>
 #include <sstream>
 
-const int screenWidth = 800;
-const int screenHeight = 450;
-
-struct Position {
-	double x, y, z;
-	// Eigen::Vector3f value;
-};
-
-struct Velocity {
-	double x, y, z;
-	// Eigen::Vector3f value;
-};
+const int CANVAS_WIDTH = 800;
+const int CANVAS_HEIGHT = 600;
 
 struct Particle {
 	Eigen::Vector3f position;
@@ -25,6 +16,7 @@ struct Particle {
 	float radius;
 	float mass;
 	float friction;
+	float restitution;
 };
 
 struct Contact {
@@ -35,96 +27,77 @@ struct Contact {
 	// static float mu; // friction
 };
 
-struct Wow {
-	Eigen::Vector3f x;
-};
-
 flecs::world ecs;
 
-void add_particle()
+void add_particle(float x, float y, float z)
 {
-	ecs.entity().set<Particle>({{1, 1, 1}, {0.121, 0.023, 0.717}, 1, 1, 1});
+	Particle p = {.position = {x, y, z},
+				  .velocity = {0, 0, 0},
+				  .radius = 1,
+				  .mass = 1,
+				  .friction = 1,
+				  .restitution = 1};
+	ecs.entity().set<Particle>(p);
 }
 
-void integrate_particle(flecs::iter& it, size_t, Position& p, const Velocity& v)
+void integrate_particle(flecs::iter& it, size_t, Particle& p)
 {
-	p.x += v.x;
-	p.y += v.y;
-	p.z += v.z;
-	// std::cout << ": {" << p.x << ", " << p.y << "}\n";
+	const float dt = it.delta_time();
 
-	char posText[50];
-	sprintf(posText, "Position: {%.3f, %.3f, %.3f}", p.x, p.y, p.z);
-	char velText[50];
-	sprintf(velText, "Velocity: {%.3f, %.3f, %.3f}", v.x, v.y, v.z);
+	// integrate
+	p.velocity += dt * (1 / p.mass) * Eigen::Vector3f(0, -9.8, 0);
+	p.position += dt * p.velocity;
 
-	DrawText(posText, 10, 10, 20, BLUE);
-	DrawText(velText, 10, 40, 20, BLUE);
-}
+	// ground collision check
+	// if penetration is greater than zero, use that to flip the velocity
+	const float pen = (p.position.y() - p.radius);
+	if(pen < 0)
+	{
+		p.velocity.y() = -p.velocity.y();
+	}
 
-void integrate_particle2(flecs::iter& it, size_t, Particle& p)
-{
-	p.position += p.velocity;
-	// p.position += dt * p.velocity;
-
-	// std::cout << p.position.x() << p.position.y() << p.position.z() << std::endl;
-
-	std::ostringstream posStream, velStream;
-	posStream << "Position: {" << p.position.x() << ", " << p.position.y() << ", " << p.position.z()
-			  << "}";
-	velStream << "Velocity: {" << p.velocity.x() << ", " << p.velocity.y() << ", " << p.velocity.z()
-			  << "}";
-
-	DrawText(posStream.str().c_str(), 10, 110, 20, BLUE);
-	DrawText(velStream.str().c_str(), 10, 140, 20, BLUE);
+	// graphics::graphics::begin_mode_3d();
+	DrawSphere(Vector3{p.position.x(), p.position.y(), p.position.z()}, p.radius, GRAY);
+	DrawSphereWires(
+		Vector3{p.position.x(), p.position.y(), p.position.z()}, p.radius, 8, 8, DARKGRAY);
+	// graphics::graphics::end_mode_3d();
 }
 
 void test_collision() { }
 
 int main(void)
 {
+	std::random_device rd;
+	std::mt19937 e2(rd());
+	std::uniform_real_distribution<float> distribution(-10.0, 10.0);
+
 	std::cout << "hello from " << __FILE__ << std::endl;
-
-// #ifdef PLATFORM_WEB
-// 	std::cout << "PLATFORM_WEB is defined" << std::endl;
-// #else
-// 	std::cout << "PLATFORM_WEB is not defined" << std::endl;
-// #endif
-
-// #ifdef __EMSCRIPTEN__
-// 	std::cout << "__EMSCRIPTEN__ is defined" << std::endl;
-// #else
-// 	std::cout << "__EMSCRIPTEN__ is not defined" << std::endl;
-// #endif
 
 	ecs.import <graphics::graphics>();
 	// ecs.import <model::model>();
 
 	flecs::log::set_level(0);
 
-	Wow wow;
-	wow.x << 1, 2, 3;
-	std::cout << "eigen vector3f: " << wow.x.transpose() << std::endl;
+	// add_particle(1, 5, 0);
+	// add_particle(-1, 5, 0);
 
-	ecs.entity("e1").set<Position>({10, 20}).set<Velocity>({0.117, 0.09367});
-	// ecs.entity("e2").set<Position>({10, 20}).set<Velocity>({3, 4});
+	for(int i = 0; i < 1000; ++i)
+	{
+		float x = distribution(e2);
+		float z = distribution(e2);
+		add_particle(x, 5, z);
+	}
 
-	add_particle();
+	ecs.system<Particle>("Integrator").kind(flecs::OnUpdate).each(integrate_particle);
 
-	ecs.system<Position, const Velocity>("integrator")
-		.kind(flecs::OnUpdate)
-		.each(integrate_particle);
-
-	ecs.system<Particle>("integrator2").kind(flecs::OnUpdate).each(integrate_particle2);
-
-	graphics::graphics::init_window(ecs, screenWidth, screenHeight, "particle test");
+	graphics::graphics::init_window(ecs, CANVAS_WIDTH, CANVAS_HEIGHT, "Simulator");
 
 	graphics::graphics::run_main_loop(ecs, []() {
 		// std::cout << "additional main loop callback" << std::endl;
 	});
 
 	// code below will be executed once the main loop break
-	std::cout << "bye!" << std::endl;
+	std::cout << "Bye!" << std::endl;
 
 	return 0;
 }
