@@ -1,251 +1,251 @@
-config_setting(
-    name = "linux",
-    constraint_values = ["@platforms//os:linux"],
-)
+# config_setting(
+#     name = "linux",
+#     constraint_values = ["@platforms//os:linux"],
+# )
 
-config_setting(
-    name = "windows",
-    constraint_values = ["@platforms//os:windows"],
-)
+# config_setting(
+#     name = "windows",
+#     constraint_values = ["@platforms//os:windows"],
+# )
 
-config_setting(
-    name = "darwin",
-    constraint_values = ["@platforms//os:osx"],
-)
+# config_setting(
+#     name = "darwin",
+#     constraint_values = ["@platforms//os:osx"],
+# )
 
 # config_setting(
 #     name = "sanitize",
 #     define = "FLECS_SANITIZE=1",
 # )
 
-cc_library(
-    name = "cglm",
-    srcs = ["deps/flecs_components_cglm.c"],
-    hdrs = ["deps/flecs_components_cglm.h"],
-    includes = ["deps/"],
-    linkstatic = True,
-    visibility = ["//visibility:public"],
-    deps = [
-        "@cglm",
-        "@flecs",
-    ],
-)
+# cc_library(
+#     name = "cglm",
+#     srcs = ["deps/flecs_components_cglm.c"],
+#     hdrs = ["deps/flecs_components_cglm.h"],
+#     includes = ["deps/"],
+#     linkstatic = True,
+#     visibility = ["//visibility:public"],
+#     deps = [
+#         "@cglm",
+#         "@flecs",
+#     ],
+# )
 
-cc_library(
-    name = "gui",
-    srcs = ["deps/flecs_components_gui.c"],
-    hdrs = ["deps/flecs_components_gui.h"],
-    includes = ["deps/"],
-    linkstatic = True,
-    visibility = ["//visibility:public"],
-    deps = [
-        # "@cglm",
-        ":graphics",
-        "@flecs",
-    ],
-)
+# cc_library(
+#     name = "gui",
+#     srcs = ["deps/flecs_components_gui.c"],
+#     hdrs = ["deps/flecs_components_gui.h"],
+#     includes = ["deps/"],
+#     linkstatic = True,
+#     visibility = ["//visibility:public"],
+#     deps = [
+#         # "@cglm",
+#         ":graphics",
+#         "@flecs",
+#     ],
+# )
 
-cc_library(
-    name = "graphics",
-    srcs = ["deps/flecs_components_graphics.c"],
-    hdrs = ["deps/flecs_components_graphics.h"],
-    includes = ["deps/"],
-    linkstatic = True,
-    visibility = ["//visibility:public"],
-    deps = [
-        ":cglm",
-        "@flecs",
-    ],
-)
+# cc_library(
+#     name = "graphics",
+#     srcs = ["deps/flecs_components_graphics.c"],
+#     hdrs = ["deps/flecs_components_graphics.h"],
+#     includes = ["deps/"],
+#     linkstatic = True,
+#     visibility = ["//visibility:public"],
+#     deps = [
+#         ":cglm",
+#         "@flecs",
+#     ],
+# )
 
-cc_library(
-    name = "input",
-    srcs = ["deps/flecs_components_input.c"],
-    hdrs = ["deps/flecs_components_input.h"],
-    includes = ["deps/"],
-    linkstatic = True,
-    visibility = ["//visibility:public"],
-    deps = [
-        # ":cglm",
-        ":graphics",
-        "@flecs",
-    ],
-)
+# cc_library(
+#     name = "input",
+#     srcs = ["deps/flecs_components_input.c"],
+#     hdrs = ["deps/flecs_components_input.h"],
+#     includes = ["deps/"],
+#     linkstatic = True,
+#     visibility = ["//visibility:public"],
+#     deps = [
+#         # ":cglm",
+#         ":graphics",
+#         "@flecs",
+#     ],
+# )
 
-cc_library(
-    name = "transform",
-    srcs = ["deps/flecs_components_transform.c"],
-    hdrs = ["deps/flecs_components_transform.h"],
-    includes = ["deps/"],
-    linkstatic = True,
-    visibility = ["//visibility:public"],
-    deps = [
-        ":cglm",
-        "@flecs",
-    ],
-)
+# cc_library(
+#     name = "transform",
+#     srcs = ["deps/flecs_components_transform.c"],
+#     hdrs = ["deps/flecs_components_transform.h"],
+#     includes = ["deps/"],
+#     linkstatic = True,
+#     visibility = ["//visibility:public"],
+#     deps = [
+#         ":cglm",
+#         "@flecs",
+#     ],
+# )
 
-cc_library(
-    name = "transform2",
-    srcs = ["deps/flecs_systems_transform.c"],
-    hdrs = ["deps/flecs_systems_transform.h"],
-    includes = ["deps/"],
-    linkstatic = True,
-    visibility = ["//visibility:public"],
-    deps = [
-        ":cglm",
-        ":transform",
-        "@flecs",
-    ],
-)
+# cc_library(
+#     name = "transform2",
+#     srcs = ["deps/flecs_systems_transform.c"],
+#     hdrs = ["deps/flecs_systems_transform.h"],
+#     includes = ["deps/"],
+#     linkstatic = True,
+#     visibility = ["//visibility:public"],
+#     deps = [
+#         ":cglm",
+#         ":transform",
+#         "@flecs",
+#     ],
+# )
 
-cc_library(
-    name = "geometry",
-    srcs = ["deps/flecs_components_geometry.c"],
-    hdrs = ["deps/flecs_components_geometry.h"],
-    includes = ["deps/"],
-    linkstatic = True,
-    visibility = ["//visibility:public"],
-    deps = [
-        # "@cglm",
-        # ":graphics",
-        ":graphics",
-        "@flecs",
-    ],
-)
+# cc_library(
+#     name = "geometry",
+#     srcs = ["deps/flecs_components_geometry.c"],
+#     hdrs = ["deps/flecs_components_geometry.h"],
+#     includes = ["deps/"],
+#     linkstatic = True,
+#     visibility = ["//visibility:public"],
+#     deps = [
+#         # "@cglm",
+#         # ":graphics",
+#         ":graphics",
+#         "@flecs",
+#     ],
+# )
 
-cc_library(
-    name = "game",
-    srcs = ["deps/flecs_game.c"],
-    hdrs = ["deps/flecs_game.h"],
-    includes = ["deps/"],
-    linkstatic = True,
-    visibility = ["//visibility:public"],
-    deps = [
-        # "@cglm",
-        ":input",
-        ":gui",
-        ":transform",
-        ":geometry",
-        ":physics",
-        ":physics2",
-        "@flecs",
-    ],
-)
+# cc_library(
+#     name = "game",
+#     srcs = ["deps/flecs_game.c"],
+#     hdrs = ["deps/flecs_game.h"],
+#     includes = ["deps/"],
+#     linkstatic = True,
+#     visibility = ["//visibility:public"],
+#     deps = [
+#         # "@cglm",
+#         ":input",
+#         ":gui",
+#         ":transform",
+#         ":geometry",
+#         ":physics",
+#         ":physics2",
+#         "@flecs",
+#     ],
+# )
 
-cc_library(
-    name = "physics",
-    srcs = ["deps/flecs_components_physics.c"],
-    hdrs = ["deps/flecs_components_physics.h"],
-    includes = ["deps/"],
-    linkstatic = True,
-    visibility = ["//visibility:public"],
-    deps = [
-        # "@cglm",
-        ":transform",
-        ":graphics",
-        "@flecs",
-    ],
-)
+# cc_library(
+#     name = "physics",
+#     srcs = ["deps/flecs_components_physics.c"],
+#     hdrs = ["deps/flecs_components_physics.h"],
+#     includes = ["deps/"],
+#     linkstatic = True,
+#     visibility = ["//visibility:public"],
+#     deps = [
+#         # "@cglm",
+#         ":transform",
+#         ":graphics",
+#         "@flecs",
+#     ],
+# )
 
-cc_library(
-    name = "physics2",
-    srcs = ["deps/flecs_systems_physics.c"],
-    hdrs = ["deps/flecs_systems_physics.h"],
-    includes = ["deps/"],
-    linkstatic = True,
-    visibility = ["//visibility:public"],
-    deps = [
-        # "@cglm",
-        ":transform",
-        ":geometry",
-        ":physics",
-        ":cglm",
-        "@flecs",
-    ],
-)
+# cc_library(
+#     name = "physics2",
+#     srcs = ["deps/flecs_systems_physics.c"],
+#     hdrs = ["deps/flecs_systems_physics.h"],
+#     includes = ["deps/"],
+#     linkstatic = True,
+#     visibility = ["//visibility:public"],
+#     deps = [
+#         # "@cglm",
+#         ":transform",
+#         ":geometry",
+#         ":physics",
+#         ":cglm",
+#         "@flecs",
+#     ],
+# )
 
-cc_library(
-    name = "sokol",
-    srcs = ["deps/flecs_systems_sokol.c"],
-    hdrs = ["deps/flecs_systems_sokol.h"],
-    includes = ["deps/"],
-    linkstatic = True,
-    visibility = ["//visibility:public"],
-    deps = [
-        # "@cglm",
-        ":gui",
-        ":input",
-        ":transform",
-        ":transform2",
-        ":game",
-        ":geometry",
-        "@flecs",
-    ],
-)
+# cc_library(
+#     name = "sokol",
+#     srcs = ["deps/flecs_systems_sokol.c"],
+#     hdrs = ["deps/flecs_systems_sokol.h"],
+#     includes = ["deps/"],
+#     linkstatic = True,
+#     visibility = ["//visibility:public"],
+#     deps = [
+#         # "@cglm",
+#         ":gui",
+#         ":input",
+#         ":transform",
+#         ":transform2",
+#         ":game",
+#         ":geometry",
+#         "@flecs",
+#     ],
+# )
 
-cc_library(
-    name = "deps",
-    visibility = ["//visibility:public"],
-    deps = [
-        ":cglm",
-        ":game",
-        ":geometry",
-        ":graphics",
-        ":gui",
-        ":input",
-        ":physics",
-        ":physics2",
-        ":sokol",
-        ":transform",
-        ":transform2",
-    ],
-)
+# cc_library(
+#     name = "deps",
+#     visibility = ["//visibility:public"],
+#     deps = [
+#         ":cglm",
+#         ":game",
+#         ":geometry",
+#         ":graphics",
+#         ":gui",
+#         ":input",
+#         ":physics",
+#         ":physics2",
+#         ":sokol",
+#         ":transform",
+#         ":transform2",
+#     ],
+# )
 
-cc_binary(
-    name = "app",
-    srcs = glob(["src/*.c"]),
-    deps = [":deps"],
-)
+# cc_binary(
+#     name = "app",
+#     srcs = glob(["src/*.c"]),
+#     deps = [":deps"],
+# )
 
-cc_binary(
-    name = "example",
-    srcs = ["src/example.cpp"],
-    deps = [
-        "@flecs",
-    ],
-)
+# cc_binary(
+#     name = "example",
+#     srcs = ["src/example.cpp"],
+#     deps = [
+#         "@flecs",
+#     ],
+# )
 
-cc_binary(
-    name = "example2",
-    srcs = ["src/example2.cpp"],
-    deps = [
-        ":deps",
-        "@cglm",
-        "@flecs",
-    ],
-)
+# cc_binary(
+#     name = "example2",
+#     srcs = ["src/example2.cpp"],
+#     deps = [
+#         ":deps",
+#         "@cglm",
+#         "@flecs",
+#     ],
+# )
 
-cc_binary(
-    name = "example3",
-    srcs = ["src/main.cpp"],
-    data = glob(["etc/**"]),
-    deps = [
-        "@flecs",
-        # "@cglm//:cglm",
-        ":deps",
-    ],
-)
+# cc_binary(
+#     name = "example3",
+#     srcs = ["src/main.cpp"],
+#     data = glob(["etc/**"]),
+#     deps = [
+#         "@flecs",
+#         # "@cglm//:cglm",
+#         ":deps",
+#     ],
+# )
 
-cc_binary(
-    name = "example4",
-    srcs = ["src/example4.cpp"],
-    deps = [
-        ":deps",
-        "@eigen",
-        "@flecs",
-    ],
-)
+# cc_binary(
+#     name = "example4",
+#     srcs = ["src/example4.cpp"],
+#     deps = [
+#         ":deps",
+#         "@eigen",
+#         "@flecs",
+#     ],
+# )
 
 # cc_binary(
 #     name = "main",
@@ -278,23 +278,23 @@ cc_binary(
 #     ],
 # )
 
-cc_binary(
-    name = "glfw",
-    srcs = ["src/glfw.cpp"],
-    deps = [
-        ":deps",
-        # "@eigen",
-        "@flecs",
-        "//glad",
-        "@glfw",
-        "@glm",
-		"@tinyobjloader",
-    ] + select({
-        "@platforms//os:linux": ["@system_libs//:x11"],
-        "@platforms//os:windows": [],
-        "@bazel_tools//src/conditions:darwin": [],
-    }),
-)
+# cc_binary(
+#     name = "glfw",
+#     srcs = ["src/glfw.cpp"],
+#     deps = [
+#         ":deps",
+#         # "@eigen",
+#         "@flecs",
+#         "//glad",
+#         "@glfw",
+#         "@glm",
+# 		"@tinyobjloader",
+#     ] + select({
+#         "@platforms//os:linux": ["@system_libs//:x11"],
+#         "@platforms//os:windows": [],
+#         "@bazel_tools//src/conditions:darwin": [],
+#     }),
+# )
 
 # cc_binary(
 #     name = "main2",
@@ -312,30 +312,30 @@ cc_binary(
 #     }),
 # )
 
-cc_library(
-    name = "m_graphics",
-    hdrs = ["deps/module_graphics.hpp"],
-    # includes = ["deps/"],
-    linkstatic = True,
-    visibility = ["//visibility:public"],
-    deps = [
-        "@glm",
-        "//glad",
-        "@glfw",
-        "@flecs",
-    ],
-)
+# cc_library(
+#     name = "m_graphics",
+#     hdrs = ["deps/module_graphics.hpp"],
+#     # includes = ["deps/"],
+#     linkstatic = True,
+#     visibility = ["//visibility:public"],
+#     deps = [
+#         "@glm",
+#         "//glad",
+#         "@glfw",
+#         "@flecs",
+#     ],
+# )
 
-cc_binary(
-    name = "test3",
-    srcs = ["src/test3.cpp"],
-    deps = [
-        # ":deps",
-        # "@eigen",
-        ":m_graphics",
-        "@flecs",
-    ],
-)
+# cc_binary(
+#     name = "test3",
+#     srcs = ["src/test3.cpp"],
+#     deps = [
+#         # ":deps",
+#         # "@eigen",
+#         ":m_graphics",
+#         "@flecs",
+#     ],
+# )
 
 
 ###

@@ -34,18 +34,18 @@ bazel_dep(name = "eigen", version = "3.4.0")
 #-------------------------------------------------------------------------------------
 # Python
 #-------------------------------------------------------------------------------------
-bazel_dep(name = "rules_python", version = "0.31.0")
+# bazel_dep(name = "rules_python", version = "0.31.0")
 
-python = use_extension("@rules_python//python/extensions:python.bzl", "python")
-use_repo(python, "python_versions")
+# python = use_extension("@rules_python//python/extensions:python.bzl", "python")
+# use_repo(python, "python_versions")
 
-pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
-pip.parse(
-    hub_name = "my_deps",
-    python_version = "3.11",
-    requirements_lock = "//:requirements.txt",
-)
-use_repo(pip, "my_deps")
+# pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
+# pip.parse(
+#     hub_name = "my_deps",
+#     python_version = "3.11",
+#     requirements_lock = "//:requirements.txt",
+# )
+# use_repo(pip, "my_deps")
 
 
 #-------------------------------------------------------------------------------------
