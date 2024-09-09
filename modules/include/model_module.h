@@ -13,12 +13,12 @@ a single source of an entire model state.
 */
 namespace model {
 
-	struct RaylibWindow {
-		int width;
-		int height;
-		const char* title;
-		int targetFPS;
-	};
+	// struct RaylibWindow {
+	// 	int width;
+	// 	int height;
+	// 	const char* title;
+	// 	int targetFPS;
+	// };
 
 	struct model {
 		model(flecs::world& world); // Ctor that loads the module
@@ -29,6 +29,10 @@ namespace model {
     void add_particle();
     void add_spring();
 
+	// register analytic shapes
+	// Model sphere = sphere_model = LoadModelFromMesh(GenMeshSphere(1, 32, 32));
+	// sphere_model.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = texture0;
+	
 } // namespace model
 
 #ifdef __cplusplus

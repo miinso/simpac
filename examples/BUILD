@@ -7,8 +7,15 @@ cpp_file_names = glob(["*.cpp"])
     cc_binary(
         name = cpp_file_name.replace(".cpp", ""),
         srcs = [cpp_file_name],
+        copts = [
+            "-DPLATFORM_DESKTOP",
+        ],
         data = [
-            "@com_minseopark_simpac//:all_resources",
+            "@com_minseopark_simpac//:resources",
+        ],
+        includes = [
+            # "raygui.h",
+            # "rlights.h",
         ],
         deps = [
             "//:raylib",
@@ -31,7 +38,7 @@ c_file_names = glob(["*.c"])
         copts = [
             "-DPLATFORM_DESKTOP",
         ],
-        data = ["@com_minseopark_simpac//:all_resources"],
+        data = ["@com_minseopark_simpac//:resources"],
         includes = [
             "rlights.h",
         ],
@@ -46,20 +53,33 @@ c_file_names = glob(["*.c"])
 cc_binary(
     name = "window-test",
     srcs = [
+        # "asset_loading.cpp",
         "test_particle1.cpp",
     ],
     copts = select({
         "@platforms//os:emscripten": ["-DPLATFORM_WEB"],
         "//conditions:default": ["-DPLATFORM_DESKTOP"],
     }),
+    data = ["@com_minseopark_simpac//:resources"],
+    includes = [
+        # "raygui.h",
+        # "rlights.h",
+    ],
     linkopts = select({
         "@platforms//os:emscripten": [
             "-sWASM=1",
-            "-sALLOW_MEMORY_GROWTH=1",
+            "-sALLOW_MEMORY_GROWTH=0",
             "-sNO_EXIT_RUNTIME=0",
             "-sSTACK_SIZE=1000000",
             "-sSINGLE_FILE",
+            # "-pthread", # requires wasm_cc_binary `threads` flag to be raised
             # "-Os",
+
+            # "--preload-file examples/index.html@resources/index.html",
+            "--preload-file resources/shaders/glsl100/lighting.fs@resources/shaders/glsl100/lighting.fs",
+            "--preload-file resources/shaders/glsl100/lighting.vs@resources/shaders/glsl100/lighting.vs",
+            "--preload-file resources/shaders/glsl120/pbr.fs@resources/shaders/glsl120/pbr.fs",
+            "--preload-file resources/shaders/glsl120/pbr.vs@resources/shaders/glsl120/pbr.vs",
         ],
         "//conditions:default": [],
     }),
@@ -79,8 +99,11 @@ wasm_cc_binary(
     outputs = [
         "index.js",
         # "index.wasm",
+        "window-test.data",
     ],
     simd = False,
     standalone = False,
     threads = "off",
 )
+
+# https://github.com/google-ai-edge/mediapipe/issues/4919

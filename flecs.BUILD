@@ -15,8 +15,8 @@ cc_library(
     linkopts = select({
         "@platforms//os:windows": ["/DEFAULTLIB:Ws2_32.lib"],  # winsocket
         "@platforms//os:emscripten": [
-            "-sALLOW_MEMORY_GROWTH=1 ",
-            "-sSTACK_SIZE=1mb",
+            # "-sALLOW_MEMORY_GROWTH=1",
+            # "-sSTACK_SIZE=1mb",
             "-sEXPORTED_RUNTIME_METHODS=cwrap ",
             # "-sMODULARIZE=1",
             # "-sEXPORT_NAME=\"my_app\"",
