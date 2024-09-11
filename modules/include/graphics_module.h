@@ -24,13 +24,13 @@ namespace graphics {
 		graphics(flecs::world& world);
 
 		static void init_window(flecs::world& world, int width, int height, const char* title);
+		static void run_main_loop(flecs::world& world, std::function<void()> update_func);
 		static bool window_should_close();
 		static void close_window();
-		static void run_main_loop(flecs::world& world, std::function<void()> update_func);
 
 		// static void begin_mode_3d();
 		// static void end_mode_3d();
-		static Shader shader;
+		// static Shader shader;
 		static Camera3D camera;
 
 	private:
@@ -40,7 +40,6 @@ namespace graphics {
 		static void main_loop_native();
 		static flecs::world* s_world;
 		static std::function<void()> s_update_func;
-
 	};
 } // namespace graphics
 

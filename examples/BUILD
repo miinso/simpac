@@ -14,7 +14,7 @@ cpp_file_names = glob(["*.cpp"])
             "@com_minseopark_simpac//:resources",
         ],
         includes = [
-            # "raygui.h",
+            "raygui.h",
             # "rlights.h",
         ],
         deps = [
@@ -54,7 +54,7 @@ cc_binary(
     name = "window-test",
     srcs = [
         # "asset_loading.cpp",
-        "test_particle1.cpp",
+        "test_particle4.cpp",
     ],
     copts = select({
         "@platforms//os:emscripten": ["-DPLATFORM_WEB"],
@@ -62,7 +62,7 @@ cc_binary(
     }),
     data = ["@com_minseopark_simpac//:resources"],
     includes = [
-        # "raygui.h",
+        "raygui.h",
         # "rlights.h",
     ],
     linkopts = select({
@@ -80,6 +80,11 @@ cc_binary(
             "--preload-file resources/shaders/glsl100/lighting.vs@resources/shaders/glsl100/lighting.vs",
             "--preload-file resources/shaders/glsl120/pbr.fs@resources/shaders/glsl120/pbr.fs",
             "--preload-file resources/shaders/glsl120/pbr.vs@resources/shaders/glsl120/pbr.vs",
+            "--preload-file resources/note1.ogg@resources/note1.ogg",
+            "--preload-file resources/note2.ogg@resources/note2.ogg",
+            "--preload-file resources/note3.ogg@resources/note3.ogg",
+            "--preload-file resources/note4.ogg@resources/note4.ogg",
+            "--preload-file resources/note0.ogg@resources/note0.ogg",
         ],
         "//conditions:default": [],
     }),

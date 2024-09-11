@@ -438,7 +438,7 @@ int main(void)
 
 	add_plane(Eigen::Vector3f(5, 5, 0), {-1, 0, 0});
 	add_plane(Eigen::Vector3f(-5, 5, 0), {1, 0, 0});
-	add_plane(Eigen::Vector3f(0, -0.01, 0), {0, 1, 0});
+	add_plane(Eigen::Vector3f(0, 2.01, 0), {0.3, 1, 0});
 	add_plane(Eigen::Vector3f(0, 5, 5), {0, 0, -1});
 	add_plane(Eigen::Vector3f(0, 5, -5), {0, 0, 1});
 
