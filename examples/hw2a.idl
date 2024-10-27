@@ -1,0 +1,113 @@
+// Common interfaces (unchanged)
+interface position { attribute vec3 value; };
+interface velocity { attribute vec3 value; };
+interface particle {} // empty structure. it's a tag 
+
+interface particle_prop {
+    attributes {
+        vec3 position;
+        vec3 velocity;
+        vec3 old_position;
+        
+        float mass;
+        float invmass;
+
+        float radius;
+        float friction;
+        float restitution;
+
+        float size_decay;
+        float color_decay;
+        float velocity_decay;
+        float lifespan;
+
+        bool is_rest;
+    }
+}
+
+interface particle_lifespan {
+    particle_lifespan() {
+        t = 0;
+    }
+    float t;
+};
+
+interface particle_generator {
+    //
+}
+
+// Body system interfaces
+interface aabb {
+    attribute vec3 min;
+    attribute vec3 max;
+
+    aabb();
+    aabb(vec3 min, vec3 max);
+
+    aabb operator=(aabb other);
+
+    static boolean point_in_aabb(aabb a, vec3 p);
+    static void corner_point(aabb a, int i, out vec3 p);
+    static boolean intersection(aabb a1, aabb a2);
+};
+
+interface trimesh {
+    attributes {
+        list<vec3> vertices;
+        list<int> edge_ids;
+        list<int> tri_ids;
+    }
+    attribute Model model; // raylib model
+
+    void init();
+    void from_raylib(raylibmesh m);
+
+    int num_vertices();
+    int num_edges();
+    int num_tris();
+};
+
+interface body {
+    attribute vec3 position;
+    attribute vec4 orientation;
+    attribute vec3 scale;
+    
+    body();
+    static void update_aabb(body b, trimesh t, inout aabb box);
+};
+
+interface hw2aux {
+    // Utility functions
+    vec3 e2r(vec3 v);
+    vec3 r2e(vec3 v);
+    matrix4x4 e2r_matrix(matrix4x4 m);
+
+    // Body creation functions
+    entity create_body_from_mesh(world w, raylibmesh mesh, vec3 position);
+    entity create_plane_body(world w, float width, float length, vec3 position, vec3 normal);
+    entity create_cube_body(world w, float width, float height, float depth, vec3 position, vec4 orientation = identity_quaternion);
+    entity create_sphere_body(world w, float radius, vec3 position, vec4 orientation = identity_quaternion);
+    entity create_poly_body(world w, int sides, float radius, vec3 position, vec4 orientation = identity_quaternion);
+    entity create_triangle_body(world w, float size, vec3 position, vec4 orientation = identity_quaternion);
+
+    void install_bodies(world w);
+}
+
+// Systems
+interface system {
+    void particle_triangle_collision();
+    void handle_keypress();
+
+    // pre physics
+    void update_aabb(); // for all body
+
+    // physics
+    void step() {
+        void progress_particle();
+        void handle_collision();
+    }
+
+    void draw_particle(); // for all particle
+    void draw_body(); // for all body
+    void reset();
+}

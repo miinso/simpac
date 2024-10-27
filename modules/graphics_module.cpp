@@ -13,7 +13,9 @@ namespace graphics {
 
 	flecs::world* graphics::s_world = nullptr;
 	std::function<void()> graphics::s_update_func;
-	Camera3D graphics::camera;
+	Camera3D graphics::camera1;
+	Camera3D graphics::camera2;
+	int graphics::activeCamera = 1;
 
 	graphics::graphics(flecs::world& ecs) {
 		// Register module with world. The module entity will be created with the
@@ -34,35 +36,46 @@ namespace graphics {
 		// 	p.y += v.y;
 		// });
 
-		ecs.system("graphics::init_camera").kind(flecs::OnStart).run([](flecs::iter& it) {
-			graphics::camera.position = Vector3{5.0f, 5.0f, 5.0f};
-			graphics::camera.target = Vector3{0.0f, 0.0f, 0.0f};
-			graphics::camera.up = Vector3{0.0f, 1.0f, 0.0f};
-			graphics::camera.fovy = 60.0f;
-			graphics::camera.projection = CAMERA_PERSPECTIVE;
+		ecs.system("graphics::init_cameras").kind(flecs::OnStart).run([](flecs::iter& it) {
+			graphics::camera1 = {0};
+			graphics::camera1.position = Vector3{5.0f, 5.0f, 5.0f};
+			graphics::camera1.target = Vector3{0.0f, 0.0f, 0.0f};
+			graphics::camera1.up = Vector3{0.0f, 1.0f, 0.0f};
+			graphics::camera1.fovy = 60.0f;
+			graphics::camera1.projection = CAMERA_PERSPECTIVE;
+
+			graphics::camera2 = {0};
+			graphics::camera2.position = Vector3{0.1f, 5.0f, 0.0f};
+			graphics::camera2.target = Vector3{0.0f, 0.0f, 0.0f};
+			graphics::camera2.up = Vector3{0.0f, 1.0f, 0.0f};
+			graphics::camera2.fovy = 60.0f;
+			graphics::camera2.projection = CAMERA_PERSPECTIVE;
 		});
 
 		// ecs.system("graphics::init_pbr_shader").kind(flecs::OnStart).run([](flecs::iter& it) {});
 
 		ecs.system("graphics::update_camera").kind(flecs::PreUpdate).run([](flecs::iter& it) {
-			// `q` for camera elevation down, `p` for camera elevation up
+			Camera3D* activeCamera =
+				(graphics::activeCamera == 1) ? &graphics::camera1 : &graphics::camera2;
+
+			// Switch active camera
+			if (IsKeyPressed(KEY_ONE))
+				graphics::activeCamera = 1;
+			if (IsKeyPressed(KEY_TWO))
+				graphics::activeCamera = 2;
+
+			// Update active camera
 			UpdateCameraPro(
-				&graphics::camera,
-				Vector3{
-					IsKeyDown(KEY_W) * 0.1f - // Move forward-backward
-						IsKeyDown(KEY_S) * 0.1f,
-					IsKeyDown(KEY_D) * 0.1f - // Move right-left
-						IsKeyDown(KEY_A) * 0.1f,
-					IsKeyDown(KEY_E) * 0.1f - IsKeyDown(KEY_Q) * 0.1f // Move up-down
-				},
-				Vector3{
-					IsMouseButtonDown(MOUSE_LEFT_BUTTON) * (GetMouseDelta().x * 0.2f) +
-						(IsKeyDown(KEY_RIGHT) * 1.5f - IsKeyDown(KEY_LEFT) * 1.5f), // yaw
-					IsMouseButtonDown(MOUSE_LEFT_BUTTON) * (GetMouseDelta().y * 0.2f) +
-						IsKeyDown(KEY_DOWN) * 1.5f - IsKeyDown(KEY_UP) * 1.5f, // pitch
-					0.0f // Rotation: roll
-				},
-				GetMouseWheelMove() * -1.0f); // Move to target (zoom)
+				activeCamera,
+				Vector3{IsKeyDown(KEY_W) * 0.1f - IsKeyDown(KEY_S) * 0.1f,
+						IsKeyDown(KEY_D) * 0.1f - IsKeyDown(KEY_A) * 0.1f,
+						IsKeyDown(KEY_E) * 0.1f - IsKeyDown(KEY_Q) * 0.1f},
+				Vector3{IsMouseButtonDown(MOUSE_LEFT_BUTTON) * (GetMouseDelta().x * 0.2f) +
+							(IsKeyDown(KEY_RIGHT) * 1.5f - IsKeyDown(KEY_LEFT) * 1.5f),
+						IsMouseButtonDown(MOUSE_LEFT_BUTTON) * (GetMouseDelta().y * 0.2f) +
+							IsKeyDown(KEY_DOWN) * 1.5f - IsKeyDown(KEY_UP) * 1.5f,
+						0.0f},
+				GetMouseWheelMove() * -1.0f);
 		});
 
 		// ecs.system("graphics::begin").kind(flecs::OnUpdate).run([](flecs::iter& it) {
@@ -107,24 +120,24 @@ namespace graphics {
 	void graphics::main_loop_native() {
 
 		// flecs owns the main loop
-		if(s_world) {
+		if (s_world) {
 			// calling `progress` will invoke registered systems including
 			// render pipeline. (clear->draw->swapchain) which is cool
 			s_world->progress();
 		}
 
 		// run post hook here
-		if(s_update_func) {
+		if (s_update_func) {
 			s_update_func();
 		}
 	}
 
 	void graphics::main_loop_rAF() {
-		if(s_world) {
+		if (s_world) {
 			s_world->progress();
 		}
 
-		if(s_update_func) {
+		if (s_update_func) {
 			s_update_func();
 		}
 	}
@@ -140,7 +153,7 @@ namespace graphics {
 #else
 		SetTargetFPS(60);
 		std::cout << "graphics::invoking native while loop" << std::endl;
-		while(!window_should_close()) {
+		while (!window_should_close()) {
 			main_loop_native();
 		}
 		std::cout << "graphics::destroying native while loop" << std::endl;

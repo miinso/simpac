@@ -61,3 +61,21 @@ cc_library(
         "@flecs",
     ],
 )
+
+cc_library(
+    name = "hw2aux",
+    srcs = [
+        "hw2aux.cpp",
+        "include/hw2aux.h",
+    ],
+    hdrs = [
+        "include/hw2aux.h",
+    ],
+    strip_include_prefix = "include",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//:raylib",
+        "@eigen",
+        "@flecs",
+    ],
+)

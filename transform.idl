@@ -1,0 +1,439 @@
+interface particle {
+    attributes {
+        vec3 position;
+        vec3 velocity;
+        vec3 old_position;
+        
+        float mass;
+        float invmass;
+
+    }
+}
+
+interface constraint {
+    attributes {
+        int dof;       // Number of constraint rows
+        float C;       // Constraint value
+        float lambda;  // Lagrange multiplier
+    }
+
+    // instance
+    void clear(); // clears C, lambda
+
+    // abstract
+    void init();
+    void solve(float h);
+    void draw();
+}
+
+interface distance_constraint : constraint {
+    attributes {
+        particle particle1;
+        particle particle2;
+        float rest_length;
+        float stiffness;
+    }
+}
+
+interface volume_constraint : constraint {
+    attributes {
+        particle particle1;
+        particle particle2;
+        particle particle3;
+        particle particle4;
+        float rest_volume;
+        float rest_inv_volume;
+        float stiffness;
+    }
+}
+
+interface neohookean_constraint : constraint {
+    attributes {
+        particle particle1;
+        particle particle2;
+        particle particle3;
+        particle particle4;
+        float rest_volume;
+        float rest_inv_volume;
+        mat3 rest_pose;
+        mat3 rest_inv_pose;
+        float mu_lame;
+        float lambda_lame;
+        float compliance_deviatoric;
+        float compliance_hydrostatic; // most cases, volumn constraint will be treated hard, so use zero
+        float lambda_deviatoric;
+        float lambda_hydrostatic;
+    }
+}
+
+// more constraints to come..
+
+// can be used as particle mesh
+interface tet_mesh {
+    attributes {
+        list<int> edge_ids; // particle indices in model
+        list<int> tri_ids;
+        list<int> tet_ids;
+        // ...
+    }
+
+    void init(); // com
+    void from_mesh(mesh m); // it would be great if we could use the built-in matlab mesh generator (from pde or fem package)
+    void from_tetgen(string node, string ele);
+
+    int num_vertices();
+    int num_edges(); // edge_ids.length() / 2;
+    int num_tris(); // tri_ids.length() / 3;
+    int num_tets(); // tet_ids.length() / 4;
+
+    void build_neighbors();
+}
+
+// can be used as surface mesh, or visualization mesh
+interface tri_mesh {
+    attributes {
+        list<int> edge_ids; // particle indices in model
+        list<int> tri_ids;
+        // ...
+    }
+
+    void init(); // com
+    void from_mesh(mesh m); // it would be great if we could use the built-in matlab mesh generator (from pde or fem package)
+    void from_tetgen(string node, string ele);
+
+    int num_vertices();
+    int num_edges(); // edge_ids.length() / 2;
+    int num_tris(); // tri_ids.length() / 3;
+
+    void build_neighbors();
+}
+
+
+interface model {
+    attributes {
+        list<particle> particles;
+        list<rigidbody> rigidbodies;
+        list<constraint> constraints;
+    }
+
+    void add_particle();
+    void add_softbody();
+    void add_constraint();
+}
+
+////
+
+interface rigidbody {
+    attributes {
+        vec3 position;
+        vec4 orientation;
+
+        vec3 linear_velocity;
+        vec3 angular_velocity;
+
+        vec3 linear_force;
+        vec3 angular_force;
+
+        vec3 old_position;
+        vec4 old_orientation;
+        
+        mat3 local_inertia; // or vec3, if pca
+        mat3 local_inverse_inertia;
+        mat3 world_inertia;
+        mat3 world_inverse_inertia;
+
+        float mass;
+        float invmass;
+
+        geometry geom;
+        // list<joint> joints;
+    }
+
+    // instance
+    void compute_inertia();
+    void clear();
+}
+
+interface model {
+    attributes {
+        list<vec3> particle_position;
+        list<vec3> particle_velocith;
+        list<vec3> particle_old_position;
+        list<vec3> particle_old_velocith;
+
+        list<particle> particles;
+        list<rigidbody> rigidbodies;
+    }
+
+    void build();
+    void add_particle();
+    void add_rigidbody();
+    void add_joint();
+    void add_constraint();
+}
+
+enum GeometryType {
+    "mesh",
+    "box",
+    "sphere",
+    "capsule"
+};
+
+interface geometry {
+    attribute GeometryType type;
+}
+
+interface Transform {
+    attribute float4x4 matrix;
+    attribute float3 position;
+    attribute quaternion rotation;
+    attribute float3 scale;
+
+    void Transform();
+
+    void setMatrix(float4x4 matrix);
+    void setPosition(float3 position);
+    void setRotation(quaternion rotation);
+    void setScale(float3 scale);
+
+    float4x4 getMatrix();
+    float3 getPosition();
+    quaternion getRotation();
+    float3 getScale();
+};
+
+interface Window {
+    attribute GLFWwindow* handle;
+
+    [Constant]
+    readonly attribute flecs::entity entity;
+
+
+}
+
+interface Renderer {
+    void updateSwapchain();
+    void render();
+
+}
+
+interface VertexShader {
+    [SetterThrows]
+    attribute String src;
+
+    ShaderKind kind;
+}
+
+[Constructor(DOMString url, URL base),
+ Constructor(DOMString url, optional DOMString base),
+ Exposed=(Window,Worker)]
+interface ShaderProgram {
+    constructor(DOMString str);
+
+    [Throws] constructor(DOMString str);
+
+    [Throws]
+    void compile();
+
+    [Throws]
+    void link(VertexShader vs);
+
+    [System]
+    void updateUniforms();
+
+    [System]
+    void updateAttributes();
+}
+
+interface Integrator {
+    void update();
+    void simulate();
+    void 
+}
+
+XPBDIntegrator implements Integrator;
+ImplicitEulerIntegrator implements Integrator;
+ImplicitNewmarkIntegrator implements Integrator;
+ImplicitMidpointIntegrator implements Integrator;
+ExplicitEuler
+SimplecticEuler
+RungeKuttaIntegrator
+
+XPBDVolumeConstraint implements constraint;
+FEMVolumeConstraint
+
+
+////
+
+
+// can be used as particle mesh
+interface tet_mesh {
+    attributes {
+        list<int> edge_ids; // particle indices in model
+        list<int> tri_ids;
+        list<int> tet_ids;
+        // ...
+    }
+
+    void init(); // com
+    void from_mesh(mesh m); // it would be great if we could use the built-in matlab mesh generator (from pde or fem package)
+    void from_tetgen(string node, string ele);
+
+    int num_vertices();
+    int num_edges(); // edge_ids.length() / 2;
+    int num_tris(); // tri_ids.length() / 3;
+    int num_tets(); // tet_ids.length() / 4;
+
+    void build_neighbors();
+}
+
+interface model {
+    attributes {
+        list<particle> particles;
+        list<rigidbody> rigidbodies;
+        list<constraint> constraints;
+    }
+
+    void add_particle();
+    void add_softbody();
+    void add_constraint();
+}
+
+////
+
+interface rigidbody {
+    attributes {
+        vec3 position;
+        vec4 orientation;
+
+        vec3 linear_velocity;
+        vec3 angular_velocity;
+
+        vec3 linear_force;
+        vec3 angular_force;
+
+        vec3 old_position;
+        vec4 old_orientation;
+        
+        mat3 local_inertia; // or vec3, if pca
+        mat3 local_inverse_inertia;
+        mat3 world_inertia;
+        mat3 world_inverse_inertia;
+
+        float mass;
+        float invmass;
+
+        geometry geom;
+        // list<joint> joints;
+    }
+
+    // instance
+    void compute_inertia();
+    void clear();
+}
+
+interface model {
+    attributes {
+        list<vec3> particle_position;
+        list<vec3> particle_velocith;
+        list<vec3> particle_old_position;
+        list<vec3> particle_old_velocith;
+
+        list<particle> particles;
+        list<rigidbody> rigidbodies;
+    }
+
+    void build();
+    void add_particle();
+    void add_rigidbody();
+    void add_joint();
+    void add_constraint();
+}
+
+enum GeometryType {
+    "mesh",
+    "box",
+    "sphere",
+    "capsule"
+};
+
+interface geometry {
+    attribute GeometryType type;
+}
+
+interface Transform {
+    attribute float4x4 matrix;
+    attribute float3 position;
+    attribute quaternion rotation;
+    attribute float3 scale;
+
+    void Transform();
+
+    void setMatrix(float4x4 matrix);
+    void setPosition(float3 position);
+    void setRotation(quaternion rotation);
+    void setScale(float3 scale);
+
+    float4x4 getMatrix();
+    float3 getPosition();
+    quaternion getRotation();
+    float3 getScale();
+};
+
+//
+
+interface constraint {
+    attributes {
+        int dof;       // Number of constraint rows
+        float C;       // Constraint value
+        float lambda;  // Lagrange multiplier
+    }
+
+    // instance
+    void clear(); // clears C, lambda
+
+    // abstract
+    void init();
+    void solve(float h);
+    void draw();
+}
+
+interface distance_constraint : constraint {
+    attributes {
+        particle particle1;
+        particle particle2;
+        float rest_length;
+        float stiffness;
+    }
+}
+
+interface volume_constraint : constraint {
+    attributes {
+        particle particle1;
+        particle particle2;
+        particle particle3;
+        particle particle4;
+        float rest_volume;
+        float rest_inv_volume;
+        float stiffness;
+    }
+}
+
+interface neohookean_constraint : constraint {
+    attributes {
+        particle particle1;
+        particle particle2;
+        particle particle3;
+        particle particle4;
+        float rest_volume;
+        float rest_inv_volume;
+        mat3 rest_pose;
+        mat3 rest_inv_pose;
+        float mu_lame;
+        float lambda_lame;
+        float compliance_deviatoric;
+        float compliance_hydrostatic; // most cases, volumn constraint will be treated hard, so use zero
+        float lambda_deviatoric;
+        float lambda_hydrostatic;
+    }
+}

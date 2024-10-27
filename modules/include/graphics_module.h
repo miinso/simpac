@@ -31,7 +31,9 @@ namespace graphics {
 		// static void begin_mode_3d();
 		// static void end_mode_3d();
 		// static Shader shader;
-		static Camera3D camera;
+		static Camera3D camera1;
+		static Camera3D camera2;
+		static int activeCamera; // 1 for camera1, 2 for camera2
 
 	private:
 		// static void main_loop_native(void* arg);

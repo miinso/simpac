@@ -1,60 +1,22 @@
-###############################################################################
-# Bazel now uses Bzlmod by default to manage external dependencies.
-# Please consider migrating your external dependencies from WORKSPACE to MODULE.bazel.
-#
-# For more details, please check https://github.com/bazelbuild/bazel/issues/18958
-###############################################################################
 bazel_dep(name = "apple_support", version = "1.12.0", repo_name = "build_bazel_apple_support")
 bazel_dep(name = "platforms", version = "0.0.10")
 bazel_dep(name = "rules_cc", version = "0.0.9")
 bazel_dep(name = "rules_pkg", version = "1.0.1")
 
-#-------------------------------------------------------------------------------------
-# Compiler commands
-#-------------------------------------------------------------------------------------
+##
+#  compile commands
+##
 bazel_dep(name = "hedron_compile_commands", dev_dependency = True)
 
 git_override(
     module_name = "hedron_compile_commands",
     remote = "https://github.com/hedronvision/bazel-compile-commands-extractor.git",
-    commit = "1e08f8e0507b6b6b1f4416a9a22cf5c28beaba93",
+    commit = "4f28899228fb3ad0126897876f147ca15026151e",
 )
-# local_path_override(
-#     module_name = "hedron_compile_commands",
-#     path = "../bazel-compile-commands-extractor",  # Assuming this tool is cloned next to your project's repo
-# )
 
-
-#-------------------------------------------------------------------------------------
-# eigen
-#-------------------------------------------------------------------------------------
+##
+#  eigen
+##
 bazel_dep(name = "eigen", version = "3.4.0")
 
-
-#-------------------------------------------------------------------------------------
-# Python
-#-------------------------------------------------------------------------------------
-# bazel_dep(name = "rules_python", version = "0.31.0")
-
-# python = use_extension("@rules_python//python/extensions:python.bzl", "python")
-# use_repo(python, "python_versions")
-
-# pip = use_extension("@rules_python//python/extensions:pip.bzl", "pip")
-# pip.parse(
-#     hub_name = "my_deps",
-#     python_version = "3.11",
-#     requirements_lock = "//:requirements.txt",
-# )
-# use_repo(pip, "my_deps")
-
-
-#-------------------------------------------------------------------------------------
-# glm
-#-------------------------------------------------------------------------------------
-bazel_dep(name = "glm", version = "0.9.9.8")
-
-
-#-------------------------------------------------------------------------------------
-# tinyobjloader
-#-------------------------------------------------------------------------------------
-bazel_dep(name = "tinyobjloader", version = "2.0.0-rc1")
+# bazel_dep(name = "tinyobjloader", version = "2.0.0-rc1")

@@ -1,7 +1,7 @@
 cc_library(
     name = "flecs",
-    srcs = ["flecs.c"],
-    hdrs = ["flecs.h"],
+    srcs = ["distr/flecs.c"],
+    hdrs = ["distr/flecs.h"],
     copts = select({
         # the manual says to build it as c, not cpp
         "@platforms//os:windows": ["/TC"],
@@ -11,7 +11,7 @@ cc_library(
             "c",
         ],
     }),
-    includes = ["."],
+    includes = ["distr"],
     linkopts = select({
         "@platforms//os:windows": ["/DEFAULTLIB:Ws2_32.lib"],  # winsocket
         "@platforms//os:emscripten": [

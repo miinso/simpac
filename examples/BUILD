@@ -15,6 +15,7 @@ cpp_file_names = glob(["*.cpp"])
         ],
         includes = [
             "raygui.h",
+            # "hw2aux.h",
             # "rlights.h",
         ],
         deps = [
@@ -24,6 +25,7 @@ cpp_file_names = glob(["*.cpp"])
             # modules
             "//modules:graphics_module",
             "//modules:model_module",
+            "//modules:hw2aux",
         ],
     )
     for cpp_file_name in cpp_file_names
@@ -54,7 +56,7 @@ cc_binary(
     name = "window-test",
     srcs = [
         # "asset_loading.cpp",
-        "test_particle4.cpp",
+        "hw3b.cpp",
     ],
     copts = select({
         "@platforms//os:emscripten": ["-DPLATFORM_WEB"],
@@ -80,11 +82,11 @@ cc_binary(
             "--preload-file resources/shaders/glsl100/lighting.vs@resources/shaders/glsl100/lighting.vs",
             "--preload-file resources/shaders/glsl120/pbr.fs@resources/shaders/glsl120/pbr.fs",
             "--preload-file resources/shaders/glsl120/pbr.vs@resources/shaders/glsl120/pbr.vs",
-            "--preload-file resources/note1.ogg@resources/note1.ogg",
-            "--preload-file resources/note2.ogg@resources/note2.ogg",
-            "--preload-file resources/note3.ogg@resources/note3.ogg",
-            "--preload-file resources/note4.ogg@resources/note4.ogg",
-            "--preload-file resources/note0.ogg@resources/note0.ogg",
+            # "--preload-file resources/note1.ogg@resources/note1.ogg",
+            # "--preload-file resources/note2.ogg@resources/note2.ogg",
+            # "--preload-file resources/note3.ogg@resources/note3.ogg",
+            # "--preload-file resources/note4.ogg@resources/note4.ogg",
+            # "--preload-file resources/note0.ogg@resources/note0.ogg",
         ],
         "//conditions:default": [],
     }),
@@ -95,20 +97,22 @@ cc_binary(
         # modules
         "//modules:graphics_module",
         "//modules:model_module",
+        "//modules:hw2aux",
     ],
 )
 
-wasm_cc_binary(
-    name = "wasm-window-test",
-    cc_target = ":window-test",
-    outputs = [
-        "index.js",
-        # "index.wasm",
-        "window-test.data",
-    ],
-    simd = False,
-    standalone = False,
-    threads = "off",
-)
+# wasm_cc_binary(
+#     name = "wasm-window-test",
+#     cc_target = ":window-test",
+#     outputs = [
+#         "hw3.js",
+#         # "index.wasm",
+#         "hw3.data",
+#     ],
+#     simd = False,
+#     standalone = False,
+#     threads = "off",
+# )
 
 # https://github.com/google-ai-edge/mediapipe/issues/4919
+
