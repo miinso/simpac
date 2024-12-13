@@ -9,9 +9,8 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 http_archive(
     name = "flecs",
     build_file = "//third_party:flecs.BUILD",
-    # integrity = "sha256-2IkoIms6bn68fIGNtQsvtYKAIe07zSBsTio7BAZHLSs=",
-    strip_prefix = "flecs-4.0.2",
-    urls = ["https://github.com/SanderMertens/flecs/archive/refs/tags/v4.0.2.tar.gz"],
+    strip_prefix = "flecs-4.0.3",
+    urls = ["https://github.com/SanderMertens/flecs/archive/refs/tags/v4.0.3.tar.gz"],
 )
 
 git_repository(
@@ -58,27 +57,27 @@ register_emscripten_toolchains()
 http_archive(
     name = "raylib_macos",
     build_file = "//third_party:raylib.BUILD",
-    strip_prefix = "raylib-5.0_macos",
-    urls = ["https://github.com/raysan5/raylib/releases/download/5.0/raylib-5.0_macos.tar.gz"],
+    strip_prefix = "raylib-5.5_macos",
+    urls = ["https://github.com/raysan5/raylib/releases/download/5.5/raylib-5.5_macos.tar.gz"],
 )
 
 http_archive(
     name = "raylib_windows",
     build_file = "//third_party:raylib.BUILD",
-    strip_prefix = "raylib-5.0_win64_msvc16",
-    urls = ["https://github.com/raysan5/raylib/releases/download/5.0/raylib-5.0_win64_msvc16.zip"],
+    strip_prefix = "raylib-5.5_win64_msvc16",
+    urls = ["https://github.com/raysan5/raylib/releases/download/5.5/raylib-5.5_win64_msvc16.zip"],
 )
 
 http_archive(
     name = "raylib_linux",
     build_file = "//third_party:raylib.BUILD",
-    strip_prefix = "raylib-5.0_linux_amd64",
-    urls = ["https://github.com/raysan5/raylib/releases/download/5.0/raylib-5.0_linux_amd64.tar.gz"],
+    strip_prefix = "raylib-5.5_linux_amd64",
+    urls = ["https://github.com/raysan5/raylib/releases/download/5.5/raylib-5.5_linux_amd64.tar.gz"],
 )
 
 http_archive(
     name = "raylib_emscripten",
     build_file = "//third_party:raylib.BUILD",
-    strip_prefix = "raylib-5.0_webassembly",
-    urls = ["https://github.com/raysan5/raylib/releases/download/5.0/raylib-5.0_webassembly.zip"],
+    strip_prefix = "raylib-5.5_webassembly",
+    urls = ["https://github.com/raysan5/raylib/releases/download/5.5/raylib-5.5_webassembly.zip"],
 )
