@@ -1,3 +1,5 @@
+load("@hedron_compile_commands//:refresh_compile_commands.bzl", "refresh_compile_commands")
+
 alias(
     name = "raylib",
     actual = select({
@@ -13,4 +15,31 @@ filegroup(
     name = "resources",
     srcs = glob(["resources/**"]),
     visibility = ["//visibility:public"],
+)
+
+refresh_compile_commands(
+    name = "refresh_compile_commands",
+
+    # Specify the targets of interest.
+    # For example, specify a dict of targets and any flags required to build.
+    targets = {
+        # header only
+        "//rbmini2:core": "",
+        # "//rbmini2:collision": "",
+        "//rbmini2:geometry": "",
+        "//rbmini2:sdf": "",
+        "//rbmini2:dynamics": "",
+        # "//rbmini2:main1": "",
+        "//rbmini2:graphics": "",
+        "//rbmini2:core_test": "",
+        "//rbmini2:geometry_test": "",
+        "//rbmini2:sdf_test": "",
+        "//rbmini2:main1": "",
+        "//rbmini2:main2": "",
+    },
+    # No need to add flags already in .bazelrc. They're automatically picked up.
+    # If you don't need flags, a list of targets is also okay, as is a single target string.
+    # Wildcard patterns, like //... for everything, *are* allowed here, just like a build.
+    # As are additional targets (+) and subtractions (-), like in bazel query https://docs.bazel.build/versions/main/query.html#expressions
+    # And if you're working on a header-only library, specify a test or binary target that compiles it.
 )

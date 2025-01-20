@@ -9,6 +9,9 @@
 #	define GLSL_VERSION 100
 #endif
 
+
+// using namespace rl;
+
 namespace graphics {
 
 	flecs::world* graphics::s_world = nullptr;

@@ -1,22 +1,3 @@
-# include_prefix
-
-# String; default is ""
-# The prefix to add to the paths of the headers of this rule.
-# When set, the headers in the hdrs attribute of this rule are accessible at is the value of this attribute prepended to their repository-relative path.
-# The prefix in the strip_include_prefix attribute is removed before this prefix is added.
-# This attribute is only legal under third_party.
-
-# strip_include_prefix
-
-# String; default is ""
-# The prefix to strip from the paths of the headers of this rule.
-# When set, the headers in the hdrs attribute of this rule are accessible at their path with this prefix cut off.
-# If it's a relative path, it's taken as a package-relative one. If it's an absolute one, it's understood as a repository-relative path.
-# The prefix in the include_prefix attribute is added after this prefix is stripped.
-# This attribute is only legal under third_party.
-
-# https://groups.google.com/g/bazel-discuss/c/5DD7ZIBt3Ss
-
 cc_library(
     name = "graphics_module",
     srcs = [
@@ -41,6 +22,32 @@ cc_library(
         "//:raylib",
         "@eigen",
         "@flecs",
+    ],
+)
+
+cc_library(
+    name = "graphics",
+    srcs = [
+        "graphics.cpp",
+        # "include/graphics_module2.h",
+        # "include/rlights.h",
+    ],
+    hdrs = [
+        "include/graphics.h",
+        "include/lights.hpp",
+    ],
+    copts = select({
+        "@platforms//os:emscripten": ["-DPLATFORM_WEB"],
+        "//conditions:default": ["-DPLATFORM_DESKTOP"],
+    }),
+    data = ["@com_minseopark_simpac//:resources"],
+    strip_include_prefix = "include",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//:raylib",
+        "@eigen",
+        "@flecs",
+        "@raylib-cpp",
     ],
 )
 
@@ -77,5 +84,75 @@ cc_library(
         "//:raylib",
         "@eigen",
         "@flecs",
+    ],
+)
+
+cc_library(
+    name = "pbd",
+    srcs = [
+        "pbd/BoundingSphereHierarchy.cpp",
+        "pbd/IndexedFaceMesh.cpp",
+        "pbd/VolumeIntegration.cpp",
+    ],
+    hdrs = [
+        "pbd/AABB.h",
+        "pbd/BoundingSphere.h",
+        "pbd/BoundingSphereHierarchy.h",
+        "pbd/Common.h",
+        "pbd/IndexedFaceMesh.h",
+        "pbd/ParticleData.h",
+        "pbd/VolumeIntegration.h",
+        "pbd/kdTree.h",
+    ],
+    strip_include_prefix = "pbd",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@eigen",
+    ],
+)
+
+cc_library(
+    name = "raylib-gizmo",
+    srcs = [
+        "raygizmo/raygizmo.c",
+    ],
+    hdrs = [
+        "raygizmo/raygizmo.h",
+    ],
+    copts = select({
+        "@platforms//os:windows": ["/TC"],
+        "//conditions:default": [
+            "-std=gnu99",
+            "-x",
+            "c",
+        ],
+    }),
+    strip_include_prefix = "raygizmo",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//:raylib",
+    ],
+)
+
+cc_library(
+    name = "rlights",
+    hdrs = [
+        "rlights/rlights.h",
+    ],
+    # srcs = [
+    #     "rlights/raygizmo.c",
+    # ],
+    copts = select({
+        "@platforms//os:windows": ["/TC"],
+        "//conditions:default": [
+            "-std=gnu99",
+            "-x",
+            "c",
+        ],
+    }),
+    strip_include_prefix = "rlights",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//:raylib",
     ],
 )

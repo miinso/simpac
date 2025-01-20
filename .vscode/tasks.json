@@ -7,10 +7,16 @@
             "command": "bazel",
             "args": [
                 "build",
-                // "-c",
-                // "opt",
-                "//${relativeFileDirname}:${fileBasenameNoExtension}"
+                "//${relativeFileDirname}:${fileBasenameNoExtension}",
             ],
+            "windows": {
+                "type": "process",
+                "command": "powershell",
+                "args": [
+                    "-Command",
+                    "& {$target = ('${relativeFileDirname}:${fileBasenameNoExtension}' -replace '\\\\', '/'); bazel build //$target;}"
+                ]
+            },
             "group": {
                 "kind": "build",
                 "isDefault": true

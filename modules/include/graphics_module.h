@@ -2,7 +2,13 @@
 #define GRAPHICS_MODULE_H
 
 #include "flecs.h"
-#include "raylib.h"
+
+// people say it's forbidden
+// namespace rl { 
+	#include "raylib.h"
+	#include "rlgl.h"
+	#include "raymath.h"
+// }
 
 #include <functional>
 #include <iostream>

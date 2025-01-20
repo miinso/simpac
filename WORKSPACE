@@ -9,8 +9,8 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 http_archive(
     name = "flecs",
     build_file = "//third_party:flecs.BUILD",
-    strip_prefix = "flecs-4.0.3",
-    urls = ["https://github.com/SanderMertens/flecs/archive/refs/tags/v4.0.3.tar.gz"],
+    strip_prefix = "flecs-4.0.4",
+    urls = ["https://github.com/SanderMertens/flecs/archive/refs/tags/v4.0.4.tar.gz"],
 )
 
 git_repository(
@@ -80,4 +80,34 @@ http_archive(
     build_file = "//third_party:raylib.BUILD",
     strip_prefix = "raylib-5.5_webassembly",
     urls = ["https://github.com/raysan5/raylib/releases/download/5.5/raylib-5.5_webassembly.zip"],
+)
+
+##
+#  raylib-cpp
+##
+git_repository(
+    name = "raylib-cpp",
+    build_file = "//third_party:raylib-cpp.BUILD",
+    commit = "c283b731b0c1bd423db45546867af969d91b49a1",  # Use the specific commit or tag
+    remote = "https://github.com/RobLoach/raylib-cpp.git",
+)
+
+##
+#  discregrid
+##
+git_repository(
+    name = "Discregrid",
+    build_file = "//third_party:Discregrid.BUILD",
+    commit = "4c27e1cc88be828c6ac5b8a05759ac7e01cf79e9",
+    remote = "https://github.com/InteractiveComputerGraphics/Discregrid.git",
+)
+
+##
+#  loguru
+##
+git_repository(
+    name = "loguru",
+    build_file = "//third_party:loguru.BUILD",
+    commit = "4adaa185883e3c04da25913579c451d3c32cfac1",
+    remote = "https://github.com/emilk/loguru.git",
 )
