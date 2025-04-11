@@ -1,0 +1,114 @@
+diff --git a/include/fcl/config.h b/include/fcl/config.h
+new file mode 100644
+index 0000000..53ac822
+--- /dev/null
++++ b/include/fcl/config.h
+@@ -0,0 +1,47 @@
++#ifndef FCL_CONFIG_H_
++#define FCL_CONFIG_H_
++
++#define FCL_VERSION "1.0.0"
++#define FCL_MAJOR_VERSION 1
++#define FCL_MINOR_VERSION 0
++#define FCL_PATCH_VERSION 0
++
++#define FCL_HAVE_SSE 1
++#define FCL_HAVE_OCTOMAP 1
++#define FCL_ENABLE_PROFILING 0
++
++// Detect the operating systems
++#if defined(__APPLE__)
++  #define FCL_OS_MACOS
++#elif defined(__gnu_linux__)
++  #define FCL_OS_LINUX
++#elif defined(_WIN32)
++  #define FCL_OS_WINDOWS
++#endif
++
++// Detect the compiler
++#if defined(__clang__)
++  #define FCL_COMPILER_CLANG
++#elif defined(__GNUC__) || defined(__GNUG__)
++  #define FCL_COMPILER_GCC
++#elif defined(_MSC_VER)
++  #define FCL_COMPILER_MSVC
++#endif
++
++#if FCL_HAVE_OCTOMAP
++  #define OCTOMAP_MAJOR_VERSION 1
++  #define OCTOMAP_MINOR_VERSION 10
++  #define OCTOMAP_PATCH_VERSION 0
++
++  #define OCTOMAP_VERSION_AT_LEAST(x,y,z) \
++    (OCTOMAP_MAJOR_VERSION > x || (OCTOMAP_MAJOR_VERSION >= x && \
++    (OCTOMAP_MINOR_VERSION > y || (OCTOMAP_MINOR_VERSION >= y && \
++    OCTOMAP_PATCH_VERSION >= z))))
++
++  #define OCTOMAP_VERSION_AT_MOST(x,y,z) \
++    (OCTOMAP_MAJOR_VERSION < x || (OCTOMAP_MAJOR_VERSION <= x && \
++    (OCTOMAP_MINOR_VERSION < y || (OCTOMAP_MINOR_VERSION <= y && \
++    OCTOMAP_PATCH_VERSION <= z))))
++#endif
++
++#endif  // FCL_CONFIG_H_
+diff --git a/include/fcl/export.h b/include/fcl/export.h
+new file mode 100644
+index 0000000..f096793
+--- /dev/null
++++ b/include/fcl/export.h
+@@ -0,0 +1,55 @@
++#ifndef FCL_EXPORT_H
++#define FCL_EXPORT_H
++
++#ifdef FCL_STATIC_DEFINE
++#  define FCL_EXPORT
++#  define FCL_NO_EXPORT
++#else
++#  ifndef FCL_EXPORT
++#    ifdef fcl_EXPORTS
++#      ifdef _WIN32
++#        define FCL_EXPORT __declspec(dllexport)
++#      else
++#        define FCL_EXPORT __attribute__((visibility("default")))
++#      endif
++#    else
++#      ifdef _WIN32
++#        define FCL_EXPORT __declspec(dllimport)
++#      else
++#        define FCL_EXPORT __attribute__((visibility("default")))
++#      endif
++#    endif
++#  endif
++
++#  ifndef FCL_NO_EXPORT
++#    ifdef _WIN32
++#      define FCL_NO_EXPORT
++#    else
++#      define FCL_NO_EXPORT __attribute__((visibility("hidden")))
++#    endif
++#  endif
++#endif
++
++#ifndef FCL_DEPRECATED
++#  ifdef _WIN32
++#    define FCL_DEPRECATED __declspec(deprecated)
++#  else
++#    define FCL_DEPRECATED __attribute__((__deprecated__))
++#  endif
++#endif
++
++#ifndef FCL_DEPRECATED_EXPORT
++#  define FCL_DEPRECATED_EXPORT FCL_EXPORT FCL_DEPRECATED
++#endif
++
++#ifndef FCL_DEPRECATED_NO_EXPORT
++#  define FCL_DEPRECATED_NO_EXPORT FCL_NO_EXPORT FCL_DEPRECATED
++#endif
++
++#if 0 /* DEFINE_NO_DEPRECATED */
++#  ifndef FCL_NO_DEPRECATED
++#    define FCL_NO_DEPRECATED
++#  endif
++#endif
++
++#endif /* FCL_EXPORT_H */

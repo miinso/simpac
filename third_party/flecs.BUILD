@@ -11,15 +11,17 @@ cc_library(
             "c",
         ],
     }),
+    # defines = [
+    #     "NDEBUG",
+    # ],
     includes = ["distr"],
     linkopts = select({
         "@platforms//os:windows": ["/DEFAULTLIB:Ws2_32.lib"],  # winsocket
         "@platforms//os:emscripten": [
             # "-sALLOW_MEMORY_GROWTH=1",
             # "-sSTACK_SIZE=1mb",
-            "-sEXPORTED_RUNTIME_METHODS=cwrap ",
+            "-sEXPORTED_RUNTIME_METHODS=cwrap", # TODO: what about ccall
             # "-sMODULARIZE=1",
-            # "-sEXPORT_NAME=\"my_app\"",
         ],  # + @platforms//cpu:wasm32
         "//conditions:default": [],
     }),

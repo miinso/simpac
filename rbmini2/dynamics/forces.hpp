@@ -28,10 +28,13 @@ namespace phys {
             const Real damping,
             const Vector3r& vel1,
             const Vector3r& vel2) {
+
+            // note it's x2 - x1, not x1 - x2
             Vector3r delta = pos2 - pos1;
             Real distance = delta.norm();
 
-            Vector3r spring_force = stiffness * (distance - rest_length) * delta.normalized();
+            Vector3r spring_force =
+                stiffness * (distance - rest_length) / distance * delta.normalized();
 
             Vector3r damping_force = damping * (vel2 - vel1);
 

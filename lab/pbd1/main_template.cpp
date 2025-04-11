@@ -3,6 +3,9 @@
 #include "graphics.h"
 #include <iostream>
 
+#include "types.hpp"
+#include "kernels.hpp"
+
 float randf(int n) {
     return static_cast<float>(rand() % n);
 }

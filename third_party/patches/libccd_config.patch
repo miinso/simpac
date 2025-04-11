@@ -1,0 +1,17 @@
+--- a/src/ccd/config.h	1969-12-31 18:00:00.000000000 -0600
++++ b/src/ccd/config.h	2025-01-25 20:57:31.203976500 -0600
+@@ -0,0 +1,14 @@
++#ifndef __CCD_CONFIG_H__
++#define __CCD_CONFIG_H__
++
++#if defined(CCD_SINGLE)
++    typedef float ccd_real_t;
++    #define CCD_REAL_MAX FLT_MAX
++    #define CCD_REAL_EPS FLT_EPSILON
++#elif defined(CCD_DOUBLE)
++    typedef double ccd_real_t;
++    #define CCD_REAL_MAX DBL_MAX
++    #define CCD_REAL_EPS DBL_EPSILON
++#endif
++
++#endif /* __CCD_CONFIG_H__ */

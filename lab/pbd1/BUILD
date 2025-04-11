@@ -16,8 +16,10 @@ source_file_name_list = glob([
             "@com_minseopark_simpac//:resources",
         ],
         includes = [
-            "pbd1.hpp", # mk.1
-            "components.hpp",
+            # "types.hpp",
+            # "kernels.hpp",
+            # "pbd1.hpp", # mk.1
+            # "components.hpp",
             # "rigid_body.hpp",
             # "rigid_body2.hpp",
             # "geometry.hpp",
@@ -31,7 +33,24 @@ source_file_name_list = glob([
             # "@Discregrid",
             # modules
             # "//modules:pbd",
+            ":pbd",
         ],
     )
     for source_file_name in source_file_name_list
 ]
+
+cc_library(
+    name = "pbd",
+    hdrs = [
+        "kernels.hpp",
+        "types.hpp",
+    ],
+    includes = [
+        "kernels.hpp",
+        "types.hpp",
+    ],
+    deps = [
+        "@eigen",
+        "@flecs",
+    ],
+)

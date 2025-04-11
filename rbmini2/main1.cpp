@@ -25,6 +25,14 @@ int main() {
     Mesh m = GenMeshCube(1, 1, 1);
     filter.init_mesh(m);
 
+    // particle
+    auto particle = 
+    ecs.entity()
+    .add<Position>()
+    .add<Position0>()
+    .add<LinearVelocity>()
+
+    // rigidbody
     auto e1 =
         ecs.entity()
             .add<phys::components::Dynamic>() // dynamic body
@@ -33,6 +41,24 @@ int main() {
             .set<Scale>({Vector3r::Identity()})
             .set<LinearVelocity>({Vector3r(0.0f, 10.0f, 0.0f)})
             .set<AngularVelocity>({Vector3r(3.0f, 0.0f, 0.0f)})
+            .add<LinearForce>()
+            .add<AngularForce>()
+            .set<Mass>({1.0f}) // no braces bc it's just a float
+            .add<InverseMass>()
+            .set<LocalInertia>({Matrix3r::Identity()})
+            .set<WorldInertia>({Matrix3r::Identity()})
+            .set<WorldInverseInertia>({Matrix3r::Identity()})
+            .set<MeshFilter>(filter)
+            .add<MeshRenderer>();
+
+    auto e2 =
+        ecs.entity()
+            .add<phys::components::Dynamic>() // dynamic body
+            .set<Position>({Vector3r(3,0,0)})
+            .add<Orientation>()
+            .set<Scale>({Vector3r::Identity()})
+            .set<LinearVelocity>({Vector3r(0.0f, 10.0f, 0.0f)})
+            .set<AngularVelocity>({Vector3r(3.0f, 0.0f, 100.0f)})
             .add<LinearForce>()
             .add<AngularForce>()
             .set<Mass>({1.0f}) // no braces bc it's just a float

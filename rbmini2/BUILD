@@ -1,4 +1,5 @@
 # rbmini2/BUILD
+load("@emsdk//emscripten_toolchain:wasm_rules.bzl", "wasm_cc_binary")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 
 cc_library(
@@ -187,6 +188,8 @@ cc_library(
     ],
 )
 
+########## engine above
+
 # main apps
 [
     cc_binary(
@@ -223,6 +226,72 @@ cc_library(
         "*.c",
     ])
 ]
+
+cc_binary(
+    name = "app1",
+    srcs = [
+        "main1.cpp",
+    ],
+    copts = select({
+        "@platforms//os:emscripten": [
+            "-DPLATFORM_WEB",
+            # "-fexceptions",  # Enable C++ exception handling
+            # "-sWASM_EXCEPTIONS=1",  # Enable WebAssembly exception support
+            # "-sEXCEPTION_DEBUG=1",  # Enable exception debugging
+        ],
+        "//conditions:default": ["-DPLATFORM_DESKTOP"],
+    }),
+    data = ["@com_minseopark_simpac//:resources"],
+    defines = [
+        "LOGGING_ENABLED",
+        # "USE_LOGURU",
+    ],
+    linkopts = select({
+        "@platforms//os:emscripten": [
+            "-sWASM=1",
+            "-sALLOW_MEMORY_GROWTH=0",
+            "-sDISABLE_EXCEPTION_CATCHING=0",  # Enable exception catching in Emscripten
+            "-sNO_EXIT_RUNTIME=0",
+            "-sSTACK_SIZE=1000000",
+            "-sSINGLE_FILE",
+            # "-fexceptions",
+            # "-fno-exceptions",
+            # "-pthread", # requires wasm_cc_binary `threads` flag to be raised
+            # "-Os",
+            "--preload-file resources/shaders/glsl100/lighting.fs@resources/shaders/glsl100/lighting.fs",
+            "--preload-file resources/shaders/glsl100/lighting.vs@resources/shaders/glsl100/lighting.vs",
+            "--preload-file resources/shaders/glsl120/pbr.fs@resources/shaders/glsl120/pbr.fs",
+            "--preload-file resources/shaders/glsl120/pbr.vs@resources/shaders/glsl120/pbr.vs",
+        ],
+        "//conditions:default": [],
+    }),
+    deps = [
+        ":collision",
+        ":core",
+        ":dynamics",
+        ":geometry",
+        ":graphics",
+        "//:raylib",
+        "//modules:pbd",
+        "@eigen",
+        "@flecs",
+    ],
+)
+
+wasm_cc_binary(
+    name = "app1-wasm",
+    cc_target = ":app1",
+    outputs = [
+        "app1.js",
+        # "index.wasm",
+        "app1.data",
+    ],
+    simd = True,
+    # standalone = False,
+    # threads = "off",
+)
+
+########## tests below
 
 cc_test(
     name = "core_test",

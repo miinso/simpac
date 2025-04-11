@@ -119,18 +119,10 @@ cc_library(
     hdrs = [
         "raygizmo/raygizmo.h",
     ],
-    copts = select({
-        "@platforms//os:windows": ["/TC"],
-        "//conditions:default": [
-            "-std=gnu99",
-            "-x",
-            "c",
-        ],
-    }),
     strip_include_prefix = "raygizmo",
     visibility = ["//visibility:public"],
     deps = [
-        "//:raylib",
+        "@raylib-head",
     ],
 )
 
@@ -139,20 +131,10 @@ cc_library(
     hdrs = [
         "rlights/rlights.h",
     ],
-    # srcs = [
-    #     "rlights/raygizmo.c",
-    # ],
-    copts = select({
-        "@platforms//os:windows": ["/TC"],
-        "//conditions:default": [
-            "-std=gnu99",
-            "-x",
-            "c",
-        ],
-    }),
     strip_include_prefix = "rlights",
     visibility = ["//visibility:public"],
     deps = [
-        "//:raylib",
+        # "//:raylib",
+        "@raylib-head",
     ],
 )

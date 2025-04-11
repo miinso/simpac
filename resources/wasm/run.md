@@ -1,0 +1,1 @@
+serve  --cors --ssl-cert --ssl-key

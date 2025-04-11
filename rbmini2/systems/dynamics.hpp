@@ -59,7 +59,7 @@ namespace phys {
                     dt);
             }
 
-            log_info("integrate_rigid_bodies::%s", it.entity(i).view().name());
+            log_info("integrate_rigid_bodies::%s", it.entity(i).view().name().c_str());
         }
 
         void register_dynamics_systems(flecs::world& ecs) {

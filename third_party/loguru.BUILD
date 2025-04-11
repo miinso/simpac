@@ -7,6 +7,9 @@ cc_library(
         "loguru.hpp",
     ],
     copts = select({
+        "@platforms//os:emscripten": [
+            "-fexceptions",  # Enable C++ exception handling
+        ],
         "@platforms//os:windows": [
             "/std:c++17",
             "/wd5051",  # Disable specific Visual Studio warning (C5051)
