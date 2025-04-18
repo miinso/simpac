@@ -105,16 +105,16 @@ namespace phys {
 
                 // express the omega in pure quaternion form
                 auto omega_q = Quaternionr(0, omega.x(), omega.y(), omega.z());
-                omega_q.coeffs() *= 0.5 * dt; // 0.5 for double-cover, dt bc it's unit speed integrated during the timestep
-
+                // omega_q.coeffs() *= 0.5 * dt; // 0.5 for double-cover, dt bc it's unit speed integrated during the timestep
+                
                 // omega here is a body quantity, so right-multiply. R(q)
                 // dq = 0.5 * q * omega_q
                 auto q_dot = (q * omega_q);
-
-                q.w() += q_dot.w();
-                q.vec() += q_dot.vec();
-                q.normalize();
                 
+                q.w() += 0.5 * dt * q_dot.w();
+                q.vec() += 0.5 * dt * q_dot.vec();
+                q.normalize();
+
             // or exponential map
                 // axis = omega / omega.norm();
                 // angle = omega.norm() * dt; unit speed multiplied with discrete time step
@@ -122,6 +122,22 @@ namespace phys {
                 // q = q * q_change; // right multiply bc omega is a body quantity
                 // hamiltonian product between two unit quats give you another unit quat, so no normalize. (..or do we?)
 
+        }
+
+        inline void rb_update_velocity(Vector3r& v, Vector3r& omega, const Vector3r& x, const Vector3r& x_old, const Quaternionr& q, const Quaternionr& q_old, const Real dt) {
+            v = (x - x_old) / dt;
+            
+            // again, omega is a body quantity, so change goes to the right side
+            // q_new = q_old * q_change => inv(q_old) * q_new = q_change
+            auto q_change = q_old.conjugate() * q;
+
+            // inverse op
+            omega = 2.0 * q_change.vec() / dt;
+
+            // send to antipodal, since we want the shortest path
+            if (q_change.w() < 0.0) {
+                omega = -omega;
+            }
         }
 
         inline void rb_reset(Vector3r& x, Quaternionr& q, Vector3r& v, Vector3r& omega, 
@@ -136,5 +152,11 @@ namespace phys {
             f.setZero();
             tau.setZero();
         }
+
+        // inline void quat_rot_vec(Vector3r& v, const Quaternionr& q) {
+        //     v = q * v * q.conjugate();
+        // }
+
+        
     } // namespace pbd
 } // namespace phys

@@ -200,13 +200,14 @@ int main() {
     //             particle_ground_collision(x.value, x_old.value, delta_time / num_substeps);
     //         });
 
-    // auto update_velocity =
-    //     ecs.system<Velocity, const Position, const OldPosition>("update velocity")
-    //         .with<Particle>()
-    //         .kind(0)
-    //         .each([&](Velocity& v, const Position& x, const OldPosition& x_old) {
-    //             particle_update_velocity(v.value, x.value, x_old.value, delta_time / num_substeps);
-    //         });
+    auto update_velocity =
+        ecs.system<LinearVelocity, AngularVelocity, const Position, const OldPosition, const Orientation, const OldOrientation>("update velocity")
+            .with<RigidBody>()
+            .kind(0)
+            .each([&](LinearVelocity& v, AngularVelocity& omega, const Position& x, const OldPosition& x_old, const Orientation& q, const OldOrientation& q_old) {
+                // particle_update_velocity(v.value, x.value, x_old.value, delta_time / num_substeps);
+                rb_update_velocity(v.value, omega.value, x.value, x_old.value, q.value, q_old.value, delta_time / num_substeps);
+            });
 
     ecs.system("simulation loop").run([&](flecs::iter&) {
         auto sub_dt = delta_time / num_substeps;
@@ -222,7 +223,7 @@ int main() {
             // }
 
             // handle_ground_collision.run();
-            // update_velocity.run();
+            update_velocity.run();
         }
     });
 
