@@ -29,6 +29,14 @@
                 "externalConsole": true
             },
             "osx": {
+                "MIMode": "lldb",
+                "setupCommands": [
+                    {
+                        "description": "Enable pretty-printing for lldb",
+                        "text": "type format add --format hex",
+                        "ignoreFailures": true
+                    }
+                ],
                 "type": "lldb",
                 "externalConsole": true
             }

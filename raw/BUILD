@@ -21,9 +21,9 @@ source_file_name_list = glob([
         deps = [
             ":graphics",
             ":pbd",
+            "//:raylib",
             "@eigen",
             "@flecs",
-            "//:raylib",
         ],
     )
     for source_file_name in source_file_name_list
@@ -45,19 +45,21 @@ cc_library(
     includes = ["."],
     strip_include_prefix = "graphics",
     deps = [
+        "//:raylib",
         "@eigen",
         "@flecs",
-        "//:raylib",
     ],
 )
 
 cc_library(
     name = "pbd",
     hdrs = [
+        "constraints.hpp",
         "kernels.hpp",
         "types.hpp",
     ],
     includes = [
+        "constraints.hpp",
         "kernels.hpp",
         "types.hpp",
     ],
@@ -123,9 +125,9 @@ cc_binary(
     deps = [
         ":graphics",
         ":pbd",
+        "//:raylib",
         "@eigen",
         "@flecs",
-        "//:raylib",
     ],
 )
 
@@ -134,10 +136,10 @@ wasm_cc_binary(
     cc_target = ":app1",
     # backend = "emscripten",
     outputs = [
-    # "mass-spring.js",
-    # "index.wasm",
-    # "app1.data",
-    # "index.html",
+        # "mass-spring.js",
+        # "index.wasm",
+        # "app1.data",
+        # "index.html",
     ],
     # simd = True,
     # standalone = True, # i don't want this. it's a wasi thing
