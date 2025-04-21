@@ -2,8 +2,12 @@
 
 #include "graphics.h"
 
+#include "entity.hpp"
 #include "kernels.hpp"
-#include "types.hpp"
+#include "types.h"
+
+#include <graphics/graphics.h>
+#include <iostream>
 
 float randf (int n) {
     return static_cast<float> (rand () % n);
@@ -11,8 +15,8 @@ float randf (int n) {
 
 Real global_time = 0.0;
 Real delta_time  = 0.016;
-int num_iter     = 10;
-int num_substeps = 100;
+int num_iter     = 2;
+int num_substeps = 1;
 
 Vector3r gravity (0, -9.81f, 0);
 
@@ -60,8 +64,8 @@ void register_prefabs (flecs::world& ecs) {
     .add<InverseMass> ()
     .add<LocalInertia> ()
     .add<LocalInverseInertia> ()
-    .add<WorldInertia> ()
-    .add<WorldInverseInertia> ()
+    // .add<WorldInertia> ()
+    // .add<WorldInverseInertia> ()
 
     // .add<PhysicsMesh>();
     .add<Forces> ();
@@ -102,9 +106,9 @@ const Matrix3r& inertia = Matrix3r::Identity ()) {
     .set<Mass> ({ mass })
     .set<InverseMass> ({ 1.0f / mass })
     .set<LocalInertia> ({ inertia })
-    .set<LocalInverseInertia> ({ inv_inertia })
-    .set<WorldInertia> ({ inertia })
-    .set<WorldInverseInertia> ({ inv_inertia });
+    .set<LocalInverseInertia> ({ inv_inertia });
+    // .set<WorldInertia> ({ inertia })
+    // .set<WorldInverseInertia> ({ inv_inertia });
 }
 
 inline Vector3 e2r (const Vector3r& v) {
@@ -131,22 +135,20 @@ int main () {
     // auto rb1                               = add_rigid_body (ecs);
     // rb1.get_mut<AngularVelocity> ()->value = Vector3r (0, 3, 0);
 
-    auto rb1                              = add_rigid_body (ecs);
-    auto rb2                              = add_rigid_body (ecs, { 0, 3, 0 });
-    // rb1.get_mut<LinearVelocity> ()->value = Vector3r (0, 10, 0);
-    // rb2.get_mut<LinearVelocity> ()->value = Vector3r (0, 1, 0);
-    // rb2.add<IsPinned> ();
-    // rb2.get_mut<Position> ()->value = Vector3r (0, 5, 0);
+    auto rb1                        = add_rigid_body (ecs);
+    rb1.get_mut<Position> ()->value = Vector3r (0.2, 0, 0);
 
-    // PositionalConstraint aa;
-    // Constraint constraint{ .type = phys::pbd::POSITIONAL_CONSTRAINT, .e1 = rb1, .e2 = rb2 };
-    // constraint.type = phys::pbd::POSITIONAL_CONSTRAINT;
-    // pbd_positional_constraint_init(&constraint, rb1, attachment_eid, (vec3) {
-    // 0.0, 0.0, 0.0 }, (vec3) { 0.0, 0.0, 0.0 }, 0.001, (vec3) { 0.0, -3.0, 0.0
-    // }); array_push(constraints, constraint);
+    auto fixed1 = add_rigid_body (ecs, { 0, 3, 0 });
+    // rb1.get_mut<LinearVelocity> ()->value  = Vector3r (0, 1, 0);
+    fixed1.get_mut<AngularVelocity> ()->value = Vector3r (0, 1, 0.2);
+    fixed1.add<IsPinned> ();
 
-    // p1.add<IsPinned>();
-    // p1.set<InverseMass>({0});
+    PositionalConstraint aa;
+    Constraint cc;
+    rb_positional_constraint_init (
+    cc, rb1, fixed1, { 0.5, 0.5, 0.5 }, Vector3r::Zero (), 1e-2, 2);
+    auto c1 = ecs.entity ().set<Constraint> (cc);
+
 
     ////////// system registration
     ecs.system ("progress").kind (flecs::OnUpdate).run ([] (flecs::iter& it) {
@@ -166,7 +168,7 @@ int main () {
     auto add_gravity =
     ecs.system<Forces, Mass> ("add_gravity").with<RigidBody> ().kind (0).each ([] (Forces& forces, Mass& mass) {
         Physics_Force pf;
-        Vector3r gravity (0, -1, 0);
+        Vector3r gravity (0, -10, 0);
         pf.force    = gravity * mass.value;
         pf.position = Vector3r::Zero ();
         forces.a.push_back (pf);
@@ -195,7 +197,7 @@ int main () {
            const LinearForce& f, const AngularForce& tau, const Mass mass) {
         x_old.value = x.value;
         q_old.value = q.value;
-
+        // std::cout << x_old.value << std::endl;
         rb_integrate (x.value, q.value, v.value, omega.value, I_body.value,
         I_body_inv.value, f.value, tau.value, mass.value, delta_time / num_substeps);
     });
@@ -207,15 +209,6 @@ int main () {
 
     auto solve_constraint =
     ecs.system<Constraint> ("constraint solve").kind (0).each ([&] (Constraint& c) {
-        // particle_solve_constraint(c, delta_time / num_substeps);
-        // auto e1 = c.e1;
-        // auto e2 = c.e2;
-
-        // auto x1 = e1.get_mut<Position>();
-        // auto x2 = e2.get_mut<Position>();
-
-        // auto w1 = e1.get<InverseMass>();
-        // auto w2 = e2.get<InverseMass>();
         rb_solve_constraint (c, delta_time / num_substeps);
     });
 
@@ -229,34 +222,35 @@ int main () {
 
     auto update_velocity =
     ecs
-    .system<LinearVelocity, AngularVelocity, const Position, const OldPosition, const Orientation, const OldOrientation> (
-    "update velocity")
+    .system<LinearVelocity, OldLinearVelocity, AngularVelocity, OldAngularVelocity,
+    const Position, const OldPosition, const Orientation, const OldOrientation> ("update velocity")
     .with<RigidBody> ()
     .kind (0)
-    .each ([&] (LinearVelocity& v, AngularVelocity& omega, const Position& x,
-           const OldPosition& x_old, const Orientation& q, const OldOrientation& q_old) {
+    .each ([&] (LinearVelocity& v, OldLinearVelocity& v_old, AngularVelocity& omega,
+           OldAngularVelocity& omega_old, const Position& x, const OldPosition& x_old,
+           const Orientation& q, const OldOrientation& q_old) {
         // particle_update_velocity(v.value, x.value, x_old.value, delta_time / num_substeps);
-        rb_update_velocity (v.value, omega.value, x.value, x_old.value, q.value,
-        q_old.value, delta_time / num_substeps);
+        rb_update_velocity (v.value, v_old.value, omega.value, omega_old.value,
+        x.value, x_old.value, q.value, q_old.value, delta_time / num_substeps);
     });
 
     ecs.system ("simulation loop").run ([&] (flecs::iter&) {
         auto sub_dt = delta_time / num_substeps;
 
         for (int i = 0; i < num_substeps; ++i) {
-            // clear_force.run ();
-            // add_gravity.run ();
-            // compute_external_forces.run ();
+            clear_force.run ();
+            add_gravity.run ();
+            compute_external_forces.run ();
             pbd_integrate.run ();
 
             clear_lambda.run ();
 
-            // for (int j = 0; j < num_iter; ++j) {
-            //     solve_constraint.run ();
-            // }
+            for (int j = 0; j < num_iter; ++j) {
+                solve_constraint.run ();
+            }
 
             // handle_ground_collision.run();
-            // update_velocity.run ();
+            update_velocity.run ();
         }
     });
 
@@ -273,11 +267,10 @@ int main () {
         // auto m = body.physics_mesh;
         // DrawMesh(x, q, m);
 
-        auto angle = 2.0 * acos (q.value.w ()); // radian
-        auto s     = sqrt (1.0f - q.value.w () * q.value.w ());
-        auto axis = Vector3r (q.value.x () / s, q.value.y () / s, q.value.z () / s);
+        auto aa = Eigen::AngleAxisd (q.value);
 
-        DrawModelEx (mmm, e2r (x.value), e2r (axis), angle * RAD2DEG, { 1, 1, 1 }, BLUE);
+        DrawModelWiresEx (mmm, e2r (x.value), e2r (aa.axis ()),
+        aa.angle () * RAD2DEG, e2r (Vector3r::Ones ()), BLUE);
     });
 
     // ecs.system<const Position, const Orientation>("draw_render_mesh")
@@ -295,7 +288,7 @@ int main () {
     //     });
 
     ecs.system<const Position, const Mass> ("draw mass info")
-    .with<Particle> ()
+    .with<RigidBody> ()
     .kind (graphics::PostRender)
     .each ([] (const Position& x, const Mass& m) {
         Vector3 textPos = e2r (x.value);
@@ -307,6 +300,26 @@ int main () {
         const char* label = (sprintf (id_buffer, "%0.2f", m.value), id_buffer);
 
         DrawText (label, screenPos.x, screenPos.y, 20, BLUE);
+    });
+
+    ecs.system<Constraint> ("draw constraint").kind (graphics::OnRender).each ([] (const Constraint& c) {
+        auto e1 = c.e1;
+        auto e2 = c.e2;
+        auto x1 = e1.get<Position> ()->value;
+        auto x2 = e2.get<Position> ()->value;
+        auto q1 = e1.get<Orientation> ()->value;
+        auto q2 = e2.get<Orientation> ()->value;
+
+        auto r1_wc = x1 + q1._transformVector (c.positional_constraint.r1_lc);
+        auto r2_wc = x2 + q2._transformVector (c.positional_constraint.r2_lc);
+
+        float lambda_abs = std::abs (c.positional_constraint.lambda);
+        float t          = lambda_abs > 1e-10f ?
+                 std::min (1.0f, -std::log10 (lambda_abs) / 10.0f) :
+                 1.0f; // fully green when lambda is very close to 0
+
+        Color color = ColorLerp (RED, GREEN, t);
+        DrawCylinderEx (e2r (r1_wc), e2r (r2_wc), 0.01, 0.01, 5, color);
     });
 
     ecs.system ("you can do it").kind (graphics::PostRender).run ([] (flecs::iter& it) {
@@ -330,12 +343,3 @@ int main () {
     printf ("Simulation ended.\n");
     return 0;
 }
-
-// #if defined(__EMSCRIPTEN__)
-// #include <emscripten/emscripten.h>
-// extern "C" {
-//     EMSCRIPTEN_KEEPALIVE void emscripten_shutdown() {
-//         graphics::close_window();
-//     }
-// }
-// #endif

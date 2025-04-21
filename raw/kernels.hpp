@@ -1,7 +1,7 @@
 // pbd/kernels.hpp
 #pragma once
 #include "constraints.hpp"
-#include "types.hpp"
+#include "types.h"
 
 namespace phys {
 namespace pbd {
@@ -126,12 +126,17 @@ const Real dt) {
 }
 
 inline void rb_update_velocity (Vector3r& v,
+Vector3r& v_old,
 Vector3r& omega,
+Vector3r& omega_old,
 const Vector3r& x,
 const Vector3r& x_old,
 const Quaternionr& q,
 const Quaternionr& q_old,
 const Real dt) {
+    v_old     = v;
+    omega_old = omega;
+
     v = (x - x_old) / dt;
 
     // again, omega is a body quantity, so change goes to the right side
@@ -162,11 +167,13 @@ const Vector3r& omega0) {
     omega = omega0;
 }
 
+// poco
 inline void rb_clear_force (Vector3r& f, Vector3r& tau) {
     f.setZero ();
     tau.setZero ();
 }
 
+// entity function
 inline Vector3r rb_calculate_external_force (flecs::entity e) {
     const Vector3r center_of_mass (0, 0, 0);
     Vector3r total_force (0, 0, 0);
@@ -178,6 +185,7 @@ inline Vector3r rb_calculate_external_force (flecs::entity e) {
     return total_force;
 }
 
+// entity function
 inline Vector3r rb_calculate_external_torque (flecs::entity e) {
     const Vector3r center_of_mass (0, 0, 0);
     Vector3r total_torque (0, 0, 0);
@@ -190,28 +198,29 @@ inline Vector3r rb_calculate_external_torque (flecs::entity e) {
     return total_torque;
 }
 
+// entity function
 inline void rb_clear_constraint_lambda (Constraint& c) {
     switch (c.type) {
     case POSITIONAL_CONSTRAINT: {
         c.positional_constraint.lambda = 0.0;
         return;
     } break;
-    case COLLISION_CONSTRAINT: {
-        c.collision_constraint.lambda_n = 0.0;
-        c.collision_constraint.lambda_t = 0.0;
-        return;
-    } break;
-    case SPHERICAL_JOINT_CONSTRAINT: {
-        c.spherical_joint_constraint.lambda_pos   = 0.0;
-        c.spherical_joint_constraint.lambda_swing = 0.0;
-        c.spherical_joint_constraint.lambda_twist = 0.0;
-    }
+        // case COLLISION_CONSTRAINT: {
+        //     c.collision_constraint.lambda_n = 0.0;
+        //     c.collision_constraint.lambda_t = 0.0;
+        //     return;
+        // } break;
+        // case SPHERICAL_JOINT_CONSTRAINT: {
+        //     c.spherical_joint_constraint.lambda_pos   = 0.0;
+        //     c.spherical_joint_constraint.lambda_swing = 0.0;
+        //     c.spherical_joint_constraint.lambda_twist = 0.0;
+        // }
     }
 
     assert (0);
 }
 
-
+// entity function
 void rb_positional_constraint_init (Constraint& constraint,
 flecs::entity e1,
 flecs::entity e2,

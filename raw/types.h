@@ -6,9 +6,25 @@
 
 typedef double Real;
 
+// using Matrix3r = Eigen::Matrix<Real, 3, 3, Eigen::DontAlign>;
+// using Matrix4r = Eigen::Matrix<Real, 4, 4, Eigen::DontAlign>;
+// using Vector3r = Eigen::Matrix<Real, 3, 1, Eigen::DontAlign>;
+// using Quaternionr = Eigen::Quaternion<Real, Eigen::DontAlign>;
+
+using Vector2r = Eigen::Matrix<Real, 2, 1, Eigen::DontAlign>;
+using Vector3r = Eigen::Matrix<Real, 3, 1, Eigen::DontAlign>;
+using Vector4r = Eigen::Matrix<Real, 4, 1, Eigen::DontAlign>;
+using Vector5r = Eigen::Matrix<Real, 5, 1, Eigen::DontAlign>;
+using Vector6r = Eigen::Matrix<Real, 6, 1, Eigen::DontAlign>;
+using Matrix2r = Eigen::Matrix<Real, 2, 2, Eigen::DontAlign>;
 using Matrix3r = Eigen::Matrix<Real, 3, 3, Eigen::DontAlign>;
 using Matrix4r = Eigen::Matrix<Real, 4, 4, Eigen::DontAlign>;
-using Vector3r = Eigen::Matrix<Real, 3, 1, Eigen::DontAlign>;
+using Vector2i = Eigen::Matrix<int, 2, 1, Eigen::DontAlign>;
+using Vector3i = Eigen::Matrix<int, 3, 1, Eigen::DontAlign>;
+using Vector4i = Eigen::Matrix<int, 4, 1, Eigen::DontAlign>;
+using AlignedBox2r = Eigen::AlignedBox<Real, 2>;
+using AlignedBox3r = Eigen::AlignedBox<Real, 3>;
+using AngleAxisr = Eigen::AngleAxis<Real>;
 using Quaternionr = Eigen::Quaternion<Real, Eigen::DontAlign>;
 
 namespace phys {
@@ -96,14 +112,14 @@ namespace phys {
             SPHERICAL_JOINT_CONSTRAINT
         } Constraint_Type;
 
-        enum class AxisType {
+        typedef enum AxisType {
             POSITIVE_X,
             NEGATIVE_X,
             POSITIVE_Y,
             NEGATIVE_Y,
             POSITIVE_Z,
             NEGATIVE_Z
-        };
+        } AxisType;
 
         typedef double r64;
 
@@ -120,7 +136,9 @@ namespace phys {
         } vec3;
 
         typedef struct {
-            Vector3r r1_lc; // application point for body1. defined in b1's local frame
+            // vec3 r1_lc; // application point for body1. defined in b1's local frame
+            // vec3 r2_lc;
+            Vector3r r1_lc;
             Vector3r r2_lc;
             Real compliance;
             Real lambda;
@@ -159,12 +177,14 @@ namespace phys {
             flecs::entity e1;
             flecs::entity e2;
             // Vector3r aaa;
+            PositionalConstraint positional_constraint;
 
-            union {
-                PositionalConstraint positional_constraint;
-                SphericalJointConstraint spherical_joint_constraint;
-                CollisionConstraint collision_constraint;
-            };
+            // union {
+                // PositionalConstraint positional_constraint;
+                // SphericalJointConstraint spherical_joint_constraint;
+                // CollisionConstraint collision_constraint;
+            // };
+
         } Constraint;
 
         struct Position_Constraint_Preprocessed_Data {

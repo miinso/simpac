@@ -1,5 +1,6 @@
-#include "types.hpp"
+#include "types.h"
 #include <flecs.h>
+#include <iostream>
 
 using namespace phys::pbd;
 
@@ -71,26 +72,29 @@ Vector3r delta_x) {
     auto r2_wc        = pcpd->r2_wc;
     auto I_world_inv1 = pcpd->e1_world_inverse_inertia_tensor;
     auto I_world_inv2 = pcpd->e2_world_inverse_inertia_tensor;
-    auto x1           = e1.get_mut<Position> ()->value;
-    auto x2           = e2.get_mut<Position> ()->value;
-    auto q1           = e1.get_mut<Orientation> ()->value;
-    auto q2           = e2.get_mut<Orientation> ()->value;
+    auto& x1          = e1.get_mut<Position> ()->value;
+    auto& x2          = e2.get_mut<Position> ()->value;
+    auto& q1          = e1.get_mut<Orientation> ()->value;
+    auto& q2          = e2.get_mut<Orientation> ()->value;
 
-    auto n = delta_x.normalized (); // direction in world coord
+    auto n = delta_x.normalized (); // x1 to x2. direction in world coord
 
-    auto grad_x1 = n;
-    auto grad_x2 = -n;
+    auto grad_x1 = -n; // violation increases when x1 move in opposite to `n`
+    auto grad_x2 = n;
 
     if (!e1.has<IsPinned> ()) {
-        x1 += e1.get<InverseMass> ()->value * delta_lambda * grad_x1;
+        auto correction = e1.get<InverseMass> ()->value * delta_lambda * grad_x1;
+        x1 += correction;
+        std::cout << delta_lambda << std::endl;
     }
 
     if (!e2.has<IsPinned> ()) {
         x2 += e2.get<InverseMass> ()->value * delta_lambda * grad_x2;
     }
 
-    auto grad_phi1 = r1_wc.cross (n);
-    auto grad_phi2 = r2_wc.cross (-n);
+    auto grad_phi1 = r1_wc.cross (-n);
+    auto grad_phi2 = r2_wc.cross (n);
+
 
     if (!e1.has<IsPinned> ()) {
         // this time, the correction `q_change` is calculated from the world

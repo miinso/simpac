@@ -55,13 +55,15 @@ cc_library(
     name = "pbd",
     hdrs = [
         "constraints.hpp",
+        "entity.hpp",
         "kernels.hpp",
-        "types.hpp",
+        "types.h",
     ],
     includes = [
         "constraints.hpp",
+        "entity.hpp",
         "kernels.hpp",
-        "types.hpp",
+        "types.h",
     ],
     deps = [
         "@eigen",
