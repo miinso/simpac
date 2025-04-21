@@ -52,6 +52,38 @@ cc_library(
 )
 
 cc_library(
+    name = "collision",
+    srcs = [
+        "broad.cpp",
+        "clipping.cpp",
+        "collider.cpp",
+        "epa.cpp",
+        "gjk.cpp",
+        "support.cpp",
+    ],
+    hdrs = [
+        "broad.h",
+        "clipping.h",
+        "collider.h",
+        "epa.h",
+        "gjk.h",
+        "support.h",
+    ],
+    includes = [
+        "broad.h",
+        "clipping.h",
+        "collider.h",
+        "epa.h",
+        "gjk.h",
+        "support.h",
+    ],
+    deps = [
+        "@eigen",
+        "@flecs",
+    ],
+)
+
+cc_library(
     name = "pbd",
     hdrs = [
         "constraints.hpp",
@@ -66,6 +98,7 @@ cc_library(
         "types.h",
     ],
     deps = [
+        ":collision",
         "@eigen",
         "@flecs",
     ],

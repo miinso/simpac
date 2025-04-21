@@ -27,7 +27,13 @@ using AlignedBox3r = Eigen::AlignedBox<Real, 3>;
 using AngleAxisr = Eigen::AngleAxis<Real>;
 using Quaternionr = Eigen::Quaternion<Real, Eigen::DontAlign>;
 
+namespace prefabs {
+struct Particle {};
+struct RigidBody {};
+} // namespace prefabs
+
 namespace phys {
+
     namespace pbd {
         // world quantities, unless otherwise mentioned
 
@@ -65,6 +71,10 @@ namespace phys {
         struct DynamicFriction { Real value = 0.3f; };
         struct StaticFriction { Real value = 0.3f; };
 
+        struct BoundingSphere { Real value = 1; }; // radius
+
+        // struct Colliders { std::vector<Collider> value; };
+
         typedef struct {
             Vector3r position;
             Vector3r force;
@@ -97,13 +107,6 @@ namespace phys {
             Real elapsed = 0;
         };
 
-        // enum class ConstraintType {
-        //     DISTANCE,
-        //     CONTACT,
-        //     POSITIONAL,
-        //     COUNT
-        // };
-
         typedef enum {
             POSITIONAL_CONSTRAINT,
             COLLISION_CONSTRAINT,
@@ -121,24 +124,22 @@ namespace phys {
             NEGATIVE_Z
         } AxisType;
 
-        typedef double r64;
+        // typedef double r64;
 
-        typedef union
-        {
-            struct
-            {
-                r64 x, y, z;
-            };
-            struct
-            {
-                r64 r, g, b;
-            };
-        } vec3;
+        // typedef union
+        // {
+        //     struct
+        //     {
+        //         r64 x, y, z;
+        //     };
+        //     struct
+        //     {
+        //         r64 r, g, b;
+        //     };
+        // } vec3;
 
         typedef struct {
-            // vec3 r1_lc; // application point for body1. defined in b1's local frame
-            // vec3 r2_lc;
-            Vector3r r1_lc;
+            Vector3r r1_lc; // application point for body1. defined in b1's local frame
             Vector3r r2_lc;
             Real compliance;
             Real lambda;
@@ -176,9 +177,11 @@ namespace phys {
             Constraint_Type type;
             flecs::entity e1;
             flecs::entity e2;
-            // Vector3r aaa;
-            PositionalConstraint positional_constraint;
 
+            PositionalConstraint positional_constraint;
+            // SphericalJointConstraint spherical_joint_constraint;
+            // CollisionConstraint collision_constraint;
+            
             // union {
                 // PositionalConstraint positional_constraint;
                 // SphericalJointConstraint spherical_joint_constraint;

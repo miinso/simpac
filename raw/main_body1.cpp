@@ -23,10 +23,7 @@ Vector3r gravity (0, -9.81f, 0);
 using namespace phys::pbd;
 using namespace phys::pbd::rigidbody;
 
-namespace prefabs {
-struct Particle {};
-struct RigidBody {};
-} // namespace prefabs
+
 
 // should i use
 //
@@ -38,78 +35,7 @@ struct RigidBody {};
 //
 // instead of OldPosition?
 
-void register_prefabs (flecs::world& ecs) {
 
-    ecs.prefab<prefabs::RigidBody> ()
-    .add<RigidBody> ()
-
-    .add<Position> ()
-    .add<Orientation> ()
-    .add<LinearVelocity> ()
-    .add<AngularVelocity> ()
-
-    .add<Position0> ()
-    .add<Orientation0> ()
-    .add<LinearVelocity0> ()
-    .add<AngularVelocity0> ()
-
-    .add<OldPosition> ()
-    .add<OldOrientation> ()
-    .add<OldLinearVelocity> ()
-    .add<OldAngularVelocity> ()
-
-    .add<LinearForce> ()
-    .add<AngularForce> () // torque
-    .add<Mass> ()
-    .add<InverseMass> ()
-    .add<LocalInertia> ()
-    .add<LocalInverseInertia> ()
-    // .add<WorldInertia> ()
-    // .add<WorldInverseInertia> ()
-
-    // .add<PhysicsMesh>();
-    .add<Forces> ();
-}
-
-flecs::entity add_rigid_body (flecs::world& ecs,
-const Vector3r& x0      = Vector3r::Zero (),
-const Quaternionr& q0   = Quaternionr::Identity (),
-const Vector3r& v0      = Vector3r::Zero (),
-const Vector3r& omega0  = Vector3r::Zero (),
-Real mass               = 1.0f,
-const Matrix3r& inertia = Matrix3r::Identity ()) {
-
-    // TODO: inertia should be set when a physics_mesh is attached to this
-    // entity do closed form thing or volume integration.
-    Matrix3r inv_inertia = inertia.inverse ();
-
-    return ecs.entity ()
-    .is_a<prefabs::RigidBody> ()
-
-    .set<Position> ({ x0 })
-    .set<Orientation> ({ q0 })
-    .set<LinearVelocity> ({ v0 })
-    .set<AngularVelocity> ({ omega0 })
-
-    .set<Position0> ({ x0 })
-    .set<Orientation0> ({ q0 })
-    .set<LinearVelocity0> ({ v0 })
-    .set<AngularVelocity0> ({ omega0 })
-
-    .set<OldPosition> ({ x0 })
-    .set<OldOrientation> ({ q0 })
-    .set<OldLinearVelocity> ({ v0 })
-    .set<OldAngularVelocity> ({ omega0 })
-
-    .set<LinearForce> ({ Vector3r::Zero () })
-    .set<AngularForce> ({ Vector3r::Zero () })
-    .set<Mass> ({ mass })
-    .set<InverseMass> ({ 1.0f / mass })
-    .set<LocalInertia> ({ inertia })
-    .set<LocalInverseInertia> ({ inv_inertia });
-    // .set<WorldInertia> ({ inertia })
-    // .set<WorldInverseInertia> ({ inv_inertia });
-}
 
 inline Vector3 e2r (const Vector3r& v) {
     return { (float)v.x (), (float)v.y (), (float)v.z () };
@@ -258,10 +184,11 @@ int main () {
 
     auto mmm = LoadModelFromMesh (GenMeshCube (1, 1, 1));
 
+
     ecs.system<const Position, const Orientation> ("draw_physics_mesh")
     .with<RigidBody> ()
     .kind (graphics::OnRender)
-    .each ([&] (const Position& x, const Orientation q) {
+    .each ([&] (const Position& x, const Orientation& q) {
         // draw physics mesh
         // DrawCube(e2r(x.value), q.value.w(), 1, 1, BLUE);
         // auto m = body.physics_mesh;

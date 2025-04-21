@@ -1,9 +1,10 @@
 #include "broad.h"
+#include <types.h>
 #include <unordered_map>
 #include <unordered_set>
 #include <algorithm>
 #include <cassert>
-#include "../util.h"
+// #include "../util.h"
 
 std::vector<Broad_Collision_Pair> broad_get_collision_pairs(const std::vector<flecs::entity>& entities) {
     std::vector<Broad_Collision_Pair> collision_pairs;
@@ -12,17 +13,25 @@ std::vector<Broad_Collision_Pair> broad_get_collision_pairs(const std::vector<fl
     for (size_t i = 0; i < entities.size(); ++i) {
         auto e1 = entities[i];
         for (size_t j = i + 1; j < entities.size(); ++j) {
-            Entity* e2 = entities[j];
+            // Entity* e2 = entities[j];
+            auto e2 = entities[j];
 
-            Real entities_distance = (e1->world_position - e2->world_position).norm();
+            auto x1 = e1.get<phys::pbd::Position>()->value;
+            auto x2 = e2.get<phys::pbd::Position>()->value;
+
+            auto bs1 = e1.get<BoundingSphere>();
+            auto bs2 = e1.get<BoundingSphere>();
+
+
+            Real entities_distance = (x1 - x2).norm();
 
             // Increase the distance a little to account for moving objects.
             // @TODO: We should derivate this value from delta_time, forces, velocities, etc
             Real max_distance_for_collision = e1->bounding_sphere_radius + e2->bounding_sphere_radius + 0.1;
             if (entities_distance <= max_distance_for_collision) {
                 Broad_Collision_Pair pair;
-                pair.e1 = e1->id;
-                pair.e2 = e2->id;
+                pair.e1 = e1;
+                pair.e2 = e2;
                 collision_pairs.push_back(pair);
             }
         }
@@ -61,27 +70,31 @@ namespace {
 
     // Collect all entities into a union-find structure
     std::unordered_map<flecs::entity, flecs::entity> uf_collect_all(
-        const std::vector<Entity*>& entities, 
+        const std::vector<flecs::entity>& entities, 
         const std::vector<Broad_Collision_Pair>& collision_pairs) {
         
         std::unordered_map<flecs::entity, flecs::entity> entity_to_parent_map;
         
         // Initialize each entity to point to itself
         for (const auto& entity : entities) {
-            entity_to_parent_map[entity->id] = entity->id;
+            entity_to_parent_map[entity] = entity;
         }
 
         // Union entities in collision pairs
         for (const auto& collision_pair : collision_pairs) {
-            flecs::entity id1 = collision_pair.e1;
-            flecs::entity id2 = collision_pair.e2;
+            flecs::entity e1 = collision_pair.e1;
+            flecs::entity e2 = collision_pair.e2;
             
             // Get entity objects
-            Entity* e1 = entity_get_by_id(id1);
-            Entity* e2 = entity_get_by_id(id2);
+            // Entity* e1 = entity_get_by_id(id1);
+            // Entity* e2 = entity_get_by_id(id2);
             
-            if (!e1->fixed && !e2->fixed) {
-                uf_union(entity_to_parent_map, id1, id2);
+            
+            // TODO: call this function with active entities only to avoid `e1.has<phys::pbd::IsPinned>()`
+            
+            // if (!e1->fixed && !e2->fixed) {
+            if (!e1.has<phys::pbd::IsPinned>() && !e2.has<phys::pbd::IsPinned>()) {
+                uf_union(entity_to_parent_map, e1, e2);
             }
         }
 
@@ -90,9 +103,9 @@ namespace {
 }
 
 std::vector<std::vector<flecs::entity>> broad_collect_simulation_islands(
-    const std::vector<Entity*>& entities, 
+    const std::vector<flecs::entity>& entities, 
     const std::vector<Broad_Collision_Pair>& collision_pairs, 
-    const std::vector<Constraint>* constraints) {
+    const std::vector<phys::pbd::Constraint>* constraints) {
     
     std::vector<std::vector<flecs::entity>> simulation_islands;
     simulation_islands.reserve(32);
@@ -103,14 +116,17 @@ std::vector<std::vector<flecs::entity>> broad_collect_simulation_islands(
     // Extra step: To avoid bugs, we need to make sure that entities that are part of a same constraint are also part of the same island!
     if (constraints != nullptr) { // contact constraints
         for (const auto& c : *constraints) {
-            flecs::entity id1 = c.e1_id;
-            flecs::entity id2 = c.e2_id;
+            // flecs::entity id1 = c.e1_id;
+            // flecs::entity id2 = c.e2_id;
+            auto e1 = c.e1;
+            auto e2 = c.e2;
             
-            Entity* e1 = entity_get_by_id(id1);
-            Entity* e2 = entity_get_by_id(id2);
-            
-            if (!e1->fixed && !e2->fixed) {
-                uf_union(entity_to_parent_map, id1, id2);
+            // Entity* e1 = entity_get_by_id(id1);
+            // Entity* e2 = entity_get_by_id(id2);
+
+            // if (!e1->fixed && !e2->fixed) {
+            if (!e1.has<phys::pbd::IsPinned>() && !e2.has<phys::pbd::IsPinned>()) {
+                uf_union(entity_to_parent_map, e1, e2);
             }
         }
     }
@@ -119,11 +135,11 @@ std::vector<std::vector<flecs::entity>> broad_collect_simulation_islands(
     std::unordered_map<flecs::entity, size_t> simulation_islands_map;
 
     for (const auto& entity : entities) {
-        if (entity->fixed) {
+        if (entity.has<phys::pbd::IsPinned>()) {
             continue;
         }
         
-        flecs::entity parent = uf_find(entity_to_parent_map, entity->id);
+        flecs::entity parent = uf_find(entity_to_parent_map, entity);
         
         auto it = simulation_islands_map.find(parent);
         if (it == simulation_islands_map.end()) {
@@ -136,10 +152,10 @@ std::vector<std::vector<flecs::entity>> broad_collect_simulation_islands(
             simulation_islands_map[parent] = simulation_island_idx;
             
             // Add the entity to the new island
-            simulation_islands.back().push_back(entity->id);
+            simulation_islands.back().push_back(entity);
         } else {
             // Add to existing island
-            simulation_islands[it->second].push_back(entity->id);
+            simulation_islands[it->second].push_back(entity);
         }
     }
 

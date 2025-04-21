@@ -8,6 +8,7 @@
 #include <flecs.h>
 
 struct Broad_Collision_Pair {
+    // TODO: to hold `flecs::entity` or `flecs::entity.id()`?
     flecs::entity e1;
     flecs::entity e2;
 };
