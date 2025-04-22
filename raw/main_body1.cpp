@@ -24,7 +24,6 @@ using namespace phys::pbd;
 using namespace phys::pbd::rigidbody;
 
 
-
 // should i use
 //
 // struct Position {
@@ -34,7 +33,6 @@ using namespace phys::pbd::rigidbody;
 // };
 //
 // instead of OldPosition?
-
 
 
 inline Vector3 e2r (const Vector3r& v) {
@@ -69,12 +67,11 @@ int main () {
     fixed1.get_mut<AngularVelocity> ()->value = Vector3r (0, 1, 0.2);
     fixed1.add<IsPinned> ();
 
-    PositionalConstraint aa;
-    Constraint cc;
+    Constraint cc1; // component
+    // flecs::entity add_positional_constraint();
     rb_positional_constraint_init (
-    cc, rb1, fixed1, { 0.5, 0.5, 0.5 }, Vector3r::Zero (), 1e-2, 2);
-    auto c1 = ecs.entity ().set<Constraint> (cc);
-
+    cc1, rb1, fixed1, { 0.5, 0.5, 0.5 }, Vector3r::Zero (), 1e-2, 2);
+    ecs.entity ().set<Constraint> (cc1); // entity now
 
     ////////// system registration
     ecs.system ("progress").kind (flecs::OnUpdate).run ([] (flecs::iter& it) {
@@ -261,6 +258,15 @@ int main () {
                   "map\nInput: W,A,S,D,Q,E,Up,Down,Left,Top,MouseDrag",
         20, 100, 20, DARKGREEN);
     });
+
+    // key input
+
+    // ecs.system ("key handle").run ([] (flecs::iter& it) {
+    //     if (IsKeyDown (KEY_SPACE)) {
+    //         throw_object (it.world ());
+    //     }
+    // });
+    throw_object(ecs);
 
     // ecs.import <flecs::stats>(); % this causes problems on web build
     // ecs.set<flecs::Rest>({});

@@ -1,5 +1,5 @@
-#include "types.h"
 #include "collider.h"
+#include "types.h"
 #include <flecs.h>
 #include <raylib.h>
 #include <vector>
@@ -35,11 +35,9 @@ inline void register_prefabs (flecs::world& ecs) {
     .add<LocalInverseInertia> ()
     // .add<WorldInertia> ()
     // .add<WorldInverseInertia> ()
-    .add<Mesh>()
+    .add<Mesh> ()
     // .add<PhysicsMesh>();
     .add<Forces> ();
-
-    
 }
 
 flecs::entity add_rigid_body (flecs::world& ecs,
@@ -86,72 +84,72 @@ const Matrix3r& inertia = Matrix3r::Identity ()) {
 // flecs::entity add_constraint() {}
 // void draw_rigidbody() {}
 
-Collider createSphereCollider(Real radius) {
-    return collider_sphere_create(radius);
+Collider createSphereCollider (Real radius) {
+    return collider_sphere_create (radius);
 }
 
-Collider createConvexHullColliderFromMesh(const Mesh& mesh, const Vector3r& scale) {
+Collider createConvexHullColliderFromMesh (const Mesh& mesh, const Vector3r& scale) {
     std::vector<Vector3r> vertices;
-    vertices.reserve(mesh.vertexCount);
-    
+    vertices.reserve (mesh.vertexCount);
+
     for (int i = 0; i < mesh.vertexCount; ++i) {
         Vector3r position;
-        position.x() = static_cast<Real>(mesh.vertices[i * 3]) * scale.x();
-        position.y() = static_cast<Real>(mesh.vertices[i * 3 + 1]) * scale.y();
-        position.z() = static_cast<Real>(mesh.vertices[i * 3 + 2]) * scale.z();
-        vertices.push_back(position);
+        position.x () = static_cast<Real> (mesh.vertices[i * 3]) * scale.x ();
+        position.y () = static_cast<Real> (mesh.vertices[i * 3 + 1]) * scale.y ();
+        position.z () = static_cast<Real> (mesh.vertices[i * 3 + 2]) * scale.z ();
+        vertices.push_back (position);
     }
-    
+
     std::vector<unsigned int> indices;
-    indices.reserve(mesh.triangleCount * 3);
+    indices.reserve (mesh.triangleCount * 3);
     for (int i = 0; i < mesh.triangleCount * 3; ++i) {
-        indices.push_back(static_cast<unsigned int>(mesh.indices[i]));
+        indices.push_back (static_cast<unsigned int> (mesh.indices[i]));
     }
-    
-    return collider_convex_hull_create(vertices, indices);
+
+    return collider_convex_hull_create (vertices, indices);
 }
 
-std::vector<Collider> createSphereColliders(Real radius) {
+std::vector<Collider> createSphereColliders (Real radius) {
     std::vector<Collider> colliders;
-    colliders.push_back(createSphereCollider(radius));
+    colliders.push_back (createSphereCollider (radius));
     return colliders;
 }
 
-std::vector<Collider> createMeshColliders(const Mesh& mesh, const Vector3r& scale) {
+std::vector<Collider> createMeshColliders (const Mesh& mesh, const Vector3r& scale) {
     std::vector<Collider> colliders;
-    colliders.push_back(createConvexHullColliderFromMesh(mesh, scale));
+    colliders.push_back (createConvexHullColliderFromMesh (mesh, scale));
     return colliders;
 }
 
-std::vector<Collider> example_util_create_sphere_convex_hull_array(Real radius) {
-    Collider collider = collider_sphere_create(radius);
-    
+std::vector<Collider> example_util_create_sphere_convex_hull_array (Real radius) {
+    Collider collider = collider_sphere_create (radius);
+
     std::vector<Collider> colliders;
-    colliders.push_back(collider);
-    
+    colliders.push_back (collider);
+
     return colliders;
 }
 
-void throw_object(flecs::world& ecs) {
+void throw_object (flecs::world ecs) {
     // mesh = rendermesh = raylib::Mesh
     // collider = physicsmesh = derived from raylib::Mesh
 
     // Mesh m = GenMeshCube(1, 1, 1);
 
-    int r = rand();
+    int r         = rand ();
     int is_sphere = 0;
-    
+
     Mesh m;
 
     if (r % 4 == 0) {
-        m = GenMeshCube(1, 1, 1);
+        m = GenMeshCube (1, 1, 1);
     } else if (r % 4 == 1) {
-        m = GenMeshCone(0.5, 1, 8);
+        m = GenMeshCone (0.5, 1, 8);
     } else if (r % 4 == 2) {
-        m = GenMeshCylinder(0.5, 1, 8);
+        m = GenMeshCylinder (0.5, 1, 8);
     } else {
         is_sphere = 1;
-        m = GenMeshSphere(0.5, 8, 8);
+        m         = GenMeshSphere (0.5, 8, 8);
     }
 
     // mesh.verts, mesh.indices -> required to generate collider
@@ -164,25 +162,25 @@ void throw_object(flecs::world& ecs) {
 
     if (is_sphere) {
         Real radius = 1.0;
-        scale = Vector3r::Ones() * radius;
-        colliders = createSphereColliders(radius);
+        scale       = Vector3r::Ones () * radius;
+        colliders   = createSphereColliders (radius);
     } else {
-        scale = Vector3r::Ones();
-        colliders = createMeshColliders(m, scale);
+        scale     = Vector3r::Ones ();
+        colliders = createMeshColliders (m, scale);
     }
 
-    auto e1 = add_rigid_body(ecs);
-    e1.set<Mesh>(m);
-    auto radius = colliders_get_bounding_sphere_radius(colliders);
-    e1.set<BoundingSphere>({radius});
-    auto inertia = colliders_get_default_inertia_tensor(colliders, e1.get<Mass>()->value);
-    e1.set<LocalInertia>({inertia});
-    e1.set<LocalInverseInertia>({inertia.inverse()});
-    // e1.get_mut<LinearVelocity>()->value = {0, 1, 0};
+    auto e1 = add_rigid_body (ecs);
+    e1.set<Mesh> (m);
+    auto radius = colliders_get_bounding_sphere_radius (colliders);
+    e1.set<BoundingSphere> ({ radius });
+    auto inertia =
+    colliders_get_default_inertia_tensor (colliders, e1.get<Mass> ()->value);
+    e1.set<LocalInertia> ({ inertia });
+    e1.set<LocalInverseInertia> ({ inertia.inverse () });
 
+    e1.get_mut<LinearVelocity> ()->value  = { 0, 5, 0 };
+    e1.get_mut<AngularVelocity> ()->value = { 0, 2, 0 };
 
     // DrawMesh(Mesh mesh, Material material, Matrix transform);
     // TODO: build the world transform using x, q, s
-    
-
 }
