@@ -197,6 +197,26 @@ int main () {
         aa.angle () * RAD2DEG, e2r (Vector3r::Ones ()), BLUE);
     });
 
+    auto default_mat = LoadMaterialDefault ();
+    ecs
+    .system<const Position, const Orientation, const Mesh0> (
+    "draw_physics_mesh2")
+    .with<RigidBody> ()
+    .kind (graphics::OnRender)
+    .each ([&] (flecs::entity e, const Position& x, const Orientation& q, const Mesh0& mesh0) {
+        // draw physics mesh
+        // DrawCube(e2r(x.value), q.value.w(), 1, 1, BLUE);
+        // auto m = body.physics_mesh;
+        // DrawMesh(x, q, m);
+
+        auto aa = Eigen::AngleAxisd (q.value);
+        auto translation = MatrixTranslate (x.value.x (), x.value.y (), x.value.z ());
+        auto rotation = MatrixRotate (e2r (aa.axis ()), aa.angle () * RAD2DEG);
+        auto tf       = MatrixMultiply (rotation, translation);
+        // mesh0.m;
+        DrawMesh (mesh0.m, default_mat, tf);
+    });
+
     // ecs.system<const Position, const Orientation>("draw_render_mesh")
     //     .with<RigidBody>()
     //     .kind(graphics::OnRender)
@@ -261,14 +281,15 @@ int main () {
 
     // key input
 
-    ecs.system ("key handle").kind(graphics::PreRender).run ([&] (flecs::iter& it) {
+    ecs.system ("key handle").kind (graphics::PreRender).run ([&] (flecs::iter& it) {
         if (IsKeyDown (KEY_SPACE)) {
             // throw_object (ecs);
         }
         // it.fini();
     });
 
-    example_util_throw_object(ecs);
+    example_util_install_floor (ecs);
+    example_util_throw_object (ecs);
 
     // ecs.import <flecs::stats>(); % this causes problems on web build
     // ecs.set<flecs::Rest>({});

@@ -32,6 +32,7 @@ struct Collider_Sphere {
     Vector3r center;
 };
 
+
 enum Collider_Type {
     COLLIDER_TYPE_SPHERE,
     COLLIDER_TYPE_CONVEX_HULL
@@ -48,6 +49,8 @@ struct Collider {
     Collider_Convex_Hull convex_hull;
     Collider_Sphere sphere;
 };
+
+struct Colliders { std::vector<Collider> value; };
 
 // @NOTE: for simplicity (and speed), we don't deal with scaling in the colliders.
 // therefore, if the object is scaled, the collider needs to be recreated (and the vertices should be already scaled when creating it)

@@ -1,5 +1,6 @@
 #include "collider.h"
 #include "types.h"
+#include <broad.h>
 #include <flecs.h>
 #include <raylib.h>
 #include <vector>
@@ -169,15 +170,60 @@ void example_util_throw_object (flecs::world& ecs) {
     auto radius = colliders_get_bounding_sphere_radius (colliders);
     e1.set<BoundingSphere> ({ radius });
 
-    assert(e1.has<Mass>());
+    assert (e1.has<Mass> ());
 
-    auto inertia = colliders_get_default_inertia_tensor (colliders, 1);
+    auto inertia =
+    colliders_get_default_inertia_tensor (colliders, e1.get<Mass> ()->value);
     e1.set<LocalInertia> ({ inertia });
     e1.set<LocalInverseInertia> ({ inertia.inverse () });
 
-    e1.get_mut<LinearVelocity> ()->value = Vector3r (0.0, 15.0, 0.0);
+    e1.get_mut<LinearVelocity> ()->value  = Vector3r (0.0, 15.0, 0.0);
     e1.get_mut<AngularVelocity> ()->value = { 0, 2, 10 };
 
     // DrawMesh(Mesh mesh, Material material, Matrix transform);
     // TODO: build the world transform using x, q, s
+}
+
+void example_util_install_floor (flecs::world& ecs) {
+    Vector3r floor_scale = { 1, 1, 1 };
+    auto floor_entity    = add_rigid_body (ecs);
+
+    // visual mesh
+    auto cube_mesh = GenMeshCube (10, 1, 10);
+    floor_entity.set<Mesh0> ({ cube_mesh });
+
+    // collision mesh
+    auto floor_colliders = entity_create_mesh_collider (cube_mesh, floor_scale);
+    floor_entity.set<Colliders> ({ floor_colliders });
+
+    // set bounding volume
+    auto radius = colliders_get_bounding_sphere_radius (floor_colliders);
+    floor_entity.set<BoundingSphere> ({ radius });
+
+    // set inertia
+    auto inertia = colliders_get_default_inertia_tensor (
+    floor_colliders, floor_entity.get<Mass> ()->value);
+    floor_entity.set<LocalInertia> ({ inertia });
+    floor_entity.set<LocalInverseInertia> ({ inertia.inverse () });
+
+    // floor is fixed
+    floor_entity.add<IsPinned> ();
+}
+
+void simulate (flecs::world& ecs, Real dt) {
+    auto entities = ecs.all();
+    auto broad_collision_pairs = broad_get_collision_pairs (entities);
+    
+    auto simulation_islands = broad_collect_simulation_islands (entities, pairs);
+    for each island, do the sleep thing
+
+    integrate
+
+    collect collision
+
+    constraint solve
+
+    velocity update
+
+    velocity pass
 }

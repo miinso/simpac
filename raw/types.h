@@ -4,6 +4,7 @@
 #include <Eigen/Dense>
 #include <flecs.h>
 #include <vector>
+#include <raylib.h>
 
 typedef double Real;
 
@@ -73,6 +74,10 @@ namespace phys {
         struct StaticFriction { Real value = 0.3f; };
 
         struct BoundingSphere { Real value = 1; }; // radius
+
+        struct Mesh0 {
+            Mesh m;
+        };
 
         // struct Colliders { std::vector<Collider> value; };
 

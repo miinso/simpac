@@ -79,6 +79,7 @@ cc_library(
         "support.h",
     ],
     deps = [
+        "//:raylib",
         "@eigen",
         "@flecs",
     ],
@@ -109,6 +110,7 @@ cc_library(
     ],
     deps = [
         ":collision",
+        "//:raylib",
         "@eigen",
         "@flecs",
     ],
