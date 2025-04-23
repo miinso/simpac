@@ -3,6 +3,7 @@
 
 #include <Eigen/Dense>
 #include <flecs.h>
+#include <vector>
 
 typedef double Real;
 
@@ -190,14 +191,7 @@ namespace phys {
 
         } Constraint;
 
-        struct Position_Constraint_Preprocessed_Data {
-            flecs::entity e1;
-            flecs::entity e2;
-            Vector3r r1_wc;
-            Vector3r r2_wc;
-            Matrix3r e1_world_inverse_inertia_tensor;
-            Matrix3r e2_world_inverse_inertia_tensor;
-        };
+        
 
     } // namespace pbd
 } // namespace phys

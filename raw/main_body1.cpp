@@ -261,12 +261,14 @@ int main () {
 
     // key input
 
-    // ecs.system ("key handle").run ([] (flecs::iter& it) {
-    //     if (IsKeyDown (KEY_SPACE)) {
-    //         throw_object (it.world ());
-    //     }
-    // });
-    throw_object(ecs);
+    ecs.system ("key handle").kind(graphics::PreRender).run ([&] (flecs::iter& it) {
+        if (IsKeyDown (KEY_SPACE)) {
+            // throw_object (ecs);
+        }
+        // it.fini();
+    });
+
+    example_util_throw_object(ecs);
 
     // ecs.import <flecs::stats>(); % this causes problems on web build
     // ecs.set<flecs::Rest>({});

@@ -68,7 +68,6 @@ cc_library(
         "epa.h",
         "gjk.h",
         "support.h",
-
         "types.h",
     ],
     includes = [
@@ -87,12 +86,15 @@ cc_library(
 
 cc_library(
     name = "pbd",
+    srcs = [
+        "constraints.cpp",
+    ],
     hdrs = [
         # common
         "types.h",
 
         # pbd
-        "constraints.hpp",
+        "constraints.h",
         "entity.hpp",
         "kernels.hpp",
     ],
@@ -101,14 +103,14 @@ cc_library(
         "types.h",
 
         # pbd
-        "constraints.hpp",
+        "constraints.h",
         "entity.hpp",
         "kernels.hpp",
     ],
     deps = [
+        ":collision",
         "@eigen",
         "@flecs",
-        ":collision",
     ],
 )
 

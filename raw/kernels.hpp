@@ -1,6 +1,6 @@
 // pbd/kernels.hpp
 #pragma once
-#include "constraints.hpp"
+#include "constraints.h"
 #include "types.h"
 
 namespace phys {
@@ -252,13 +252,13 @@ static void positional_constraint_solve (Constraint* constraint, Real h) {
     Position_Constraint_Preprocessed_Data pcpd;
     calculate_positional_constraint_preprocessed_data (e1, e2,
     constraint->positional_constraint.r1_lc,
-    constraint->positional_constraint.r2_lc, &pcpd);
+    constraint->positional_constraint.r2_lc, pcpd);
 
-    auto delta_lambda = positional_constraint_get_delta_lambda (&pcpd, h,
+    auto delta_lambda = positional_constraint_get_delta_lambda (pcpd, h,
     constraint->positional_constraint.compliance,
     constraint->positional_constraint.lambda, delta_x, violation);
 
-    positional_constraint_apply (&pcpd, delta_lambda, delta_x);
+    positional_constraint_apply (pcpd, delta_lambda, delta_x);
     constraint->positional_constraint.lambda += delta_lambda;
 }
 

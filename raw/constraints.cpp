@@ -1,16 +1,14 @@
-#include "types.h"
-#include <flecs.h>
-#include <iostream>
+#include "constraints.h"
 
 using namespace phys::pbd;
 
-inline void calculate_positional_constraint_preprocessed_data (flecs::entity e1,
+void calculate_positional_constraint_preprocessed_data (flecs::entity e1,
 flecs::entity e2,
 Vector3r r1_lc,
 Vector3r r2_lc,
-phys::pbd::Position_Constraint_Preprocessed_Data* pcpd) {
-    pcpd->e1 = e1;
-    pcpd->e2 = e2;
+Position_Constraint_Preprocessed_Data& pcpd) {
+    pcpd.e1 = e1;
+    pcpd.e2 = e2;
 
     const auto R1 = e1.get<Orientation> ()->value.toRotationMatrix ();
     const auto R2 = e2.get<Orientation> ()->value.toRotationMatrix ();
@@ -18,14 +16,14 @@ phys::pbd::Position_Constraint_Preprocessed_Data* pcpd) {
     const auto I_body_inv1 = e1.get<LocalInverseInertia> ()->value;
     const auto I_body_inv2 = e2.get<LocalInverseInertia> ()->value;
 
-    pcpd->r1_wc = R1 * r1_lc;
-    pcpd->r2_wc = R2 * r2_lc;
+    pcpd.r1_wc = R1 * r1_lc;
+    pcpd.r2_wc = R2 * r2_lc;
 
-    pcpd->e1_world_inverse_inertia_tensor = R1 * I_body_inv1 * R1.transpose ();
-    pcpd->e2_world_inverse_inertia_tensor = R2 * I_body_inv2 * R2.transpose ();
+    pcpd.e1_world_inverse_inertia_tensor = R1 * I_body_inv1 * R1.transpose ();
+    pcpd.e2_world_inverse_inertia_tensor = R2 * I_body_inv2 * R2.transpose ();
 }
 
-inline Real positional_constraint_get_delta_lambda (Position_Constraint_Preprocessed_Data* pcpd,
+Real positional_constraint_get_delta_lambda (Position_Constraint_Preprocessed_Data& pcpd,
 Real h,
 Real compliance,
 Real lambda,
@@ -40,12 +38,12 @@ Real violation) {
         return 0.0;
     }
 
-    auto e1           = pcpd->e1;
-    auto e2           = pcpd->e2;
-    auto r1_wc        = pcpd->r1_wc; // application point in world coord
-    auto r2_wc        = pcpd->r2_wc;
-    auto I_world_inv1 = pcpd->e1_world_inverse_inertia_tensor;
-    auto I_world_inv2 = pcpd->e2_world_inverse_inertia_tensor;
+    auto e1           = pcpd.e1;
+    auto e2           = pcpd.e2;
+    auto r1_wc        = pcpd.r1_wc; // application point in world coord
+    auto r2_wc        = pcpd.r2_wc;
+    auto I_world_inv1 = pcpd.e1_world_inverse_inertia_tensor;
+    auto I_world_inv2 = pcpd.e2_world_inverse_inertia_tensor;
 
     auto n = delta_x.normalized (); // direction in world coord
 
@@ -63,15 +61,15 @@ Real violation) {
     return delta_lambda;
 }
 
-inline void positional_constraint_apply (Position_Constraint_Preprocessed_Data* pcpd,
+void positional_constraint_apply (Position_Constraint_Preprocessed_Data& pcpd,
 Real delta_lambda,
 Vector3r delta_x) {
-    auto e1           = pcpd->e1;
-    auto e2           = pcpd->e2;
-    auto r1_wc        = pcpd->r1_wc; // application point in world coord
-    auto r2_wc        = pcpd->r2_wc;
-    auto I_world_inv1 = pcpd->e1_world_inverse_inertia_tensor;
-    auto I_world_inv2 = pcpd->e2_world_inverse_inertia_tensor;
+    auto e1           = pcpd.e1;
+    auto e2           = pcpd.e2;
+    auto r1_wc        = pcpd.r1_wc; // application point in world coord
+    auto r2_wc        = pcpd.r2_wc;
+    auto I_world_inv1 = pcpd.e1_world_inverse_inertia_tensor;
+    auto I_world_inv2 = pcpd.e2_world_inverse_inertia_tensor;
     auto& x1          = e1.get_mut<Position> ()->value;
     auto& x2          = e2.get_mut<Position> ()->value;
     auto& q1          = e1.get_mut<Orientation> ()->value;
@@ -85,7 +83,6 @@ Vector3r delta_x) {
     if (!e1.has<IsPinned> ()) {
         auto correction = e1.get<InverseMass> ()->value * delta_lambda * grad_x1;
         x1 += correction;
-        std::cout << delta_lambda << std::endl;
     }
 
     if (!e2.has<IsPinned> ()) {
@@ -126,4 +123,27 @@ Vector3r delta_x) {
         q2.vec () += 0.5 * q_dot_dt.vec ();
         q2.normalize ();
     }
+}
+
+void calculate_angular_constraint_preprocessed_data (flecs::entity e1,
+flecs::entity e2,
+Angular_Constraint_Preprocessed_Data& acpd) {
+    acpd.e1 = e1;
+    acpd.e2 = e2;
+
+    const auto R1 = e1.get<Orientation> ()->value.toRotationMatrix ();
+    const auto R2 = e2.get<Orientation> ()->value.toRotationMatrix ();
+
+    const auto I_body_inv1 = e1.get<LocalInverseInertia> ()->value;
+    const auto I_body_inv2 = e2.get<LocalInverseInertia> ()->value;
+
+    acpd.e1_world_inverse_inertia_tensor = R1 * I_body_inv1 * R1.transpose ();
+    acpd.e2_world_inverse_inertia_tensor = R2 * I_body_inv2 * R2.transpose ();
+}
+
+Real angular_constraint_get_delta_lambda (Angular_Constraint_Preprocessed_Data& acpd,
+Real h,
+Real compliance,
+Real lambda,
+Vector3r delta_q) {
 }
