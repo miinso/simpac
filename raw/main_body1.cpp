@@ -79,6 +79,11 @@ int main () {
         params->elapsed += params->timestep;
     });
 
+    auto identify_island =
+    ecs.system ("identify island").with<RigidBody> ().kind (0).run ([] (flecs::iter& it) {
+        rb_identify_island (it, delta_time); // use full step
+    });
+
     auto clear_force =
     ecs.system<Forces, LinearForce, AngularForce> ("clear force")
     .with<RigidBody> ()
@@ -112,22 +117,28 @@ int main () {
     .system<Position, Orientation, LinearVelocity, AngularVelocity, OldPosition, OldOrientation, const LocalInertia,
     const LocalInverseInertia, const LinearForce, const AngularForce, const Mass> ("integrate")
     .with<RigidBody> ()
-    .without<IsPinned> ()
+    .without<IsPinned> () // is fixex
+    // .with<IsActive> ()
     .kind (0)
-    .each ([&] (Position& x, Orientation& q, LinearVelocity& v,
+    .each ([&] (flecs::entity e, Position& x, Orientation& q, LinearVelocity& v,
            AngularVelocity& omega, OldPosition& x_old, OldOrientation& q_old,
            const LocalInertia& I_body, const LocalInverseInertia& I_body_inv,
            const LinearForce& f, const AngularForce& tau, const Mass mass) {
-        x_old.value = x.value;
-        q_old.value = q.value;
-        // std::cout << x_old.value << std::endl;
-        rb_integrate (x.value, q.value, v.value, omega.value, I_body.value,
-        I_body_inv.value, f.value, tau.value, mass.value, delta_time / num_substeps);
+        // if (e.get<IsActive> ()->value == true) {
+        rb_integrate (x.value, x_old.value, q.value, q_old.value, v.value,
+        omega.value, I_body.value, I_body_inv.value, f.value, tau.value,
+        mass.value, delta_time / num_substeps);
+        // }
     });
 
     auto clear_lambda =
     ecs.system<Constraint> ("clear constraint lambda").kind (0).each ([&] (Constraint& c) {
         rb_clear_constraint_lambda (c);
+    });
+
+    auto collect_collision =
+    ecs.system ("collect collision").with<RigidBody> ().kind (0).run ([] (flecs::iter& it) {
+        rb_collect_collision (it);
     });
 
     auto solve_constraint =
@@ -160,6 +171,8 @@ int main () {
     ecs.system ("simulation loop").run ([&] (flecs::iter&) {
         auto sub_dt = delta_time / num_substeps;
 
+        identify_island.run ();
+
         for (int i = 0; i < num_substeps; ++i) {
             clear_force.run ();
             add_gravity.run ();
@@ -168,12 +181,18 @@ int main () {
 
             clear_lambda.run ();
 
+            // collect collision constraint
+            collect_collision.run ();
+
             for (int j = 0; j < num_iter; ++j) {
                 solve_constraint.run ();
             }
 
             // handle_ground_collision.run();
             update_velocity.run ();
+
+            // velocity dependent things
+            // run_velocity_pass.run();
         }
     });
 
@@ -197,7 +216,8 @@ int main () {
         aa.angle () * RAD2DEG, e2r (Vector3r::Ones ()), BLUE);
     });
 
-    auto default_mat = LoadMaterialDefault ();
+    auto default_mat          = LoadMaterialDefault ();
+    default_mat.maps->color.a = 0.5;
     ecs
     .system<const Position, const Orientation, const Mesh0> (
     "draw_physics_mesh2")

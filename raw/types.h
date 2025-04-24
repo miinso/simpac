@@ -72,7 +72,8 @@ namespace phys {
         struct Restitution { Real value = 0.5f; };
         struct DynamicFriction { Real value = 0.3f; };
         struct StaticFriction { Real value = 0.3f; };
-
+        struct DeactivationTime { Real value = 0.0; };
+        struct IsActive { };
         struct BoundingSphere { Real value = 1; }; // radius
 
         struct Mesh0 {
@@ -186,7 +187,7 @@ namespace phys {
 
             PositionalConstraint positional_constraint;
             // SphericalJointConstraint spherical_joint_constraint;
-            // CollisionConstraint collision_constraint;
+            CollisionConstraint collision_constraint;
             
             // union {
                 // PositionalConstraint positional_constraint;

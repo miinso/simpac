@@ -8,6 +8,7 @@
 using namespace phys::pbd;
 // using namespace phys::pbd::rigidbody;
 
+
 inline void register_prefabs (flecs::world& ecs) {
 
     ecs.prefab<prefabs::RigidBody> ()
@@ -38,7 +39,13 @@ inline void register_prefabs (flecs::world& ecs) {
     // .add<WorldInverseInertia> ()
     .add<Mesh> ()
     // .add<PhysicsMesh>();
-    .add<Forces> ();
+    .add<Forces> ()
+
+    // collision
+    .add<IsActive> () // a body starts with active collision state
+    .add<BoundingSphere> ()
+    .add<Colliders> ()
+    .add<DeactivationTime> ();
 }
 
 flecs::entity add_rigid_body (flecs::world& ecs,
@@ -91,35 +98,35 @@ const Matrix3r& inertia = Matrix3r::Identity ()) {
 
 // gameobject <-child, parent-> gameobject
 // gameobject <-entity
-rb.set<Collider>(c1);
-rb.set<Collider>(c2);
-rb.set<Collider>(c3);
+// rb.set<Collider>(c1);
+// rb.set<Collider>(c2);
+// rb.set<Collider>(c3);
 
-entity = rb.parent
-list<entity> = rb.children
+// entity = rb.parent
+// list<entity> = rb.children
 
-rb.child_of(child_rb);
+// rb.child_of(child_rb);
 
-collider.set<Collider>(c1).child_of(rb);
+// collider.set<Collider>(c1).child_of(rb);
 
-rb.children
+// rb.children
 
-void iterate_tree(flecs::entity e, Position p_parent = {0, 0}) {
-    // Print hierarchical name of entity & the entity type
-    std::cout << e.path() << " [" << e.type().str() << "]\n";
+// void iterate_tree(flecs::entity e, Position p_parent = {0, 0}) {
+//     // Print hierarchical name of entity & the entity type
+//     std::cout << e.path() << " [" << e.type().str() << "]\n";
 
-    // Get entity position
-    const Position *p = e.get<Position>();
+//     // Get entity position
+//     const Position *p = e.get<Position>();
 
-    // Calculate actual position
-    Position p_actual = {p->x + p_parent.x, p->y + p_parent.y};
-    std::cout << "{" << p_actual.x << ", " << p_actual.y << "}\n\n";
+//     // Calculate actual position
+//     Position p_actual = {p->x + p_parent.x, p->y + p_parent.y};
+//     std::cout << "{" << p_actual.x << ", " << p_actual.y << "}\n\n";
 
-    // Iterate children recursively
-    e.children([&](flecs::entity child) {
-        iterate_tree(child, p_actual);
-    });
-}
+//     // Iterate children recursively
+//     e.children([&](flecs::entity child) {
+//         iterate_tree(child, p_actual);
+//     });
+// }
 
 Collider collider_convex_hull_from_mesh (const Mesh& mesh, const Vector3r& scale) {
     std::vector<Vector3r> vertices;
@@ -204,6 +211,8 @@ void example_util_throw_object (flecs::world& ecs) {
 
     assert (e1.has<Mass> ());
 
+    e1.set<Colliders> ({ colliders });
+
     auto inertia =
     colliders_get_default_inertia_tensor (colliders, e1.get<Mass> ()->value);
     e1.set<LocalInertia> ({ inertia });
@@ -243,19 +252,57 @@ void example_util_install_floor (flecs::world& ecs) {
 }
 
 void simulate (flecs::world& ecs, Real dt) {
-    auto entities = ecs.all();
-    auto broad_collision_pairs = broad_get_collision_pairs (entities);
-    
-    auto simulation_islands = broad_collect_simulation_islands (entities, pairs);
-    for each island, do the sleep thing
 
-    integrate
+    // find all rigidbodies
+    auto get_all_rigidbodies =
+    ecs.query_builder<Position> ().with<RigidBody> ().cached ().build ();
+    std::vector<flecs::entity> entities;
+    entities.reserve (get_all_rigidbodies.count ());
 
-    collect collision
+    get_all_rigidbodies.each (
+    [&] (flecs::entity e, Position& x) { entities.push_back (e); });
 
-    constraint solve
+    // auto broad_collision_pairs = broad_get_collision_pairs (entities);
 
-    velocity update
+    // // do the island sleep thing
+    // auto simulation_islands =
+    // broad_collect_simulation_islands (entities, broad_collision_pairs);
+    // for (size_t j = 0; j < simulation_islands.size (); ++j) {
+    //     auto simulation_island = simulation_islands[j];
 
-    velocity pass
+    //     bool all_inactive = true;
+    //     for (size_t k = 0; k < simulation_island.size (); ++k) {
+    //         auto e = simulation_island[k];
+
+    //         auto linear_velocity_norm = e.get<LinearVelocity> ()->value.norm ();
+    //         auto angular_velocity_norm = e.get<AngularVelocity> ()->value.norm ();
+    //         if (linear_velocity_norm < LINEAR_SLEEPING_THRESHOLD &&
+    //         angular_velocity_norm < ANGULAR_SLEEPING_THRESHOLD) {
+    //             e.get_mut<DeactivationTime> ()->value += dt;
+    //         } else {
+    //             e.get_mut<DeactivationTime> ()->value = 0.0;
+    //         }
+
+    //         if (e.get_mut<DeactivationTime> ()->value < DEACTIVATION_TIME_TO_BE_INACTIVE) {
+    //             all_inactive = false;
+    //         }
+    //     }
+
+    //     // we only set entities to inactive if the whole island is inactive!
+    //     for (size_t k = 0; k < simulation_island.size (); ++k) {
+    //         auto e                        = simulation_island[k];
+    //         e.get_mut<IsActive> ()->value = !all_inactive;
+    //     }
+    // }
+    // broad_simulation_islands_destroy(simulation_islands);
+
+    // integrate
+
+    // collect collision
+
+    // constraint solve
+
+    // velocity update
+
+    // velocity pass
 }
