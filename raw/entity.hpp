@@ -89,6 +89,38 @@ const Matrix3r& inertia = Matrix3r::Identity ()) {
 //     return collider_sphere_create (radius);
 // }
 
+// gameobject <-child, parent-> gameobject
+// gameobject <-entity
+rb.set<Collider>(c1);
+rb.set<Collider>(c2);
+rb.set<Collider>(c3);
+
+entity = rb.parent
+list<entity> = rb.children
+
+rb.child_of(child_rb);
+
+collider.set<Collider>(c1).child_of(rb);
+
+rb.children
+
+void iterate_tree(flecs::entity e, Position p_parent = {0, 0}) {
+    // Print hierarchical name of entity & the entity type
+    std::cout << e.path() << " [" << e.type().str() << "]\n";
+
+    // Get entity position
+    const Position *p = e.get<Position>();
+
+    // Calculate actual position
+    Position p_actual = {p->x + p_parent.x, p->y + p_parent.y};
+    std::cout << "{" << p_actual.x << ", " << p_actual.y << "}\n\n";
+
+    // Iterate children recursively
+    e.children([&](flecs::entity child) {
+        iterate_tree(child, p_actual);
+    });
+}
+
 Collider collider_convex_hull_from_mesh (const Mesh& mesh, const Vector3r& scale) {
     std::vector<Vector3r> vertices;
     vertices.reserve (mesh.vertexCount);
