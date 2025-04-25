@@ -39,7 +39,7 @@ inline void register_prefabs (flecs::world& ecs) {
     // .add<WorldInverseInertia> ()
     .add<Mesh> ()
     // .add<PhysicsMesh>();
-    .add<Forces> ()
+    .add<Forces> () // list of external forces
 
     // collision
     .add<IsActive> () // a body starts with active collision state
@@ -82,10 +82,8 @@ const Matrix3r& inertia = Matrix3r::Identity ()) {
     .set<AngularForce> ({ Vector3r::Zero () })
     .set<Mass> ({ mass })
     .set<InverseMass> ({ 1.0f / mass })
-    .set<LocalInertia> ({ inertia })
+    .set<LocalInertia> ({ inertia }) // should be initialized when `Collider` component is attached to this entity.
     .set<LocalInverseInertia> ({ inv_inertia });
-    // .set<WorldInertia> ({ inertia })
-    // .set<WorldInverseInertia> ({ inv_inertia });
 }
 
 // flecs::entity add_rigidbody() {}
@@ -171,6 +169,9 @@ std::vector<Collider> example_util_create_sphere_convex_hull_array (Real radius)
 }
 
 void example_util_throw_object (flecs::world& ecs) {
+    auto e1 = add_rigid_body (ecs);
+
+    // generate random mesh
     int r         = rand ();
     int is_sphere = 0;
 
@@ -186,12 +187,9 @@ void example_util_throw_object (flecs::world& ecs) {
         is_sphere = 1;
         m         = GenMeshSphere (0.5, 8, 8);
     }
+    e1.set<Mesh0> ({ m });
 
-    // mesh.verts, mesh.indices -> required to generate collider
-    // or decomposed convex collider pieces
-
-    // a body can have multiple colliders.
-    // each collider add its own inertia to its parent body
+    // generate colliders from the mesh
     Vector3r scale;
     std::vector<Collider> colliders;
 
@@ -203,26 +201,21 @@ void example_util_throw_object (flecs::world& ecs) {
         scale     = Vector3r::Ones ();
         colliders = entity_create_mesh_collider (m, scale);
     }
+    e1.set<Colliders> ({ colliders });
 
-    auto e1 = add_rigid_body (ecs);
-    e1.set<Mesh> (m);
+    // set bounding volume
     auto radius = colliders_get_bounding_sphere_radius (colliders);
     e1.set<BoundingSphere> ({ radius });
 
-    assert (e1.has<Mass> ());
-
-    e1.set<Colliders> ({ colliders });
-
+    // set inertia
     auto inertia =
     colliders_get_default_inertia_tensor (colliders, e1.get<Mass> ()->value);
     e1.set<LocalInertia> ({ inertia });
     e1.set<LocalInverseInertia> ({ inertia.inverse () });
 
+    // set initial condition
     e1.get_mut<LinearVelocity> ()->value  = Vector3r (0.0, 15.0, 0.0);
     e1.get_mut<AngularVelocity> ()->value = { 0, 2, 10 };
-
-    // DrawMesh(Mesh mesh, Material material, Matrix transform);
-    // TODO: build the world transform using x, q, s
 }
 
 void example_util_install_floor (flecs::world& ecs) {
@@ -230,10 +223,10 @@ void example_util_install_floor (flecs::world& ecs) {
     auto floor_entity    = add_rigid_body (ecs);
 
     // visual mesh
-    auto cube_mesh = GenMeshCube (10, 1, 10);
+    auto cube_mesh = GenMeshCube (5, 0.5, 5);
     floor_entity.set<Mesh0> ({ cube_mesh });
 
-    // collision mesh
+    // set collision mesh
     auto floor_colliders = entity_create_mesh_collider (cube_mesh, floor_scale);
     floor_entity.set<Colliders> ({ floor_colliders });
 
@@ -249,6 +242,35 @@ void example_util_install_floor (flecs::world& ecs) {
 
     // floor is fixed
     floor_entity.add<IsPinned> ();
+}
+
+flecs::entity add_box_object (flecs::world& ecs) {
+    Vector3r floor_scale = { 1, 1, 1 };
+    auto box_entity      = add_rigid_body (ecs);
+
+    // visual mesh
+    auto cube_mesh = GenMeshCube (1, 1, 1);
+    box_entity.set<Mesh0> ({ cube_mesh });
+
+    // set collision mesh
+    auto box_colliders = entity_create_mesh_collider (cube_mesh, floor_scale);
+    box_entity.set<Colliders> ({ box_colliders });
+
+    // set bounding volume
+    auto radius = colliders_get_bounding_sphere_radius (box_colliders);
+    box_entity.set<BoundingSphere> ({ radius });
+
+    // set inertia
+    auto inertia = colliders_get_default_inertia_tensor (
+    box_colliders, box_entity.get<Mass> ()->value);
+    box_entity.set<LocalInertia> ({ inertia });
+    box_entity.set<LocalInverseInertia> ({ inertia.inverse () });
+
+    // entity_create_box_collider
+    // entity_create_sphere_collider
+    // entity_create_capsule_collider
+    // entity_create_mesh_collider
+    return box_entity;
 }
 
 void simulate (flecs::world& ecs, Real dt) {

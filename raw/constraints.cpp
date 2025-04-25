@@ -48,9 +48,9 @@ Real violation) {
     auto n = delta_x.normalized (); // direction in world coord
 
     // generalized inversed mass for each body
-    auto w1 = e1.get<Mass> ()->value +
+    auto w1 = e1.get<InverseMass> ()->value +
     r1_wc.cross (n).transpose () * I_world_inv1 * r1_wc.cross (n);
-    auto w2 = e2.get<Mass> ()->value +
+    auto w2 = e2.get<InverseMass> ()->value +
     r2_wc.cross (n).transpose () * I_world_inv2 * r2_wc.cross (n);
 
     assert (w1 + w2 != 0.0);
@@ -145,5 +145,96 @@ Real angular_constraint_get_delta_lambda (Angular_Constraint_Preprocessed_Data& 
 Real h,
 Real compliance,
 Real lambda,
+Vector3r delta_q,
+Real violation) {
+    // angular violation is given by an axis-angle representation.
+    // `axis` defines the reference axis (or the direction of violation),
+    // and the `angle` represents the magnitude of the violation.
+    //
+    // rotating the body along this `axis` give you the largest increase in
+    // `angle`, therefore this axis is the gradient of angular constraint (`n`).
+
+    // violation = |theta - theta0|
+    // Real violation = delta_q.norm ();
+    if (violation <= 1e-12) {
+        return 0.0;
+    }
+
+    auto axis = delta_q.normalized ();
+
+    auto e1 = acpd.e1;
+    auto e2 = acpd.e2;
+
+    auto I_world_inv1 = acpd.e1_world_inverse_inertia_tensor;
+    auto I_world_inv2 = acpd.e2_world_inverse_inertia_tensor;
+
+    // generalized inverse mass for each body
+    Real w1 = axis.transpose () * I_world_inv1 *
+    axis; // how strong the body resists to rotational motion
+    Real w2 = axis.transpose () * I_world_inv2 * axis;
+
+    assert (w1 + w2 != 0.0);
+
+    Real alpha_tilde = compliance / (h * h);
+    Real delta_lambda = -(violation + alpha_tilde * lambda) / (w1 + w2 + alpha_tilde);
+
+    return delta_lambda;
+}
+
+void angular_constraint_apply (Angular_Constraint_Preprocessed_Data& acpd,
+Real delta_lambda,
 Vector3r delta_q) {
+    auto e1           = acpd.e1;
+    auto e2           = acpd.e2;
+    auto I_world_inv1 = acpd.e1_world_inverse_inertia_tensor;
+    auto I_world_inv2 = acpd.e2_world_inverse_inertia_tensor;
+    auto& q1          = e1.get_mut<Orientation> ()->value;
+    auto& q2          = e2.get_mut<Orientation> ()->value;
+
+    auto axis = delta_q.normalized ();
+
+    // how the constraint function (violation) response to purturbation of direction (or axis)
+    auto grad_phi1 = -axis;
+    auto grad_phi2 = axis;
+
+    if (!e1.has<IsPinned> ()) {
+        // this `omega_dt_q` is an impulse like quantity since `dt` is already
+        // multiplied in it. the paper uses a 3-parameter reps with pure
+        // quaternion, so do we.
+        auto omega_dt_q   = Quaternionr ();
+        omega_dt_q.w ()   = 0;
+        omega_dt_q.vec () = I_world_inv1 * delta_lambda * grad_phi1;
+
+        // derive impulse-like `q_dot` from impulse-like `omega`
+        auto q_dot_dt = omega_dt_q * q1;
+
+        // qdot = 0.5 * [0; omega(t)] * q(t) % if `omega` is world quantity
+        // q(t + dt) ~= q(t) + dt * qdot(q(t), omega(t))
+        q1.w () += 0.5 * q_dot_dt.w ();
+        q1.vec () += 0.5 * q_dot_dt.vec ();
+        q1.normalize ();
+    }
+
+    if (!e2.has<IsPinned> ()) {
+        auto omega_dt_q   = Quaternionr ();
+        omega_dt_q.w ()   = 0;
+        omega_dt_q.vec () = I_world_inv2 * delta_lambda * grad_phi2;
+
+        auto q_dot_dt = omega_dt_q * q2;
+        q2.w () += 0.5 * q_dot_dt.w ();
+        q2.vec () += 0.5 * q_dot_dt.vec ();
+        q2.normalize ();
+    }
+
+    // or we can use exponetial map instead
+    /*
+    auto omega_dt = I_world_inv * delta_lambda * grad_phi;
+
+    auto axis = omega_dt.normalized();
+    auto angle = omega_dt.norm();
+
+    auto q_change = Quaternionr(AngleAxisr(angle, axis));
+    // this change is a world quantity, so left multiply
+    q = q_change * q;
+    */
 }

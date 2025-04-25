@@ -117,8 +117,8 @@ namespace phys {
         typedef enum {
             POSITIONAL_CONSTRAINT,
             COLLISION_CONSTRAINT,
-            // MUTUAL_ORIENTATION_CONSTRAINT,
-            // HINGE_JOINT_CONSTRAINT,
+            MUTUAL_ORIENTATION_CONSTRAINT,
+            HINGE_JOINT_CONSTRAINT,
             SPHERICAL_JOINT_CONSTRAINT
         } Constraint_Type;
 
@@ -152,6 +152,11 @@ namespace phys {
             Real lambda;
             Real distance;
         } PositionalConstraint;
+        
+        typedef struct {
+            Real compliance;
+            Real lambda;
+        } MutualOrientationConstraint;
 
         typedef struct {
             Vector3r r1_lc;
@@ -188,7 +193,7 @@ namespace phys {
             PositionalConstraint positional_constraint;
             // SphericalJointConstraint spherical_joint_constraint;
             CollisionConstraint collision_constraint;
-            
+            MutualOrientationConstraint mutual_orientation_constraint;    
             // union {
                 // PositionalConstraint positional_constraint;
                 // SphericalJointConstraint spherical_joint_constraint;

@@ -46,7 +46,8 @@ Real angular_constraint_get_delta_lambda (Angular_Constraint_Preprocessed_Data& 
 Real h,
 Real compliance,
 Real lambda,
-Vector3r delta_q);
+Vector3r delta_q,
+Real violation);
 
 void angular_constraint_apply (Angular_Constraint_Preprocessed_Data& acpd,
 Real delta_lambda,

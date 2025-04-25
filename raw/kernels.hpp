@@ -4,7 +4,9 @@
 #include "types.h"
 #include <broad.h>
 #include <collider.h>
+#include <iostream>
 #include <vector>
+
 
 namespace phys {
 namespace pbd {
@@ -218,11 +220,15 @@ inline void rb_clear_constraint_lambda (Constraint& c) {
         c.positional_constraint.lambda = 0.0;
         return;
     } break;
-        // case COLLISION_CONSTRAINT: {
-        //     c.collision_constraint.lambda_n = 0.0;
-        //     c.collision_constraint.lambda_t = 0.0;
-        //     return;
-        // } break;
+    case MUTUAL_ORIENTATION_CONSTRAINT: {
+        c.mutual_orientation_constraint.lambda = 0.0;
+        return;
+    } break;
+    case COLLISION_CONSTRAINT: {
+        c.collision_constraint.lambda_n = 0.0;
+        c.collision_constraint.lambda_t = 0.0;
+        return;
+    } break;
         // case SPHERICAL_JOINT_CONSTRAINT: {
         //     c.spherical_joint_constraint.lambda_pos   = 0.0;
         //     c.spherical_joint_constraint.lambda_swing = 0.0;
@@ -249,6 +255,9 @@ inline void rb_identify_island (flecs::iter& it, Real dt) {
     // do the island sleep thing
     auto simulation_islands =
     broad_collect_simulation_islands (entities, broad_collision_pairs);
+
+    std::cout << "there are " << simulation_islands.size () << " islands" << std::endl;
+
     for (size_t j = 0; j < simulation_islands.size (); ++j) {
         auto simulation_island = simulation_islands[j];
 
@@ -269,6 +278,7 @@ inline void rb_identify_island (flecs::iter& it, Real dt) {
                 all_inactive = false;
             }
         }
+
 
         // we only set entities to inactive if the whole island is inactive!
         for (size_t k = 0; k < simulation_island.size (); ++k) {
@@ -349,13 +359,13 @@ inline void rb_collect_collision (flecs::iter& it) {
             Collider_Contact contact = contacts[l];
             Constraint constraint;
             clipping_contact_to_collision_constraint (e1, e2, contact, constraint);
-            auto new_constraint_entity = it.world ().entity ();
-            new_constraint_entity.set<Constraint> ({ constraint });
+
+            it.world ().entity ().set<Constraint> ({ constraint });
         }
     }
 }
 
-// entity function
+// TODO: entity function. these should go into entity.h
 void rb_positional_constraint_init (Constraint& constraint,
 flecs::entity e1,
 flecs::entity e2,
@@ -370,6 +380,16 @@ Real distance) {
     constraint.positional_constraint.r2_lc      = r2_lc;
     constraint.positional_constraint.compliance = compliance;
     constraint.positional_constraint.distance   = distance;
+}
+
+void rb_mutual_orientation_constraint_init (Constraint& constraint,
+flecs::entity e1,
+flecs::entity e2,
+Real compliance) {
+    constraint.type = MUTUAL_ORIENTATION_CONSTRAINT;
+    constraint.e1   = e1;
+    constraint.e2   = e2;
+    constraint.mutual_orientation_constraint.compliance = compliance;
 }
 
 static void positional_constraint_solve (Constraint& constraint, Real h) {
@@ -396,6 +416,32 @@ static void positional_constraint_solve (Constraint& constraint, Real h) {
     constraint.positional_constraint.lambda += delta_lambda;
 }
 
+static void mutual_orientation_constraint_solve (Constraint& constraint, Real h) {
+    assert (constraint.type == MUTUAL_ORIENTATION_CONSTRAINT);
+
+    auto e1 = constraint.e1;
+    auto e2 = constraint.e2;
+
+    auto q1 = e1.get<Orientation> ()->value;
+    auto q2 = e2.get<Orientation> ()->value;
+
+    auto q_change = q1 * q2.conjugate ();
+
+    // take the pure quaternion, then mult 2.0 to account double-cover
+    auto delta_q   = 2.0 * q_change.vec ();
+    auto violation = delta_q.norm (); // retrieve theta
+
+    Angular_Constraint_Preprocessed_Data acpd;
+    calculate_angular_constraint_preprocessed_data (e1, e2, acpd);
+
+    auto delta_lambda = angular_constraint_get_delta_lambda (acpd, h,
+    constraint.mutual_orientation_constraint.compliance,
+    constraint.mutual_orientation_constraint.lambda, delta_q, violation);
+
+    angular_constraint_apply (acpd, delta_lambda, delta_q);
+    constraint.mutual_orientation_constraint.lambda += delta_lambda;
+}
+
 static void collision_constraint_solve (Constraint& constraint, Real h) {
     assert (constraint.type == COLLISION_CONSTRAINT);
 
@@ -413,6 +459,10 @@ inline void rb_solve_constraint (Constraint& constraint, Real dt) {
     switch (constraint.type) {
     case POSITIONAL_CONSTRAINT: {
         positional_constraint_solve (constraint, dt);
+        return;
+    } break;
+    case MUTUAL_ORIENTATION_CONSTRAINT: {
+        mutual_orientation_constraint_solve (constraint, dt);
         return;
     } break;
     case COLLISION_CONSTRAINT: {

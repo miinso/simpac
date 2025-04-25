@@ -163,7 +163,6 @@ int main () {
     .each ([&] (LinearVelocity& v, OldLinearVelocity& v_old, AngularVelocity& omega,
            OldAngularVelocity& omega_old, const Position& x, const OldPosition& x_old,
            const Orientation& q, const OldOrientation& q_old) {
-        // particle_update_velocity(v.value, x.value, x_old.value, delta_time / num_substeps);
         rb_update_velocity (v.value, v_old.value, omega.value, omega_old.value,
         x.value, x_old.value, q.value, q_old.value, delta_time / num_substeps);
     });
@@ -181,8 +180,11 @@ int main () {
 
             clear_lambda.run ();
 
+            // TODO: clear all existing contacts and
+            // remove collision constraint
+
             // collect collision constraint
-            collect_collision.run ();
+            // collect_collision.run ();
 
             for (int j = 0; j < num_iter; ++j) {
                 solve_constraint.run ();
@@ -213,11 +215,12 @@ int main () {
         auto aa = Eigen::AngleAxisd (q.value);
 
         DrawModelWiresEx (mmm, e2r (x.value), e2r (aa.axis ()),
-        aa.angle () * RAD2DEG, e2r (Vector3r::Ones ()), BLUE);
+        aa.angle () * RAD2DEG, e2r (Vector3r::Ones ()), GREEN);
+        DrawCircle3D (e2r (x.value), 0.2, e2r (aa.axis ()), aa.angle () * RAD2DEG, RED);
     });
 
     auto default_mat          = LoadMaterialDefault ();
-    default_mat.maps->color.a = 0.5;
+    default_mat.maps->color.r = 0;
     ecs
     .system<const Position, const Orientation, const Mesh0> (
     "draw_physics_mesh2")
@@ -266,7 +269,9 @@ int main () {
         DrawText (label, screenPos.x, screenPos.y, 20, BLUE);
     });
 
-    ecs.system<Constraint> ("draw constraint").kind (graphics::OnRender).each ([] (const Constraint& c) {
+    ecs.system<Constraint> ("draw position constraint")
+    .kind (graphics::OnRender)
+    .each ([] (const Constraint& c) {
         auto e1 = c.e1;
         auto e2 = c.e2;
         auto x1 = e1.get<Position> ()->value;

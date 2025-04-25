@@ -35,7 +35,11 @@ struct Collider_Sphere {
 
 enum Collider_Type {
     COLLIDER_TYPE_SPHERE,
+    // COLLIDER_TYPE_PLAIN,
+    // COLLIDER_TYPE_BOX,
+    // COLLIDER_TYPE_CAPSULE,
     COLLIDER_TYPE_CONVEX_HULL
+    // COLLIDER_TYPE_SDF,
 };
 
 struct Collider {
