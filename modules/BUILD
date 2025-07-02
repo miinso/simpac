@@ -1,3 +1,5 @@
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
 cc_library(
     name = "graphics_module",
     srcs = [
@@ -138,3 +140,17 @@ cc_library(
         "@raylib-head",
     ],
 )
+
+cc_library(
+    name = "raygui",
+    hdrs = [
+        "raygui/raygui.h",
+    ],
+    strip_include_prefix = "raygui",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//:raylib",
+        # "@raylib-head",
+    ],
+)
+

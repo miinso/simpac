@@ -1,8 +1,8 @@
 load("@emsdk//emscripten_toolchain:wasm_rules.bzl", "wasm_cc_binary")
-load("@rules_cc//cc:defs.bzl", "cc_binary")
+# load("@rules_cc//cc:defs.bzl", "cc_binary")
 
 source_file_name_list = glob([
-    "*.c",
+    # "*.c",
     "*.cpp",
 ])
 
@@ -14,7 +14,8 @@ source_file_name_list = glob([
             "-DPLATFORM_DESKTOP",
         ],
         data = [
-            "@com_minseopark_simpac//:resources",
+            # "@com_minseopark_simpac//:resources",
+            "//:resources"
         ],
         includes = [
         ],
@@ -41,7 +42,7 @@ cc_library(
         "@platforms//os:emscripten": ["-DPLATFORM_WEB"],
         "//conditions:default": ["-DPLATFORM_DESKTOP"],
     }),
-    data = ["@com_minseopark_simpac//:resources"],
+    # data = ["@com_minseopark_simpac//:resources"],
     includes = ["."],
     strip_include_prefix = "graphics",
     deps = [
@@ -121,7 +122,7 @@ cc_library(
 cc_binary(
     name = "app1",
     srcs = [
-        "main_spring1.cpp",
+        "main_orientation1.cpp",
     ],
     copts = select({
         "@platforms//os:emscripten": [

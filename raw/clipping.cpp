@@ -54,7 +54,7 @@ static bool plane_edge_intersection(const Plane* plane, const Vector3r& start, c
 // Based on https://research.ncl.ac.uk/game/mastersdegree/gametechnologies/previousinformation/physics5collisionmanifolds/
 static void sutherland_hodgman(const std::vector<Vector3r>& input_polygon, int num_clip_planes, const Plane* clip_planes, 
                               std::vector<Vector3r>& out_polygon, bool remove_instead_of_clipping) {
-    assert(!out_polygon.empty());
+    // assert(!out_polygon.empty());
     assert(num_clip_planes > 0);
 
     // Create temporary list of vertices

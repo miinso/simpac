@@ -1,19 +1,82 @@
-bazel_dep(name = "apple_support", version = "1.12.0", repo_name = "build_bazel_apple_support")
-bazel_dep(name = "platforms", version = "0.0.10")
-bazel_dep(name = "rules_cc", version = "0.0.9")
-bazel_dep(name = "rules_pkg", version = "1.0.1")
-bazel_dep(name = "rules_foreign_cc", version = "0.13.0")
+"""
+simpac: a meek peon, simulation package of mine.
+"""
+
+# "@@ is the new @" to clarify the distinction between main repo targets (@@//)
+# and internal repo targets (//).
+# see https://blog.engflow.com/2024/06/27/migrating-to-bazel-modules-aka-bzlmod---the-easy-parts/
+
+# If you also depend on rules_cc, apple_support must come above rules_cc in your
+# MODULE.bazel or WORKSPACE file because Bazel selects toolchains based on which
+# is registered first. https://github.com/bazelbuild/apple_support
+bazel_dep(name = "apple_support", version = "1.22.0", repo_name = "build_bazel_apple_support")  # me first
+bazel_dep(name = "platforms", version = "1.0.0")
+bazel_dep(name = "rules_cc", version = "0.1.2")
+bazel_dep(name = "rules_pkg", version = "1.1.0")
+bazel_dep(name = "rules_foreign_cc", version = "0.15.0")
+
+http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+git_repository = use_repo_rule("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 ##
 #  compile commands
 ##
 bazel_dep(name = "hedron_compile_commands", dev_dependency = True)
-
 git_override(
     module_name = "hedron_compile_commands",
     remote = "https://github.com/hedronvision/bazel-compile-commands-extractor.git",
     commit = "4f28899228fb3ad0126897876f147ca15026151e",
 )
+
+##
+# emcc
+##
+bazel_dep(name = "emsdk")
+
+# bring your own or.. comment this `local_path_override` block and uncomment
+# the `git_override` below.
+local_path_override(
+    module_name = "emsdk",
+    path = "../emsdk/bazel",
+)
+
+# git_override(
+#     module_name = "emsdk",
+#     remote = "https://github.com/emscripten-core/emsdk.git",
+#     strip_prefix = "bazel",
+#     tag = "4.0.10",
+# )
+
+# emscripten_cache = use_extension(
+#     "@emsdk//:emscripten_cache.bzl",
+#     "emscripten_cache",
+# )
+# emscripten_cache.configuration(flags = [
+#     "--lto",
+#     "--wasm64",
+# ])
+# emscripten_cache.targets(targets = [
+#     "crtbegin",
+#     # "libc-debug",
+#     "libc",
+#     # "libprintf_long_double-debug",
+#     # "libprintf_long_double",
+#     # "libstubs-debug",
+#     # "libstubs",
+#     "libnoexit",
+#     "libdlmalloc",
+#     # "libdlmalloc-debug",
+#     "libemmalloc",
+#     "libcompiler_rt",
+#     "libc++-noexcept",
+#     # "libc++abi-debug-noexcept",
+#     "libc++abi-noexcept",
+#     "libsockets",
+#     # "libembind-rtti",
+#     "libGL-getprocaddr",
+#     "libal",
+#     "libhtml5",
+# ])
 
 ##
 #  eigen
@@ -25,23 +88,128 @@ bazel_dep(name = "eigen", version = "3.4.0")
 ##
 bazel_dep(name = "googletest", version = "1.15.2")
 
+##
+#  flecs
+##
+# bazel_dep(name = "flecs")
+http_archive(
+    name = "flecs",
+    build_file = "//third_party:flecs.BUILD",
+    strip_prefix = "flecs-4.1.0",
+    urls = ["https://github.com/SanderMertens/flecs/archive/refs/tags/v4.1.0.tar.gz"],
+)
+
+##
+#  raylib (prebuilt)
+##
+http_archive(
+    name = "raylib_macos",
+    build_file = "//third_party:raylib.BUILD",
+    strip_prefix = "raylib-5.5_macos",
+    urls = ["https://github.com/raysan5/raylib/releases/download/5.5/raylib-5.5_macos.tar.gz"],
+)
+
+http_archive(
+    name = "raylib_windows",
+    build_file = "//third_party:raylib.BUILD",
+    strip_prefix = "raylib-5.5_win64_msvc16",
+    urls = ["https://github.com/raysan5/raylib/releases/download/5.5/raylib-5.5_win64_msvc16.zip"],
+)
+
+http_archive(
+    name = "raylib_linux",
+    build_file = "//third_party:raylib.BUILD",
+    strip_prefix = "raylib-5.5_linux_amd64",
+    urls = ["https://github.com/raysan5/raylib/releases/download/5.5/raylib-5.5_linux_amd64.tar.gz"],
+)
+
+http_archive(
+    name = "raylib_emscripten",
+    build_file = "//third_party:raylib.BUILD",
+    strip_prefix = "raylib-5.5_webassembly",
+    urls = ["https://github.com/raysan5/raylib/releases/download/5.5/raylib-5.5_webassembly.zip"],
+)
+
+##
+#  libccd
+##
+http_archive(
+    name = "libccd",
+    build_file = "//third_party:libccd.BUILD",
+    patch_args = ["-p1"],
+    patches = ["//third_party/patches:libccd_config.patch"],
+    strip_prefix = "libccd-2.1",
+    urls = ["https://github.com/danfis/libccd/archive/refs/tags/v2.1.tar.gz"],
+)
+
+##
+#  octomap
+##
+http_archive(
+    name = "octomap",
+    build_file = "//third_party:octomap.BUILD",
+    strip_prefix = "octomap-1.10.0",
+    urls = ["https://github.com/OctoMap/octomap/archive/refs/tags/v1.10.0.tar.gz"],
+)
+
+##
+#  fcl
+##
+http_archive(
+    name = "fcl",
+    build_file = "//third_party:fcl.BUILD",
+    patch_args = ["-p1"],
+    patches = ["//third_party/patches:fcl_config.patch"],
+    strip_prefix = "fcl-0.7.0",
+    urls = ["https://github.com/flexible-collision-library/fcl/archive/refs/tags/0.7.0.tar.gz"],
+)
+
+##
+#  discregrid
+##
+git_repository(
+    name = "Discregrid",
+    build_file = "//third_party:Discregrid.BUILD",
+    commit = "4c27e1cc88be828c6ac5b8a05759ac7e01cf79e9",
+    remote = "https://github.com/InteractiveComputerGraphics/Discregrid.git",
+)
+
+##
+#  loguru
+##
+git_repository(
+    name = "loguru",
+    build_file = "//third_party:loguru.BUILD",
+    commit = "4adaa185883e3c04da25913579c451d3c32cfac1",
+    remote = "https://github.com/emilk/loguru.git",
+)
+
+##
+# assimp
+##
+http_archive(
+    name = "assimp",
+    build_file = "//third_party:assimp.BUILD",
+    strip_prefix = "assimp-5.3.1",
+    urls = ["https://github.com/assimp/assimp/archive/refs/tags/v5.3.1.tar.gz"],
+)
 
 ##
 # Boost
 # Famous C++ library that has given rise to many new additions to the C++ Standard Library
 # Makes @boost available for use: For example, add `@boost//:algorithm` to your deps.
 # For more, see https://github.com/nelhage/rules_boost and https://www.boost.org
-bazel_dep(name = "rules_boost", repo_name = "com_github_nelhage_rules_boost")
-archive_override(
-    module_name = "rules_boost",
-    urls = "https://github.com/nelhage/rules_boost/archive/refs/heads/master.tar.gz",
-    strip_prefix = "rules_boost-master",
-    # It is recommended to edit the above URL and the below sha256 to point to a specific version of this repository.
-    # integrity = "sha256-...",
-)
+# bazel_dep(name = "rules_boost", repo_name = "com_github_nelhage_rules_boost")
+# archive_override(
+#     module_name = "rules_boost",
+#     urls = "https://github.com/nelhage/rules_boost/archive/refs/heads/master.tar.gz",
+#     strip_prefix = "rules_boost-master",
+#     # It is recommended to edit the above URL and the below sha256 to point to a specific version of this repository.
+#     # integrity = "sha256-...",
+# )
 
-non_module_boost_repositories = use_extension("@com_github_nelhage_rules_boost//:boost/repositories.bzl", "non_module_dependencies")
-use_repo(
-    non_module_boost_repositories,
-    "boost",
-)
+# non_module_boost_repositories = use_extension("@com_github_nelhage_rules_boost//:boost/repositories.bzl", "non_module_dependencies")
+# use_repo(
+#     non_module_boost_repositories,
+#     "boost",
+# )

@@ -34,7 +34,42 @@ struct Particle {};
 struct RigidBody {};
 } // namespace prefabs
 
+// RenderMesh component hold raylib::model object
+struct RenderMesh
+{
+    Model model;
+
+    // void set_transform(Matrix4r &m)
+    // {
+    // 	model.transform = MatrixIdentity();
+    // };
+};
+
+typedef enum {
+    BOX_COLLIDER,
+    SPHERE_COLLIDER,
+    CAPSULE_COLLIDER,
+    MESH_COLLIDER,
+    SDF_COLLIDER
+} PhysicsMeshType;
+
+struct PhysicsMesh // collider?
+{
+	Model model;
+	Matrix3r inertia; // body space
+
+	Matrix3r compute_inertia()
+	{
+		assert(model.meshes[0].triangleCount > 0);
+
+        // do the volume integration thing?
+        // extend the raylib for physics stuff
+	};
+	Vector3r compute_inertia_diagonalized(Matrix3r &R, Vector3r &t);
+};
+
 namespace phys {
+
 
     namespace pbd {
         // world quantities, unless otherwise mentioned
@@ -76,9 +111,9 @@ namespace phys {
         struct IsActive { };
         struct BoundingSphere { Real value = 1; }; // radius
 
-        struct Mesh0 {
-            Mesh m;
-        };
+        // struct Mesh0 {
+        //     Mesh m;
+        // };
 
         // struct Colliders { std::vector<Collider> value; };
 

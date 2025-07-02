@@ -1,0 +1,93 @@
+#include "physics_module.h"
+#include "components.h"
+#include "pipelines.h"
+#include "systems.h"
+
+#include <modules/engine/core/components.h>
+#include <modules/engine/rendering/components.h>
+
+namespace physics {
+    flecs::entity PhysicsModule::m_physicsTick; // static
+
+    void PhysicsModule::register_components(flecs::world &world) {
+        world.component<Velocity>();
+        world.component<AccelerationSpeed>();
+        world.component<CollidedWith>();
+    }
+
+    void PhysicsModule::register_systems(flecs::world &world) {
+        m_physicsTick = world.timer().interval(PHYSICS_TICK_LENGTH);
+
+        world.system<const Velocity, DesiredVelocity>("Reset desired velocity")
+                .kind(flecs::PreUpdate)
+                .tick_source(m_physicsTick)
+                .each(systems::reset_desired_velocity);
+
+        world.system<Velocity, const DesiredVelocity, const AccelerationSpeed>("Integrate velocity")
+                .kind<Integration>()
+                .tick_source(m_physicsTick)
+                .each(systems::integrate_velocity);
+
+        world.system<core::Position, const Velocity>("Integrate position")
+                .kind<Integration>()
+                .tick_source(m_physicsTick)
+                .each(systems::integrate_position);
+
+        world.system<CollisionRecordList, const core::Position, const Collider>(
+                     "Detect discrete collision")
+                .term_at(0)
+                .singleton()
+                .kind<CollisionDetection>()
+                .tick_source(m_physicsTick)
+                .each(systems::detect_collision);
+
+        world.system<CollisionRecordList>("Resolve collision")
+                .term_at(0)
+                .singleton()
+                .kind<CollisionResolution>()
+                .tick_source(m_physicsTick)
+                .each(systems::resolve_collision);
+
+        world.system<CollisionRecordList>("Create collision relationship")
+                .term_at(0)
+                .singleton()
+                .kind<CollisionResolution>()
+                .tick_source(m_physicsTick)
+                .each(systems::create_collision_relationship);
+
+        world.system("Delete collision relationship")
+                .kind<CollisionCleanup>()
+                .tick_source(m_physicsTick)
+                .with<CollidedWith>(flecs::Wildcard)
+                .each(systems::delete_collision_relationship);
+    }
+
+    void PhysicsModule::register_pipeline(flecs::world &world) {
+        world.component<Integration>().add(flecs::Phase).depends_on(flecs::OnUpdate);
+        world.component<CollisionDetection>().add(flecs::Phase).depends_on(flecs::OnValidate);
+        world.component<CollisionResolution>().add(flecs::Phase).depends_on(flecs::PostUpdate);
+        world.component<CollisionCleanup>().add(flecs::Phase).depends_on<CollisionResolution>();
+
+        // "flecs built-ins"
+
+        // OnStart
+        // OnLoad
+        // PostLoad
+        // PreUpdate
+        // OnUpdate
+        //      Integration
+        // OnValidate
+        //      CollisionDetection
+        //          OnCollisionDetected
+        //          PostCollisionDetected
+        // PostUpdate
+        //      CollisionResolution
+        //      CollisionCleanup
+        // PreStore
+        // OnStore
+        //      PreRender
+        //      Render
+        //      RenderGUI
+        //      PostRender
+    }
+} // namespace physics
