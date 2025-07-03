@@ -76,6 +76,15 @@ cc_binary(
     ],
 )
 
+cc_binary(
+    name = "tmx",
+    srcs = ["tmx.cpp"],
+    data = ["//:resources"],
+    deps = [
+        "@tmxlite",
+    ],
+)
+
 wasm_cc_binary(
     name = "webapp",
     cc_target = ":main1",

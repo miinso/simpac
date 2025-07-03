@@ -61,5 +61,6 @@ refresh_compile_commands(
         # "//modules:debug": "",
         "//survivors:library1": "",
         "//survivors:main1": "",
+        "//survivors:tmx": "",
     },
 )
