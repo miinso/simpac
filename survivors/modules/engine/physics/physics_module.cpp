@@ -1,18 +1,28 @@
 #include "physics_module.h"
 #include "components.h"
 #include "pipelines.h"
+#include "queries.h"
 #include "systems.h"
+
 
 #include <modules/engine/core/components.h>
 #include <modules/engine/rendering/components.h>
 
 namespace physics {
-    flecs::entity PhysicsModule::m_physicsTick; // static
+    // flecs::entity PhysicsModule::m_physicsTick; // static
 
     void PhysicsModule::register_components(flecs::world &world) {
         world.component<Velocity>();
         world.component<AccelerationSpeed>();
         world.component<CollidedWith>();
+    }
+
+    void PhysicsModule::register_queries(flecs::world &world) {
+        queries::visible_collision_bodies_query =
+                world.query_builder<core::Position, Collider>().with<rendering::Visible>().build();
+
+        queries::box_collider_query =
+                world.query_builder<core::Position, Collider>().with<BoxCollider>().build();
     }
 
     void PhysicsModule::register_systems(flecs::world &world) {
@@ -34,12 +44,22 @@ namespace physics {
                 .each(systems::integrate_position);
 
         world.system<CollisionRecordList, const core::Position, const Collider>(
-                     "Detect discrete collision")
+                     "Detect discrete collision (static??)")
                 .term_at(0)
+                .with<StaticCollider>()
                 .singleton()
                 .kind<CollisionDetection>()
                 .tick_source(m_physicsTick)
                 .each(systems::detect_collision);
+
+        world.system<CollisionRecordList, const core::Position, const Collider>(
+                     "Detect discrete collision (non-static??)")
+                .term_at(0)
+                .singleton()
+                .with<rendering::Visible>()
+                .kind<CollisionDetection>()
+                .tick_source(m_physicsTick)
+                .each(systems::detect_collision_alt);
 
         world.system<CollisionRecordList>("Resolve collision")
                 .term_at(0)
@@ -56,10 +76,17 @@ namespace physics {
                 .each(systems::create_collision_relationship);
 
         world.system("Delete collision relationship")
+                .with<Collider>()
                 .kind<CollisionCleanup>()
                 .tick_source(m_physicsTick)
-                .with<CollidedWith>(flecs::Wildcard)
                 .each(systems::delete_collision_relationship);
+
+        world.system<CollisionRecordList>("Clean collision record list")
+                .term_at(0)
+                .singleton()
+                .kind<CollisionCleanup>()
+                .tick_source(m_physicsTick)
+                .each(systems::clean_collision_record);
     }
 
     void PhysicsModule::register_pipeline(flecs::world &world) {

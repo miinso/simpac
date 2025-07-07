@@ -2,10 +2,17 @@
 
 #include <Eigen/Dense>
 #include <flecs.h>
+#include <raylib.h>
+#include <unordered_map>
 #include <vector>
 
 namespace physics {
-    enum CollisionFilter { none = 0x00, player = 0x01, enemy = 0x02, more = 0x04 };
+    struct CircleCollider;
+    struct BoxCollider;
+
+    enum CollisionFilter { none = 0x00, player = 0x01, enemy = 0x02, environment = 0x04 };
+
+    enum ColliderType { Circle = 0, Box = 1, SIZE = 2 };
 
     struct Velocity {
         Eigen::Vector3f value;
@@ -20,32 +27,58 @@ namespace physics {
     };
 
     struct Collider {
-        float radius;
+        // float radius;
         bool correct_position;
+        bool static_body;
+        Rectangle bounds;
         CollisionFilter collision_type; // type
         CollisionFilter collision_filter; // filter
+        ColliderType type;
     };
 
-    // method 1. using relationships (poor)
+    struct StaticCollider {};
+
+    struct CircleCollider {
+        float radius;
+    };
+
+    struct BoxCollider {};
+
     struct CollidedWith {};
 
-    // method 2. dispatching a new entity for each collision
-    // (marginally better than method 1)
+    struct CollisionInfo {
+        Vector2 normal;
+        Vector2 contact_point;
+    };
+
     struct CollisionRecord {
         flecs::entity a;
         flecs::entity b;
     };
 
-    // method 3. maintaining a global list (kind of works)
+    struct SignificantCollisionRecord {
+        flecs::entity a;
+        flecs::entity b;
+        CollisionInfo a_info;
+        CollisionInfo b_info;
+    };
+
+    struct IdPairHash {
+        std::size_t operator()(const std::pair<long, long> &h) const {
+            auto h1 = std::hash<long>{}(h.first);
+            auto h2 = std::hash<long>{}(h.second);
+
+            // A common way to combine hashes is to use XOR and a bit shift.
+            // The choice of shift value can impact distribution, but 0x9e3779b9 is a common
+            // constant derived from the golden ratio, used in boost::hash_combine.
+            return h1 ^ (h2 << 1); // Or h1 ^ (h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2)); for better
+                                   // distribution
+        }
+    };
+
     struct CollisionRecordList {
         std::vector<CollisionRecord> records;
-        std::vector<CollisionRecord>
-                significant_collisions; // what does it mean, significant collision? is this to
-                                        // differenciate broad/narrow results?? i
-                                        // guess it is (but not sure of it)
-                                        // no! it means a subset of detected collisions,
-                                        // specifically collision between entities with different
-                                        // collision tag player-enemy: significant. enemy-enemy:
-                                        // non-significant.
+        std::vector<SignificantCollisionRecord> significant_collisions;
+        std::unordered_map<std::pair<long, long>, CollisionInfo, IdPairHash> collisions_info;
     };
 } // namespace physics

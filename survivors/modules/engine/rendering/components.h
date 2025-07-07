@@ -1,6 +1,8 @@
 #pragma once
 
+#include <flecs.h>
 #include <raylib.h>
+
 
 namespace rendering {
     struct Circle {
@@ -19,6 +21,11 @@ namespace rendering {
         Vector2 draw_offset;
         float scale;
         Color tint;
+    };
+
+    struct TrackingCamera {
+        flecs::entity target;
+        Camera2D camera{0};
     };
 
     struct Rotation {

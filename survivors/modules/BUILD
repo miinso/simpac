@@ -173,3 +173,21 @@ cc_library(
         ":rendering",
     ],
 )
+
+cc_library(
+    name = "tilemap",
+    srcs = [
+        "tilemap/tilemap_module.cpp",
+    ],
+    hdrs = [
+        "tilemap/systems.h",
+        "tilemap/tilemap_module.h",
+    ],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":core",
+        ":physics",
+        ":rendering",
+        "@tmxlite",
+    ],
+)

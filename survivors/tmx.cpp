@@ -1,3 +1,5 @@
+// https://github.com/fallahn/tmxlite/blob/master/ParseTest/src/main.cpp
+
 #include <tmxlite/FreeFuncs.hpp>
 #include <tmxlite/LayerGroup.hpp>
 #include <tmxlite/Map.hpp>
@@ -234,3 +236,172 @@ int main() {
     std::cout << "Test complete" << std::endl;
     return 0;
 }
+
+/*
+Loaded Map version: 1, 0
+Map Dimensions: {0, 0, 12800, 2560}
+Map class: TestMapClass
+Map tileset has 2 tilesets
+Tileset: platform
+Tileset class: Level
+Tileset first GID: 1
+Tileset: tileset02
+Tileset class: TestTilesetClass
+Tileset first GID: 43
+Map has 1 properties
+Found property: test map property
+Type: 1
+
+Map has 3 layers
+Found Layer: TestGroup
+Layer Type: Group
+Layer Dimensions: {0, 0}
+Layer Tint: RGBA: 255, 255, 255, 255
+Checking sublayers
+LayerGroup has 3 layers
+Found Layer: Far
+Sub-layer Type: Tile
+Sub-layer Class: TestLayerClass
+Sub-layer Dimensions: {200, 40}
+Sub-layer Tint: RGBA: 255, 255, 255, 255
+Far has 8000 tiles
+Found Layer: Middle
+Sub-layer Type: Tile
+Sub-layer Class:
+Sub-layer Dimensions: {200, 40}
+Sub-layer Tint: RGBA: 255, 255, 255, 255
+Middle has 8000 tiles
+Found Layer: Near
+Sub-layer Type: Tile
+Sub-layer Class:
+Sub-layer Dimensions: {200, 40}
+Sub-layer Tint: RGBA: 255, 255, 255, 255
+Near has 8000 tiles
+2 Layer Properties:
+Found property: layer group prop
+Type: 3
+Found property: another property
+Type: 0
+Found Layer: Objects
+Layer Type: Object
+Layer Dimensions: {0, 0}
+Layer Tint: RGBA: 255, 255, 255, 255
+Found 30 objects in layer
+Object 1, Buns
+Object has 0 properties
+Object 2, Flaps
+Object has 1 properties
+Found property: Custom Object Property
+Type: 0
+Object 3, Dicketry
+Object has 0 properties
+Object 4,
+Object has 0 properties
+Object 6,
+Object has 0 properties
+Object 8,
+Object has 0 properties
+Object 19,
+Object has 0 properties
+Object 23,
+Object has 0 properties
+Object 24,
+Object has 0 properties
+Object 25,
+Object has 0 properties
+Object 26,
+Object has 0 properties
+Object 27,
+Object has 0 properties
+Object 28,
+Object has 0 properties
+Object 29,
+Object has 0 properties
+Object 30,
+Object has 0 properties
+Object 31,
+Object has 0 properties
+Object 32,
+Object has 0 properties
+Object 33,
+Object has 0 properties
+Object 34,
+Object has 0 properties
+Object 35,
+Object has 0 properties
+Object 36,
+Object has 0 properties
+Object 37,
+Object has 0 properties
+Object 38,
+Object has 0 properties
+Object 39,
+Object has 0 properties
+Object 40,
+Object has 0 properties
+Object 41,
+Object has 0 properties
+Object 42,
+Object has 0 properties
+Object 43,
+Object has 0 properties
+Object 44,
+Object has 0 properties
+Object 45,
+Object has 0 properties
+0 Layer Properties:
+Found Layer: Test Image Layer
+Layer Type: Image
+Layer Dimensions: {0, 0}
+Layer Tint: RGBA: 255, 255, 255, 255
+1 Layer Properties:
+Found property: image layer property
+Type: 3
+
+------------------------------
+
+Loaded tileset without map: platform
+Tileset class: Level
+Tileset image: resources/tmx/images/tilemap/tileset.png
+Tileset first GID: 0
+Tiles in tileset: 42
+
+------------------------------
+
+OK: tmx::resolveFilePath("a/b/c", "A/B/C") = "A/B/C/a/b/c" = A/B/C/a/b/c
+OK: tmx::resolveFilePath("a/b/c/", "A/B/C") = "A/B/C/a/b/c" = A/B/C/a/b/c
+OK: tmx::resolveFilePath("a/b/c", "A/B/C/") = "A/B/C/a/b/c" = A/B/C/a/b/c
+OK: tmx::resolveFilePath("a/b/c", "") = "a/b/c" = a/b/c
+OK: tmx::resolveFilePath("", "A/B/C") = "A/B/C" = A/B/C
+OK: tmx::resolveFilePath("a///b//c", "A//B///C") = "A/B/C/a/b/c" = A/B/C/a/b/c
+OK: tmx::resolveFilePath("/a/b/c", "A/B/C") = "/a/b/c" = /a/b/c
+OK: tmx::resolveFilePath("a/b/c", "/A/B/C") = "/A/B/C/a/b/c" = /A/B/C/a/b/c
+OK: tmx::resolveFilePath("./a/b/c", "A/B/C") = "A/B/C/a/b/c" = A/B/C/a/b/c
+OK: tmx::resolveFilePath("../a/b/c", "A/B/C") = "A/B/a/b/c" = A/B/a/b/c
+OK: tmx::resolveFilePath("../../a/b/c", "A/B/C") = "A/a/b/c" = A/a/b/c
+OK: tmx::resolveFilePath("../../../a/b/c", "A/B/C") = "a/b/c" = a/b/c
+OK: tmx::resolveFilePath("../../../../a/b/c", "A/B/C") = "../a/b/c" = ../a/b/c
+OK: tmx::resolveFilePath("../../../../../a/b/c", "A/B/C") = "../../a/b/c" = ../../a/b/c
+OK: tmx::resolveFilePath("a/b/c", "./A/B/C") = "A/B/C/a/b/c" = A/B/C/a/b/c
+OK: tmx::resolveFilePath("a/b/c", "../A/B/C") = "../A/B/C/a/b/c" = ../A/B/C/a/b/c
+OK: tmx::resolveFilePath("a/b/c", "../../A/B/C") = "../../A/B/C/a/b/c" = ../../A/B/C/a/b/c
+OK: tmx::resolveFilePath("a/../b/c", "A/B/C") = "A/B/C/b/c" = A/B/C/b/c
+OK: tmx::resolveFilePath("a/b/c", "A/../B/C") = "B/C/a/b/c" = B/C/a/b/c
+OK: tmx::resolveFilePath("a/../b/../c", "A/B/C") = "A/B/C/c" = A/B/C/c
+OK: tmx::resolveFilePath("a/b/c", "A/../B/../C") = "C/a/b/c" = C/a/b/c
+OK: tmx::resolveFilePath("a/../b/../c", "A/../B/../C") = "C/c" = C/c
+OK: tmx::resolveFilePath("a/b/c/../..", "A/B/C") = "A/B/C/a" = A/B/C/a
+OK: tmx::resolveFilePath("a/b/c/../../..", "A/B/C") = "A/B/C" = A/B/C
+OK: tmx::resolveFilePath("a/b/c/../../../..", "A/B/C") = "A/B" = A/B
+OK: tmx::resolveFilePath("/a/../b/c", "A/B/C") = "/b/c" = /b/c
+OK: tmx::resolveFilePath("/a/../../b/c", "A/B/C") = "/../b/c" = /../b/c
+OK: tmx::resolveFilePath("C:/a/../b/c", "A/B/C") = "C:/b/c" = C:/b/c
+OK: tmx::resolveFilePath("a/../b/c", "C:/A/B/C") = "C:/A/B/C/b/c" = C:/A/B/C/b/c
+OK: tmx::resolveFilePath("C:/a/../b/c", "C:/A/B/C") = "C:/b/c" = C:/b/c
+OK: tmx::resolveFilePath("a\\..\\b\\c", "C:\\A\\B\\..\\C") = "C:/A/C/b/c" = C:/A/C/b/c
+
+------------------------------
+
+Test complete
+Press any key to continue . . .
+*/

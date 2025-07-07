@@ -39,6 +39,10 @@ namespace gameplay {
 
     struct Projectile {};
 
+    struct Bounce {
+        int bounce_count;
+    };
+
     struct Pierce {
         int pierce_count;
         std::unordered_set<int> hits;

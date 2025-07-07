@@ -6,6 +6,7 @@
 #include <modules/engine/core/queries.h>
 #include <modules/engine/core/systems.h>
 #include <modules/engine/physics/components.h>
+#include <modules/engine/physics/queries.h>
 #include <modules/engine/rendering/components.h>
 
 #include <raylib.h>
@@ -13,28 +14,57 @@
 
 namespace gameplay {
     namespace systems {
-        inline bool &outside_side_switch() {
-            static bool outside_side_switch = false;
-            return outside_side_switch;
-        } // i don't like this. i need something better whilst using cpp11
+        // inline bool &outside_side_switch() {
+        inline bool outside_side_switch = false;
+        // return outside_side_switch;
+        // } // i don't like this. i need something better whilst using cpp11
+        // no just use cpp17
 
-        inline void spawn_enemy(flecs::iter &it, size_t i, const Spawner &spawner,
-                                const core::GameSettings &settings) {
-            float factor = rand() % 2 - 1;
-            float neg = rand() % 1 - 1;
-            float randX = outside_side_switch() ? neg * factor * settings.windowWidth
-                                                : rand() % settings.windowWidth;
-            float randY = outside_side_switch() ? rand() % settings.windowHeight
-                                                : neg * factor * settings.windowHeight;
+        inline void spawn_enemy(flecs::iter &iter, size_t i, const Spawner &spawner,
+                                const core::GameSettings &settings,
+                                const rendering::TrackingCamera &camera) {
+            for (int i = 0; i < 1; i++) {
+                float factor = rand() % 2 - 1;
+                float neg = rand() % 1 - 1;
+                float randX = outside_side_switch ? neg * factor * settings.windowWidth
+                                                  : rand() % settings.windowWidth;
+                randX += camera.camera.target.x - camera.camera.offset.x;
+                float randY = outside_side_switch ? rand() % settings.windowHeight
+                                                  : neg * factor * settings.windowHeight;
+                randY += camera.camera.target.y - camera.camera.offset.y;
+                bool is_valid = true;
 
-            it.world()
-                    .entity()
-                    .is_a(spawner.enemy_prefab)
-                    .child_of(it.entity(i))
-                    .set<core::Position>({Eigen::Vector3f(randX, randY, 0)});
+                physics::queries::box_collider_query.run([&](flecs::iter &it) {
+                    while (it.next()) {
+                        if (!is_valid)
+                            break;
+                        auto pos = it.field<core::Position>(0);
+                        auto box = it.field<physics::Collider>(1);
+                        for (auto j: it) {
+                            const Rectangle rec = {pos[j].value.x() + box[j].bounds.x,
+                                                   pos[j].value.y() + box[j].bounds.y,
+                                                   box[j].bounds.width, box[j].bounds.height};
+                            if (CheckCollisionPointRec({randX, randY}, rec)) {
+                                is_valid = false;
+                                break;
+                            }
+                        }
+                    }
+                });
 
-            outside_side_switch() = !outside_side_switch();
-        };
+                outside_side_switch = !outside_side_switch;
+
+                if (!is_valid)
+                    continue;
+
+                iter.world()
+                        .entity()
+                        .is_a(spawner.enemy_prefab)
+                        .child_of(iter.entity(i))
+                        .set<core::Position>({Eigen::Vector3f(randX, randY, 0)});
+                break;
+            }
+        }
 
         inline void update_cooldown(flecs::iter &it, size_t i, Cooldown &cooldown) {
             cooldown.elapsed_time += it.delta_time();
@@ -96,6 +126,25 @@ namespace gameplay {
             }
             weapon.remove<CooldownCompleted>();
         };
+
+        inline void handle_projectile_collision_against_wall(flecs::iter &it, size_t i,
+                                                             physics::CollisionRecordList &list,
+                                                             Bounce &bounce, physics::Velocity &vel,
+                                                             rendering::Rotation &rotation) {
+            flecs::entity other = it.pair(4).second();
+            if (other.try_get<physics::Collider>()->collision_type == physics::environment) {
+                physics::CollisionInfo info = list.collisions_info[{it.entity(i).id(), other.id()}];
+                vel.value = Vector2Reflect(vel.value, info.normal);
+                rotation.angle = Vector2Angle(Vector2{0, 1}, Vector2Negate(vel.value)) * RAD2DEG;
+
+                bounce.bounce_count--;
+                if (bounce.bounce_count <= 0) {
+                    it.entity(i).remove<Bounce>();
+                }
+
+                it.entity(i).remove<physics::CollidedWith>(other);
+            }
+        }
 
         inline void handle_projectile_collision(flecs::entity e) {
             e.add<core::DestroyAfterFrame>();
@@ -202,7 +251,7 @@ namespace gameplay {
 
         inline void convert_collision_to_damage(flecs::iter &it, size_t i, Damage &damage) {
             auto other = it.pair(1).second();
-            if (other.has<TakeDamage>() && !other.has<Health>())
+            if (other.has<TakeDamage>() || !other.has<Health>())
                 return;
             other.set<TakeDamage>({damage.value});
         };
@@ -289,6 +338,22 @@ namespace gameplay {
 
         inline void decrease_chain_count(Chain &chain) {
             chain.chain_count = std::min(0, chain.chain_count - 1);
+        }
+
+        inline void add_bounce_enchant(const flecs::world &world, flecs::entity e) {
+            e.set<Bounce>({1});
+            // core::systems::remove_empty_tables(world);
+        }
+
+        inline void remove_bounce_enchant(const flecs::world &world, flecs::entity e) {
+            e.remove<Bounce>();
+            core::systems::remove_empty_tables(world);
+        }
+
+        inline void increase_bounce_count(Bounce &bounce) { bounce.bounce_count++; }
+
+        inline void decrease_bounce_count(Bounce &bounce) {
+            bounce.bounce_count = std::min(0, bounce.bounce_count - 1);
         }
     } // namespace systems
 } // namespace gameplay

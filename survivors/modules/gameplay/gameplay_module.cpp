@@ -19,9 +19,12 @@ namespace gameplay {
     void GameplayModule::register_systems(flecs::world world) {
         m_spawner_tick = world.timer().interval(SPAWNER_INTERVAL);
 
-        world.system<const Spawner, const core::GameSettings>("Spawn enemy")
+        world.system<const Spawner, const core::GameSettings, const rendering::TrackingCamera>(
+                     "Spawn enemy")
                 .tick_source(m_spawner_tick)
                 .term_at(1)
+                .singleton()
+                .term_at(2)
                 .singleton()
                 .each(systems::spawn_enemy);
 
@@ -44,6 +47,21 @@ namespace gameplay {
                 .parent() // weapon is equipped by a player, so get the `Position` from the parent
                           // entity
                 .each(systems::fire_projectile);
+
+        world.system("Handle collision for projectiles against wall, no-bounce")
+                .with<physics::CollidedWith>(flecs::Wildcard)
+                .with<Projectile>()
+                .without<Bounce>()
+                .kind<OnCollisionDetected>()
+                .immediate()
+                .each(systems::handle_projectile_collision_against_wall);
+
+        world.system("Handle collision for projectiles against, bounce")
+                .with<physics::CollidedWith>(flecs::Wildcard)
+                .with<Projectile>()
+                .kind<OnCollisionDetected>()
+                .immediate()
+                .each(systems::handle_projectile_collision_against_wall_bounce);
 
         world.system("Handle collision for projectiles, without any enchantments or modifiers")
                 .with<Projectile>()
@@ -209,10 +227,39 @@ namespace gameplay {
                                    .with<Projectile>()
                                    .with(flecs::Prefab)
                                    .each(systems::decrease_chain_count);
+
+        add_bounce = world.system("Add bounce enchant")
+                             .kind(0)
+                             .with<Projectile>()
+                             .without<Bounce>()
+                             .with(flecs::Prefab)
+                             .immediate()
+                             .each(systems::add_bounce_enchant);
+        remove_bounce = world.system("Remove bounce enchant")
+                                .kind(0)
+                                .with<Projectile>()
+                                .with<Bounce>()
+                                .with(flecs::Prefab)
+                                .immediate()
+                                .each(systems::remove_bounce_enchant);
+
+        add_bounce_amt = world.system<Bounce>("+1 Bounce")
+                                 .kind(0)
+                                 .with<Projectile>()
+                                 .with(flecs::Prefab)
+                                 .immediate()
+                                 .each(systems::increase_bounce_count);
+
+        remove_bounce_amt = world.system<Bounce>("-1 Bounce")
+                                    .kind(0)
+                                    .with<Projectile>()
+                                    .with(flecs::Prefab)
+                                    .immediate()
+                                    .each(systems::decrease_bounce_count);
     }
 
     void GameplayModule::register_entities(flecs::world world) {
-        auto dropdown = world.entity("more_dropdown")
+        auto dropdown = world.entity("gameplay_dropdown")
                                 .child_of(rendering::gui::GUIModule::menu_bar)
                                 .set<rendering::gui::MenuBarTab>({"Gameplay Tools", 25});
 
@@ -244,6 +291,14 @@ namespace gameplay {
                 {"Add Split", add_split, rendering::gui::MenuBarTabItemType::RUN});
         world.entity().child_of(dropdown).set<rendering::gui::MenuBarTabItem>(
                 {"Remove Split", remove_split, rendering::gui::MenuBarTabItemType::RUN});
+        world.entity().child_of(dropdown).set<rendering::gui::MenuBarTabItem>(
+                {"Add Bounce", add_bounce, rendering::gui::MenuBarTabItemType::RUN});
+        world.entity().child_of(dropdown).set<rendering::gui::MenuBarTabItem>(
+                {"Remove Bounce", remove_bounce, rendering::gui::MenuBarTabItemType::RUN});
+        world.entity().child_of(dropdown).set<rendering::gui::MenuBarTabItem>(
+                {"+1 Bounce", add_bounce_amt, rendering::gui::MenuBarTabItemType::RUN});
+        world.entity().child_of(dropdown).set<rendering::gui::MenuBarTabItem>(
+                {"-1 Bounce", remove_bounce_amt, rendering::gui::MenuBarTabItemType::RUN});
     }
 
     void GameplayModule::register_pipeline(flecs::world world) {
