@@ -8,7 +8,10 @@ namespace debug {
         DebugModule(flecs::world world) : BaseModule(world){};
 
     private:
-        flecs::system debug_colliders;
+        flecs::system debug_collidable_entity_id;
+        flecs::system debug_collider_bound;
+        flecs::system debug_circle_collider;
+        flecs::system debug_box_collider;
         flecs::system debug_FPS;
         flecs::system debug_entity_count;
         flecs::system debug_mouse_pos;

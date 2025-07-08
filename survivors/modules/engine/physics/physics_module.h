@@ -23,7 +23,7 @@ namespace physics {
         PhysicsModule(flecs::world &world) : BaseModule(world){};
 
 
-        static Vector2 collide_circles(const CircleCollider *a, const core::Position *a_pos,
+        static Vector2 collide_circle_circle(const CircleCollider *a, const core::Position *a_pos,
                                        CollisionInfo &a_info, const CircleCollider *b,
                                        const core::Position *b_pos, CollisionInfo &b_info) {
             float combinedRadius = a->radius + b->radius;

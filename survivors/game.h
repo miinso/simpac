@@ -10,6 +10,8 @@ public:
     void run();
 
 private:
+    void update_draw_frame_desktop();
+    static void update_draw_frame_browser(void *app);
     flecs::world m_world;
     std::string m_windowName;
     int m_windowWidth;

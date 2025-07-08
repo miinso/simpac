@@ -10,25 +10,48 @@
 
 namespace debug {
     namespace systems {
-        inline void draw_collider(const physics::Collider &collider,
-                                  const core::Position &position) {
-            DrawCircleLines(position.value.x(), position.value.y(), collider.radius, GREEN);
-        };
+        // inline void draw_collider(const physics::Collider &collider,
+        //                           const core::Position &position) {
+        //     DrawCircleLines(position.value.x(), position.value.y(), collider.radius, GREEN);
+        // };
+
+        inline void draw_collidable(flecs::entity e, const core::Position &pos,
+                                    const physics::Collider &col) {
+            DrawText(TextFormat("%d", e.id()), pos.value.x() + col.bounds.x + 12,
+                     pos.value.y() + col.bounds.y + 12, 16, GREEN);
+            DrawCircleLines(pos.value.x(), pos.value.y(), 0.02f, RED);
+        }
+
+        inline void draw_collider_bound(const core::Position &pos, const physics::Collider &col) {
+            DrawRectangleLines(pos.value.x() + col.bounds.x, pos.value.y() + col.bounds.y,
+                               col.bounds.width, col.bounds.height, MAGENTA);
+        }
+
+        inline void draw_circle_collider(const core::Position &pos,
+                                         const physics::CircleCollider &col) {
+            DrawCircleLines(pos.value.x(), pos.value.y(), col.radius, GREEN);
+        }
+
+        inline void draw_box_collider(const core::Position &pos, const physics::Collider &col) {
+            DrawRectangleLines(pos.value.x() + col.bounds.x, pos.value.y() + col.bounds.y,
+                               col.bounds.width, col.bounds.height, GREEN);
+        }
 
         inline void draw_fps(flecs::iter &iter) {
             DrawRectangleRec({0, 10, 225, 20}, DARKGRAY);
             DrawFPS(10, 10);
         };
 
-        inline void draw_entity_count(flecs::iter &iter) {
+        inline void draw_entity_count(flecs::iter &it) {
             DrawRectangleRec({0, 30, 225, 40}, DARKGRAY);
-            auto renderable_count = rendering::queries::query_all_renderables().count();
-            auto visible_renderable_count = rendering::queries::query_visible_renderables().count();
-            DrawText(std::string(std::to_string(renderable_count) + " entities").c_str(), 10, 30,
-                     20, GREEN);
-            DrawText(std::string(std::to_string(visible_renderable_count) + " visible entities")
-                             .c_str(),
-                     10, 50, 20, GREEN);
+            auto renderable_count = rendering::queries::query_all_renderables.count();
+            auto collidable_count = it.world().query<physics::Collider>().count();
+            auto visible_renderable_count = rendering::queries::query_visible_renderables.count();
+            DrawText(TextFormat("%d entities", renderable_count), 10, 30, 20, GREEN);
+            DrawText(TextFormat("%d visible entities", visible_renderable_count), 10, 50, 20,
+                     GREEN);
+            DrawText(TextFormat("%d collidable entities", visible_renderable_count), 10, 50, 20,
+                     GREEN);
         };
 
         inline void draw_mouse_position(flecs::iter &iter) {
@@ -36,7 +59,7 @@ namespace debug {
         };
 
         inline void draw_grid(flecs::iter &iter) {
-            GuiGrid({0, 0, (float) GetScreenWidth(), (float) GetScreenHeight()}, "grid", 32, 1,
+            GuiGrid({0, 0, (float) GetScreenWidth(), (float) GetScreenHeight()}, "grid", 48, 1,
                     nullptr);
         };
 

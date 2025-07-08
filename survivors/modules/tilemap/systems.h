@@ -6,7 +6,6 @@
 #include <tmxlite/ObjectGroup.hpp>
 #include <tmxlite/TileLayer.hpp>
 
-
 #include "modules/engine/core/components.h"
 #include "modules/engine/physics/components.h"
 #include "modules/engine/physics/physics_module.h"
@@ -15,8 +14,6 @@
 
 namespace tilemap {
     namespace systems {
-
-        // 타일셋 정보 구조체
         struct TilesetData {
             flecs::entity entity;
             tmx::Tileset tileset;
@@ -29,7 +26,6 @@ namespace tilemap {
                 last_gid(ts.getLastGID()) {}
         };
 
-        // 타일 변환 정보
         struct TileTransform {
             Rectangle source;
             Rectangle destination;
@@ -37,7 +33,6 @@ namespace tilemap {
             float rotation;
         };
 
-        // 타일셋 로드
         inline void load_tilesets(flecs::entity parent, const tmx::Map &map,
                                   std::vector<TilesetData> &tilesets) {
             const auto &tmx_tilesets = map.getTilesets();
@@ -53,7 +48,6 @@ namespace tilemap {
             }
         }
 
-        // 타일 ID로 타일셋 찾기
         inline const TilesetData *find_tileset_for_tile(int tile_id,
                                                         const std::vector<TilesetData> &tilesets) {
             for (size_t i = 0; i < tilesets.size(); ++i) {
@@ -65,7 +59,6 @@ namespace tilemap {
             return NULL;
         }
 
-        // 타일 변환 계산
         inline TileTransform calculate_tile_transform(const tmx::Tileset::Tile *tile,
                                                       const tmx::TileLayer::Tile &tile_data, int x,
                                                       int y, float scale) {
@@ -75,7 +68,6 @@ namespace tilemap {
             int height = tile->imageSize.y;
             transform.rotation = 0.0f;
 
-            // 플립 플래그 처리
             if (tile_data.flipFlags & tmx::TileLayer::FlipFlag::Diagonal) {
                 transform.rotation = -90.0f;
                 height = -height;
@@ -87,26 +79,25 @@ namespace tilemap {
                 height = -height;
             }
 
-            // Source rectangle (atlas에서 자를 영역)
+            // source rectangle (where to sicssor atlas)
             transform.source.x = static_cast<float>(tile->imagePosition.x);
             transform.source.y = static_cast<float>(tile->imagePosition.y);
             transform.source.width = static_cast<float>(width);
             transform.source.height = static_cast<float>(height);
 
-            // Destination rectangle (화면에 그릴 위치/크기)
+            // Destination rectangle
             transform.destination.x = static_cast<float>(x) * scale * tile->imageSize.x;
             transform.destination.y = static_cast<float>(y) * scale * tile->imageSize.y;
             transform.destination.width = static_cast<float>(tile->imageSize.x) * scale;
             transform.destination.height = static_cast<float>(tile->imageSize.y) * scale;
 
-            // Origin (회전 중심점)
+            // Origin (rotation anchor)
             transform.origin.x = transform.destination.width / 2.0f;
             transform.origin.y = transform.destination.height / 2.0f;
 
             return transform;
         }
 
-        // 타일 프로퍼티에서 충돌 여부 확인
         inline bool is_tile_collidable(const tmx::Tileset::Tile *tile) {
             if (!tile || tile->properties.empty()) {
                 return false;
@@ -120,7 +111,6 @@ namespace tilemap {
             return false;
         }
 
-        // 타일 레이어 처리
         inline void process_tile_layer(flecs::entity parent, const tmx::TileLayer &tile_layer,
                                        const tmx::Map &map, const Tilemap &tilemap,
                                        const std::vector<TilesetData> &tilesets,
@@ -129,7 +119,7 @@ namespace tilemap {
             tmx::Vector2u layer_size = tile_layer.getSize();
             tmx::Vector2u tile_size = map.getTileSize();
 
-            // 레이어 텍스처 생성
+            // bake atlas to offscreen rendertexture
             RenderTexture2D layer_texture =
                     LoadRenderTexture(layer_size.x * tile_size.x * tilemap.scale,
                                       layer_size.y * tile_size.y * tilemap.scale);
@@ -137,22 +127,21 @@ namespace tilemap {
             BeginTextureMode(layer_texture);
             ClearBackground(BLANK);
 
-            // 레이어 엔티티 생성
             flecs::entity layer_entity =
                     parent.world().entity(tile_layer.getName().c_str()).child_of(parent);
 
             const auto &tiles = tile_layer.getTiles();
 
-            // 각 타일 처리
+            // traverse all tiles
             for (int y = 0; y < static_cast<int>(layer_size.y); ++y) {
                 for (int x = 0; x < static_cast<int>(layer_size.x); ++x) {
                     int index = y * layer_size.x + x;
                     int tile_id = tiles[index].ID;
 
                     if (tile_id == 0)
-                        continue; // 빈 타일
+                        continue; // empty tile
 
-                    // 타일셋 검색
+                    // search the tile in the set
                     const TilesetData *tileset_data = find_tileset_for_tile(tile_id, tilesets);
                     if (!tileset_data)
                         continue;
@@ -161,11 +150,10 @@ namespace tilemap {
                     if (!tile)
                         continue;
 
-                    // 타일 변환 계산
                     TileTransform transform =
                             calculate_tile_transform(tile, tiles[index], x, y, tilemap.scale);
 
-                    // 타일 엔티티 생성
+                    // tile gets their own entity
                     TilemapLayerTile tile_component;
                     tile_component.tileset = tileset_data->entity;
                     tile_component.source = transform.source;
@@ -177,12 +165,10 @@ namespace tilemap {
                                                         .child_of(layer_entity)
                                                         .set<TilemapLayerTile>(tile_component);
 
-                    // 충돌 정보 수집
                     if (is_tile_collidable(tile)) {
                         collision_map[index] = true;
                     }
 
-                    // 타일 렌더링
                     DrawTexturePro(tileset_data->texture, transform.source, transform.destination,
                                    transform.origin, transform.rotation, WHITE);
                 }
@@ -190,22 +176,22 @@ namespace tilemap {
 
             EndTextureMode();
 
-            // 텍스처 복사 (원래 코드 유지)
-            RenderTexture2D inverted =
-                    LoadRenderTexture(layer_size.x * tile_size.x * tilemap.scale,
-                                      layer_size.y * tile_size.y * tilemap.scale);
-            BeginTextureMode(inverted);
-            DrawTexture(layer_texture.texture, 0, 0, WHITE);
-            EndTextureMode();
+            // RenderTexture2D inverted =
+            //         LoadRenderTexture(layer_size.x * tile_size.x * tilemap.scale,
+            //                           layer_size.y * tile_size.y * tilemap.scale);
+            // BeginTextureMode(inverted);
+            // DrawTexture(layer_texture.texture, 0, 0, WHITE);
+            // EndTextureMode();
 
-            // 레이어 렌더링 컴포넌트 설정
-            rendering::Renderable renderable = {inverted.texture, {0, 0}, 1.0f, WHITE};
+            // rendering::Renderable renderable = {inverted.texture, {0, 0}, 1.0f, WHITE};
+            // rendering::Priority priority = {0};
+
+            rendering::Renderable renderable = {layer_texture.texture, {0, 0}, 1.0f, WHITE};
             rendering::Priority priority = {0};
 
             layer_entity.set<rendering::Renderable>(renderable).set<rendering::Priority>(priority);
         }
 
-        // 충돌 사각형 병합
         inline void merge_collision_rectangles(std::vector<bool> &collision_map,
                                                const tmx::Vector2u &map_size,
                                                const tmx::Vector2u &tile_size, float scale,
@@ -219,28 +205,28 @@ namespace tilemap {
                         continue;
                     }
 
-                    // 새 사각형 시작
                     int rect_x = x;
                     int rect_y = y;
                     int rect_width = 1;
                     int rect_height = 1;
 
-                    // 1. 오른쪽으로 확장
+                    // 1. expand to the right
                     while (rect_x + rect_width < static_cast<int>(map_size.x) &&
                            collision_map[y * map_size.x + (rect_x + rect_width)]) {
                         rect_width++;
                     }
 
-                    // 2. 아래쪽으로 확장
+                    // 2. expand to the bottom
                     bool can_extend_down = true;
                     while (can_extend_down && rect_y + rect_height < static_cast<int>(map_size.y)) {
-                        // 전체 행이 충돌 타일인지 확인
+                        // Check the entire row at current_y + rect_height for collisions within
+                        // current rect_width
                         for (int current_rect_x = rect_x; current_rect_x < rect_x + rect_width;
                              ++current_rect_x) {
                             if (!collision_map[(rect_y + rect_height) * map_size.x +
                                                current_rect_x]) {
                                 can_extend_down = false;
-                                break;
+                                break; // This row cannot be fully extended
                             }
                         }
                         if (can_extend_down) {
@@ -248,14 +234,15 @@ namespace tilemap {
                         }
                     }
 
-                    // 처리된 타일들 마킹
+                    // Now we have the largest possible rectangle starting at (rect_x, rect_y)
+                    // Mark all tiles within this rectangle as processed in the collision_map
                     for (int mark_y = rect_y; mark_y < rect_y + rect_height; ++mark_y) {
                         for (int mark_x = rect_x; mark_x < rect_x + rect_width; ++mark_x) {
                             collision_map[mark_y * map_size.x + mark_x] = false;
                         }
                     }
 
-                    // 월드 좌표로 변환하여 추가
+                    // transform to world coords
                     Rectangle merged_rect;
                     merged_rect.x = rect_x * tile_size.x * scale - tile_size.x * scale / 2.0f;
                     merged_rect.y = rect_y * tile_size.y * scale - tile_size.y * scale / 2.0f;
@@ -267,7 +254,6 @@ namespace tilemap {
             }
         }
 
-        // 충돌 엔티티 생성
         inline void create_collision_entities(flecs::entity parent,
                                               const std::vector<Rectangle> &merged_colliders) {
             for (size_t i = 0; i < merged_colliders.size(); ++i) {
@@ -275,7 +261,7 @@ namespace tilemap {
 
                 core::Position position({Eigen::Vector3f(col.x, col.y, 0)});
                 physics::Collider collider = {
-                        false, // is_sensor
+                        false, // is_correctable
                         true, // is_static
                         {0, 0, col.width, col.height}, // aabb
                         physics::environment, // collision_layer

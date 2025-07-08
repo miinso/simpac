@@ -14,13 +14,41 @@ namespace debug {
     void DebugModule::register_components(flecs::world &world) {}
 
     void DebugModule::register_systems(flecs::world &world) {
-        debug_colliders =
-                world.system<const physics::Collider, const core::Position>("Draw collider")
-                        .kind<rendering::Render>()
+        // debug_colliders =
+        //         world.system<const physics::Collider, const core::Position>("Draw collider")
+        //                 .kind<rendering::Render>()
+        //                 .with<rendering::Visible>()
+        //                 .group_by<rendering::Priority>()
+        //                 .each(systems::draw_collider);
+        // debug_colliders.disable();
+
+        debug_collidable_entity_id = world.system<const core::Position, const physics::Collider>(
+                                                  "Draw collidable entity id")
+                                             .kind<rendering::RenderGizmo>()
+                                             .each(systems::draw_collidable);
+        debug_collidable_entity_id.disable();
+
+        debug_collider_bound =
+                world.system<const core::Position, const physics::Collider>("Draw collider bound")
+                        .kind<rendering::RenderGizmo>()
+                        .each(systems::draw_collider_bound);
+        debug_collider_bound.disable();
+
+        debug_circle_collider = world.system<const core::Position, const physics::CircleCollider>(
+                                             "Draw circle collider")
+                                        .kind<rendering::RenderGizmo>()
+                                        .with<rendering::Visible>()
+                                        .group_by<rendering::Priority>()
+                                        .each(systems::draw_circle_collider);
+        debug_circle_collider.disable();
+
+        debug_box_collider =
+                world.system<const core::Position, const physics::Collider>("Draw box collider")
+                        .kind<rendering::RenderGizmo>()
                         .with<rendering::Visible>()
                         .group_by<rendering::Priority>()
-                        .each(systems::draw_collider);
-        debug_colliders.disable();
+                        .each(systems::draw_box_collider);
+        debug_box_collider.disable();
 
         debug_FPS = world.system("Draw FPS").kind<rendering::RenderGUI>().run(systems::draw_fps);
         debug_FPS.disable();
@@ -35,11 +63,12 @@ namespace debug {
                                   .run(systems::draw_mouse_position);
         debug_mouse_pos.disable();
 
-        debug_grid = world.system("Draw grid").kind<rendering::RenderGUI>().run(systems::draw_grid);
+        debug_grid =
+                world.system("Draw grid").kind<rendering::RenderGizmo>().run(systems::draw_grid);
         debug_grid.disable();
 
         debug_closest_enemy = world.system("Draw ray to the closest target")
-                                      .kind<rendering::RenderGUI>()
+                                      .kind<rendering::RenderGizmo>()
                                       .run(systems::draw_closest_enemy);
         debug_closest_enemy.disable();
     }
@@ -49,10 +78,23 @@ namespace debug {
                                 .child_of(rendering::gui::GUIModule::menu_bar)
                                 .set<rendering::gui::MenuBarTab>({"Debug Tools", 25});
 
-        world.entity("debug_collisions_item_1")
+        world.entity("debug_collisions_item_0")
+                .child_of(dropdown)
+                .set<rendering::gui::MenuBarTabItem>({"Toggle collidable entity id",
+                                                      debug_collidable_entity_id,
+                                                      rendering::gui::TOGGLE});
+        world.entity("debug_collisions_item_1_0")
                 .child_of(dropdown)
                 .set<rendering::gui::MenuBarTabItem>(
-                        {"Toggle Colliders", debug_colliders, rendering::gui::TOGGLE});
+                        {"Toggle collider bound", debug_collider_bound, rendering::gui::TOGGLE});
+        world.entity("debug_collisions_item_1_1")
+                .child_of(dropdown)
+                .set<rendering::gui::MenuBarTabItem>(
+                        {"Toggle circle collider", debug_circle_collider, rendering::gui::TOGGLE});
+        world.entity("debug_collisions_item_1_2")
+                .child_of(dropdown)
+                .set<rendering::gui::MenuBarTabItem>(
+                        {"Toggle box collider", debug_box_collider, rendering::gui::TOGGLE});
         world.entity("debug_collisions_item_2")
                 .child_of(dropdown)
                 .set<rendering::gui::MenuBarTabItem>(

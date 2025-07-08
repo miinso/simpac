@@ -11,6 +11,9 @@
 
 namespace rendering {
     void RenderingModule::register_components(flecs::world world) { world.component<Priority>(); }
+
+    flecs::query<Renderable> queries::query_all_renderables;
+    flecs::query<Renderable> queries::query_visible_renderables;
     void RenderingModule::register_queries(flecs::world world) {
         auto base_query = world.query_builder<Renderable>();
         queries::query_all_renderables = base_query.build();
@@ -44,7 +47,7 @@ namespace rendering {
                 .kind<PreRender>()
                 .each(systems::determine_visible_entity);
 
-        world.system<const Renderable>("Draw Background Textures")
+        world.system<const Renderable>("Draw background textures")
                 .kind<RenderBackground>()
                 .without<core::Position>()
                 .with<Priority>()
@@ -58,7 +61,7 @@ namespace rendering {
                 .each(systems::draw_background_texture);
 
         world.system<const Renderable, const core::Position, const Rotation *>(
-                     "Draw entities with texture")
+                     "Draw entitys with texture")
                 .kind<Render>()
                 .with<Visible>()
                 .group_by<Priority>()

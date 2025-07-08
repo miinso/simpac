@@ -4,7 +4,6 @@
 #include <raylib.h>
 #include <string>
 
-
 namespace tilemap {
     struct Tilemap {
         std::string tmx_file_path;

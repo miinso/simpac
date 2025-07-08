@@ -14,10 +14,15 @@
 #include <raymath.h>
 
 namespace gameplay {
+    namespace queries {
+
+    }
+    
     void GameplayModule::register_components(flecs::world world) { world.component<Spawner>(); }
 
     void GameplayModule::register_systems(flecs::world world) {
         m_spawner_tick = world.timer().interval(SPAWNER_INTERVAL);
+        systems::outside_side_switch = true; // cpp11
 
         world.system<const Spawner, const core::GameSettings, const rendering::TrackingCamera>(
                      "Spawn enemy")
@@ -56,12 +61,15 @@ namespace gameplay {
                 .immediate()
                 .each(systems::handle_projectile_collision_against_wall);
 
-        world.system("Handle collision for projectiles against, bounce")
+        world.system<physics::CollisionRecordList, Bounce, physics::Velocity, rendering::Rotation>(
+                     "Handle collision for projectiles against, bounce")
                 .with<physics::CollidedWith>(flecs::Wildcard)
                 .with<Projectile>()
                 .kind<OnCollisionDetected>()
+                .term_at(0)
+                .singleton()
                 .immediate()
-                .each(systems::handle_projectile_collision_against_wall_bounce);
+                .each(systems::handle_projectile_collision_against_wall_with_bounce);
 
         world.system("Handle collision for projectiles, without any enchantments or modifiers")
                 .with<Projectile>()
@@ -235,6 +243,7 @@ namespace gameplay {
                              .with(flecs::Prefab)
                              .immediate()
                              .each(systems::add_bounce_enchant);
+
         remove_bounce = world.system("Remove bounce enchant")
                                 .kind(0)
                                 .with<Projectile>()

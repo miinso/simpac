@@ -7,7 +7,7 @@ package(
 )
 
 cc_library(
-    name = "library1",
+    name = "game",
     srcs = ["game.cpp"],
     hdrs = ["game.h"],
     deps = [
@@ -17,6 +17,7 @@ cc_library(
         "//survivors/modules:ai",
         "//survivors/modules:gameplay",
         "//survivors/modules:debug",
+        "//survivors/modules:tilemap",
         # third_party below
         "//:raylib",
         "@flecs",
@@ -70,7 +71,7 @@ cc_binary(
         "//conditions:default": [],
     }),
     deps = [
-        ":library1",
+        ":game",
         # "//:raylib",
         # "@flecs",
     ],

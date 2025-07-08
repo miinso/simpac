@@ -74,7 +74,7 @@ namespace rendering {
             }
         };
 
-        void inline draw_entity_with_texture(Renderable &renderable, const core::Position &position,
+        void inline draw_entity_with_texture(const Renderable &renderable, const core::Position &position,
                                              const Rotation *rotation) {
             Rectangle rec{0.0f, 0.0f, (float) renderable.texture.width,
                           (float) renderable.texture.height};

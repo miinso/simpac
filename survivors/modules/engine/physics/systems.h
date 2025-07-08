@@ -8,176 +8,143 @@
 #include "physics_module.h"
 
 namespace physics {
+
     namespace systems {
-        ///////////////////// wow
-        /**
-         * Correct the positions of the entity (if they are not static nor "triggers") by the
-         * overlap amount
-         * @param a entity 1
-         * @param a_col entity 1 mutable position
-         * @param b entity 2
-         * @param b_col entity 2 mutable position
-         * @param overlap amount of overlap of the two entities
-         */
-        inline void correct_positions(flecs::entity &a, const Collider *a_col,
-                                      CollisionInfo &a_info, flecs::entity &b,
-                                      const Collider *b_col, CollisionInfo &b_info,
-                                      Vector2 overlap) {
-            core::Position *a_pos = a.try_get_mut<core::Position>();
-            core::Position *b_pos = b.try_get_mut<core::Position>();
-
-            float a_move_ratio = 0.5f;
-            float b_move_ratio = 0.5f;
-
-            if (a_col->static_body) {
-                a_move_ratio = 0;
-                b_move_ratio = 1.0f;
-            }
-            if (b_col->static_body) {
-                a_move_ratio = 1.0f;
-                b_move_ratio = 0;
+        namespace detail {
+            inline bool check_collision_filter(const Collider &a, const Collider &b) {
+                return (a.collision_filter & b.collision_type) != none;
             }
 
-            if ((!a_col->correct_position && !a_col->static_body) ||
-                (!b_col->correct_position && !b_col->static_body)) {
-                a_move_ratio = 0.0f;
-                b_move_ratio = 0.0f;
-            }
-            auto correction = Eigen::Vector3f(overlap.x, overlap.y, 0);
-            a_pos->value = a_pos->value - correction * a_move_ratio * 0.9;
-            b_pos->value = b_pos->value + correction * b_move_ratio * 0.9;
-        }
-
-        /**
-         * Resolve Circle vs Circle collision
-         * @param a circle 1 entity
-         * @param base_col circle 1 collider
-         * @param b circle 2 entity
-         * @param other_base_col circle 2 entity
-         * @return if the circles collided
-         */
-        inline bool handle_circle_circle(flecs::entity &a, const Collider *a_col,
-                                         CollisionInfo &a_info, flecs::entity &b,
-                                         const Collider *b_col, CollisionInfo &b_info) {
-            auto a_pos = a.try_get<core::Position>()->value;
-            auto b_pos = b.try_get<core::Position>()->value;
-
-            const CircleCollider *col = a.try_get<CircleCollider>();
-            const CircleCollider *other_col = b.try_get<CircleCollider>();
-
-            if (!CheckCollisionCircles({a_pos.x(), a_pos.y()}, col->radius, {b_pos.x(), b_pos.y()},
-                                       other_col->radius)) {
-                return false;
+            inline Rectangle get_world_bounds(const core::Position &pos, const Collider &col) {
+                return {pos.value.x() + col.bounds.x, pos.value.y() + col.bounds.y,
+                        col.bounds.width, col.bounds.height};
             }
 
-            Vector2 overlap =
-                    PhysicsModule::collide_circles(col, a.try_get<core::Position>(), a_info,
-                                                   other_col, b.try_get<core::Position>(), b_info);
+            inline void correct_positions(flecs::entity &a, const Collider *a_col,
+                                          CollisionInfo &a_info, flecs::entity &b,
+                                          const Collider *b_col, CollisionInfo &b_info,
+                                          Vector2 overlap) {
+                core::Position *a_pos = a.try_get_mut<core::Position>();
+                core::Position *b_pos = b.try_get_mut<core::Position>();
 
-            correct_positions(a, a_col, a_info, b, b_col, b_info, overlap);
+                float a_move_ratio = 0.5f;
+                float b_move_ratio = 0.5f;
 
-            Vector2 contact_point = Vector2{a_pos.x(), a_pos.y()} + b_info.normal * col->radius;
-            a_info.contact_point = contact_point;
-            b_info.contact_point = contact_point;
-
-            return true;
-        }
-
-        /**
-         * Resolve circle vs rectangle collision
-         * @param a circle entity
-         * @param a_col circle base collider
-         * @param b box entity
-         * @param b_col box base collider
-         * @return if there was a collision
-         */
-        inline bool handle_circle_rec_collision(flecs::entity &a, const Collider *a_col,
-                                                CollisionInfo &a_info, flecs::entity &b,
-                                                const Collider *b_col, CollisionInfo &b_info) {
-            auto a_pos = a.try_get<core::Position>()->value;
-            auto b_pos = b.try_get<core::Position>()->value;
-            const CircleCollider *circle_col = a.try_get<CircleCollider>();
-            if (!CheckCollisionCircleRec({a_pos.x(), a_pos.y()}, circle_col->radius,
-                                         {b_pos.x() + b_col->bounds.x, b_pos.y() + b_col->bounds.y,
-                                          b_col->bounds.width, b_col->bounds.height})) {
-                return false;
-            }
-
-            Vector2 overlap = PhysicsModule::collide_circle_rec(
-                    circle_col, a.try_get_mut<core::Position>(), a_info, b_col,
-                    b.try_get_mut<core::Position>(), b_info);
-
-            correct_positions(a, a_col, a_info, b, b_col, b_info, overlap);
-
-            Vector2 contact_point =
-                    Vector2{a_pos.x(), a_pos.y()} + b_info.normal * circle_col->radius;
-            a_info.contact_point = contact_point;
-            b_info.contact_point = contact_point;
-
-            return true;
-        }
-
-        /**
-         * Resolve rectangle vs rectangle collision
-         * @param a box 1 entity
-         * @param a_col box 1 collider
-         * @param b box 2 entity
-         * @param b_col box 2 collider
-         * @return if the boxes collided or not
-         */
-        inline bool handle_boxes_collision(flecs::entity &a, const Collider *a_col,
-                                           flecs::entity &b, const Collider *b_col) {
-            auto a_pos = a.try_get<core::Position>()->value;
-            auto b_pos = b.try_get<core::Position>()->value;
-            if (!CheckCollisionRecs({a_pos.x() + a_col->bounds.x, a_pos.y() + a_col->bounds.y,
-                                     a_col->bounds.width, a_col->bounds.height},
-                                    {b_pos.x() + b_col->bounds.x, b_pos.y() + b_col->bounds.y,
-                                     b_col->bounds.width, b_col->bounds.height})) {
-                return false;
-            }
-
-            // TODO need to figure overlap for boxes and update the positions properly
-            return true;
-        }
-
-        using CollisionHandler =
-                std::function<bool(flecs::entity &, const Collider *, CollisionInfo &,
-                                   flecs::entity &, const Collider *, CollisionInfo &)>;
-
-        /**
-         * Map for collision type handling, we point to the correct position in the array with the
-         * Collider type enum
-         */
-        inline CollisionHandler collision_handler[ColliderType::SIZE][ColliderType::SIZE] = {
-                // Circle = 0
-                {
-                        // Circle vs Circle
-                        [](flecs::entity &a, const Collider *a_col, CollisionInfo &a_info,
-                           flecs::entity &b, const Collider *b_col, CollisionInfo &b_info) {
-                            return handle_circle_circle(a, a_col, a_info, b, b_col, b_info);
-                        },
-                        // Circle vs Box
-                        [](flecs::entity &a, const Collider *a_col, CollisionInfo &a_info,
-                           flecs::entity &b, const Collider *b_col, CollisionInfo &b_info) {
-                            return handle_circle_rec_collision(a, a_col, a_info, b, b_col, b_info);
-                        },
-                },
-                // Box = 1
-                {
-                        // Box vs Circle
-                        [](flecs::entity &a, const Collider *a_col, CollisionInfo &a_info,
-                           flecs::entity &b, const Collider *b_col, CollisionInfo &b_info) {
-                            return handle_circle_rec_collision(b, b_col, b_info, a, a_col, a_info);
-                        },
-                        // Box vs Box
-                        [](flecs::entity &a, const Collider *a_col, CollisionInfo &a_info,
-                           flecs::entity &b, const Collider *b_col, CollisionInfo &b_info) {
-                            return handle_boxes_collision(a, a_col, b, b_col);
-                        },
+                if (a_col->static_body) {
+                    a_move_ratio = 0;
+                    b_move_ratio = 1.0f;
                 }
-                // more collisions
-        };
-        /////////////////////
+                if (b_col->static_body) {
+                    a_move_ratio = 1.0f;
+                    b_move_ratio = 0;
+                }
+
+                if ((!a_col->correct_position && !a_col->static_body) ||
+                    (!b_col->correct_position && !b_col->static_body)) {
+                    a_move_ratio = 0.0f;
+                    b_move_ratio = 0.0f;
+                }
+
+                auto correction = Eigen::Vector3f(overlap.x, overlap.y, 0);
+                a_pos->value = a_pos->value - correction * a_move_ratio * 0.9f;
+                b_pos->value = b_pos->value + correction * b_move_ratio * 0.9f;
+            }
+
+            inline bool handle_circle_circle_collision(flecs::entity &a, const Collider *a_col,
+                                                       CollisionInfo &a_info, flecs::entity &b,
+                                                       const Collider *b_col,
+                                                       CollisionInfo &b_info) {
+                auto a_pos = a.try_get<core::Position>()->value;
+                auto b_pos = b.try_get<core::Position>()->value;
+
+                const CircleCollider *col = a.try_get<CircleCollider>();
+                const CircleCollider *other_col = b.try_get<CircleCollider>();
+
+                if (!CheckCollisionCircles({a_pos.x(), a_pos.y()}, col->radius,
+                                           {b_pos.x(), b_pos.y()}, other_col->radius)) {
+                    return false;
+                }
+
+                Vector2 overlap = PhysicsModule::collide_circle_circle(
+                        col, a.try_get<core::Position>(), a_info, other_col,
+                        b.try_get<core::Position>(), b_info);
+
+                correct_positions(a, a_col, a_info, b, b_col, b_info, overlap);
+
+                Vector2 contact_point = Vector2{a_pos.x(), a_pos.y()} + b_info.normal * col->radius;
+                a_info.contact_point = contact_point;
+                b_info.contact_point = contact_point;
+
+                return true;
+            }
+
+            inline bool handle_circle_box_collision(flecs::entity &a, const Collider *a_col,
+                                                    CollisionInfo &a_info, flecs::entity &b,
+                                                    const Collider *b_col, CollisionInfo &b_info) {
+                auto a_pos = a.try_get<core::Position>()->value;
+                auto b_pos = b.try_get<core::Position>()->value;
+                const CircleCollider *circle_col = a.try_get<CircleCollider>();
+
+                if (!CheckCollisionCircleRec({a_pos.x(), a_pos.y()}, circle_col->radius,
+                                             {b_pos.x() + b_col->bounds.x,
+                                              b_pos.y() + b_col->bounds.y, b_col->bounds.width,
+                                              b_col->bounds.height})) {
+                    return false;
+                }
+
+                Vector2 overlap = PhysicsModule::collide_circle_rec(
+                        circle_col, a.try_get_mut<core::Position>(), a_info, b_col,
+                        b.try_get_mut<core::Position>(), b_info);
+
+                correct_positions(a, a_col, a_info, b, b_col, b_info, overlap);
+
+                Vector2 contact_point =
+                        Vector2{a_pos.x(), a_pos.y()} + b_info.normal * circle_col->radius;
+                a_info.contact_point = contact_point;
+                b_info.contact_point = contact_point;
+
+                return true;
+            }
+
+            inline bool handle_box_box_collision(flecs::entity &a, const Collider *a_col,
+                                                 CollisionInfo &a_info, flecs::entity &b,
+                                                 const Collider *b_col, CollisionInfo &b_info) {
+                auto a_pos = a.try_get<core::Position>()->value;
+                auto b_pos = b.try_get<core::Position>()->value;
+
+                if (!CheckCollisionRecs({a_pos.x() + a_col->bounds.x, a_pos.y() + a_col->bounds.y,
+                                         a_col->bounds.width, a_col->bounds.height},
+                                        {b_pos.x() + b_col->bounds.x, b_pos.y() + b_col->bounds.y,
+                                         b_col->bounds.width, b_col->bounds.height})) {
+                    return false;
+                }
+
+                // TODO: implment
+                return true;
+            }
+
+            inline bool resolve_collision_by_type(flecs::entity &a, flecs::entity &b,
+                                                  const Collider *a_col, const Collider *b_col,
+                                                  CollisionInfo &a_info, CollisionInfo &b_info) {
+                ColliderType a_type = a_col->type;
+                ColliderType b_type = b_col->type;
+
+                if (a_type == ColliderType::Circle && b_type == ColliderType::Circle) {
+                    return handle_circle_circle_collision(a, a_col, a_info, b, b_col, b_info);
+                } else if (a_type == ColliderType::Circle && b_type == ColliderType::Box) {
+                    return handle_circle_box_collision(a, a_col, a_info, b, b_col, b_info);
+                } else if (a_type == ColliderType::Box && b_type == ColliderType::Circle) {
+                    return handle_circle_box_collision(b, b_col, b_info, a, a_col, a_info);
+                } else if (a_type == ColliderType::Box && b_type == ColliderType::Box) {
+                    return handle_box_box_collision(a, a_col, a_info, b, b_col, b_info);
+                }
+
+                return false;
+            }
+
+        } // namespace detail
+
+        ////////////////////////////////////////////////////////////////////////
 
         inline void reset_desired_velocity(const Velocity &vel, DesiredVelocity &desired_vel) {
             desired_vel.value = vel.value;
@@ -195,6 +162,7 @@ namespace physics {
             pos.value += vel.value * std::min(PHYSICS_TICK_LENGTH, it.delta_system_time());
         };
 
+        // static??
         inline void detect_collision(flecs::entity body_a, CollisionRecordList &list,
                                      const core::Position &x_a, const Collider &collider_a) {
             flecs::world staged_world = body_a.world();
@@ -225,6 +193,7 @@ namespace physics {
             });
         };
 
+        // non-static??
         inline void detect_collision_alt(flecs::entity body_a, CollisionRecordList &list,
                                          const core::Position &x_a, const Collider &collider_a) {
             flecs::world staged_world = body_a.world(); // this makes a "staged" world (not sure
@@ -322,20 +291,29 @@ namespace physics {
                 const Collider *a_col = a.try_get<Collider>();
                 const Collider *b_col = b.try_get<Collider>();
 
-                // are the entities colliding?
-                CollisionInfo a_info;
-                CollisionInfo b_info;
-                if (!collision_handler[a_col->type][b_col->type](a, a_col, a_info, b, b_col,
-                                                                 b_info))
+                if (!a_col || !b_col)
                     continue;
+
+                CollisionInfo a_info, b_info;
+                bool collision_occurred =
+                        detail::resolve_collision_by_type(a, b, a_col, b_col, a_info, b_info);
+
+                // are the entities colliding?
+                // CollisionInfo a_info;
+                // CollisionInfo b_info;
+                // if (!collision_handler[a_col->type][b_col->type](a, a_col, a_info, b, b_col,
+                //                                                  b_info))
+                //     continue;
 
                 // if the entities are of different types (player & enemy) we report it a
                 // significant collision enemy vs environment should not be significant. (too many
                 // tables) But player vs environment should count (because of projectiles, they
                 // might have behaviours specific to obstacles)
-                if ((a_col->collision_type & b_col->collision_type) == none &&
-                    (a_col->collision_type | b_col->collision_type) != (enemy | environment)) {
-                    list.significant_collisions.push_back({a, b, a_info, b_info});
+                if (collision_occurred) {
+                    if ((a_col->collision_type & b_col->collision_type) == none &&
+                        (a_col->collision_type | b_col->collision_type) != (enemy | environment)) {
+                        list.significant_collisions.push_back({a, b, a_info, b_info});
+                    }
                 }
             }
 
@@ -354,6 +332,7 @@ namespace physics {
             list.significant_collisions.clear();
             list.collisions_info.clear();
         }
+
 
     } // namespace systems
 } // namespace physics

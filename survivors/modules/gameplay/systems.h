@@ -6,6 +6,7 @@
 #include <modules/engine/core/queries.h>
 #include <modules/engine/core/systems.h>
 #include <modules/engine/physics/components.h>
+#include <modules/engine/physics/physics_module.h>
 #include <modules/engine/physics/queries.h>
 #include <modules/engine/rendering/components.h>
 
@@ -14,11 +15,7 @@
 
 namespace gameplay {
     namespace systems {
-        // inline bool &outside_side_switch() {
-        inline bool outside_side_switch = false;
-        // return outside_side_switch;
-        // } // i don't like this. i need something better whilst using cpp11
-        // no just use cpp17
+        static bool outside_side_switch = false; // cpp11
 
         inline void spawn_enemy(flecs::iter &iter, size_t i, const Spawner &spawner,
                                 const core::GameSettings &settings,
@@ -127,15 +124,20 @@ namespace gameplay {
             weapon.remove<CooldownCompleted>();
         };
 
-        inline void handle_projectile_collision_against_wall(flecs::iter &it, size_t i,
-                                                             physics::CollisionRecordList &list,
-                                                             Bounce &bounce, physics::Velocity &vel,
-                                                             rendering::Rotation &rotation) {
+        inline void handle_projectile_collision_against_wall_with_bounce(
+                flecs::iter &it, size_t i, physics::CollisionRecordList &list, Bounce &bounce,
+                physics::Velocity &vel, rendering::Rotation &rotation) {
             flecs::entity other = it.pair(4).second();
             if (other.try_get<physics::Collider>()->collision_type == physics::environment) {
                 physics::CollisionInfo info = list.collisions_info[{it.entity(i).id(), other.id()}];
-                vel.value = Vector2Reflect(vel.value, info.normal);
-                rotation.angle = Vector2Angle(Vector2{0, 1}, Vector2Negate(vel.value)) * RAD2DEG;
+                auto d = vel.value; // v_projectile
+                auto n = Eigen::Vector3f(info.normal.x, info.normal.y, 0);
+                // vel.value = Vector2Reflect(vel.value, info.normal);
+                vel.value = d - 2 * n * (n.dot(d));
+                rotation.angle =
+                        Vector2Angle(Vector2{0, 1},
+                                     Vector2Negate(Vector2{vel.value.x(), vel.value.y()})) *
+                        RAD2DEG;
 
                 bounce.bounce_count--;
                 if (bounce.bounce_count <= 0) {
@@ -143,6 +145,14 @@ namespace gameplay {
                 }
 
                 it.entity(i).remove<physics::CollidedWith>(other);
+            }
+        }
+
+        inline void handle_projectile_collision_against_wall(flecs::iter &it, size_t i) {
+            auto other = it.pair(0).second();
+            if (other.get<physics::Collider>().collision_type == physics::environment) {
+                it.entity(i).remove<physics::CollidedWith>(other);
+                it.entity(i).add<core::DestroyAfterFrame>();
             }
         }
 
@@ -171,15 +181,16 @@ namespace gameplay {
                                                            core::Position &pos,
                                                            rendering::Rotation &rot,
                                                            Attack &attack) {
-            auto other = it.pair(5).second();
+            auto projectile = it.entity(i);
+            auto victim = it.pair(5).second(); // "i'm hit!"
 
-            if (chain.hits.count(other.id())) {
+            if (chain.hits.count(victim.id())) {
                 // a projectile interact only once
-                it.entity(i).remove<physics::CollidedWith>(other);
+                projectile.remove<physics::CollidedWith>(victim);
                 return;
             }
 
-            chain.hits.insert(other.id());
+            chain.hits.insert(victim.id());
             chain.chain_count -= 1;
 
             float shortest_distance_sqr = 1e6;
@@ -188,7 +199,7 @@ namespace gameplay {
             core::queries::position_and_tag().each(
                     [&](flecs::entity collidable, core::Position &collidable_pos, core::Tag &tag) {
                         if (!chain.hits.count(collidable.id()) && attack.target_tag == tag.name &&
-                            other.id() != collidable.id()) {
+                            victim.id() != collidable.id()) {
                             float d = (pos.value - collidable_pos.value).squaredNorm();
                             if (d > shortest_distance_sqr)
                                 return;
@@ -206,6 +217,10 @@ namespace gameplay {
 
             auto new_velocity = -direction * vel.value.norm();
             vel.value = new_velocity;
+
+            if (chain.chain_count <= 0) {
+                projectile.remove<Chain>();
+            }
         };
 
         inline void handle_projectile_collision_with_split(flecs::iter &it, size_t i, Split &split,
@@ -236,7 +251,8 @@ namespace gameplay {
                     .set<physics::Velocity>({new_velocity_left})
                     .remove<Split>() // remove enchantments bc it's too op
                     .remove<Chain>()
-                    .remove<Pierce>();
+                    .remove<Pierce>()
+                    .remove<Bounce>();
 
             it.world()
                     .entity()
@@ -246,7 +262,8 @@ namespace gameplay {
                     .set<physics::Velocity>({new_velocity_right})
                     .remove<Split>() // remove enchantments bc it's too op
                     .remove<Chain>()
-                    .remove<Pierce>();
+                    .remove<Pierce>()
+                    .remove<Bounce>();
         };
 
         inline void convert_collision_to_damage(flecs::iter &it, size_t i, Damage &damage) {
@@ -340,14 +357,14 @@ namespace gameplay {
             chain.chain_count = std::min(0, chain.chain_count - 1);
         }
 
-        inline void add_bounce_enchant(const flecs::world &world, flecs::entity e) {
+        inline void add_bounce_enchant(flecs::entity e) {
             e.set<Bounce>({1});
             // core::systems::remove_empty_tables(world);
         }
 
-        inline void remove_bounce_enchant(const flecs::world &world, flecs::entity e) {
+        inline void remove_bounce_enchant(flecs::entity e) {
             e.remove<Bounce>();
-            core::systems::remove_empty_tables(world);
+            // core::systems::remove_empty_tables(world);
         }
 
         inline void increase_bounce_count(Bounce &bounce) { bounce.bounce_count++; }

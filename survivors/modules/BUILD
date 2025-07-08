@@ -30,6 +30,7 @@ cc_library(
         "engine/physics/components.h",
         "engine/physics/physics_module.h",
         "engine/physics/pipelines.h",
+        "engine/physics/queries.h",
         "engine/physics/systems.h",
     ],
     includes = ["."],
@@ -96,6 +97,7 @@ cc_library(
 
 cc_library(
     name = "engine",
+    
     visibility = ["//visibility:public"],
     deps = [
         ":core",
@@ -114,6 +116,7 @@ cc_library(
     hdrs = [
         "player/components.h",
         "player/player_module.h",
+        "player/systems.h",
     ],
     visibility = ["//visibility:public"],
     deps = [
@@ -148,12 +151,14 @@ cc_library(
         "gameplay/components.h",
         "gameplay/gameplay_module.h",
         "gameplay/pipelines.h",
+        "gameplay/queries.h",
         "gameplay/systems.h",
     ],
     visibility = ["//visibility:public"],
     deps = [
         ":core",
         ":rendering",
+        ":physics",
     ],
 )
 
