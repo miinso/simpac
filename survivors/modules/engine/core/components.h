@@ -12,11 +12,11 @@ namespace core {
     };
 
     struct GameSettings {
-        std::string windowName;
-        int initialWidth;
-        int initialHeight;
-        int windowWidth;
-        int windowHeight;
+        std::string window_name;
+        int initial_width;
+        int initial_height;
+        int window_width;
+        int window_height;
     };
 
     struct Tag {

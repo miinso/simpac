@@ -40,12 +40,12 @@ namespace debug {
         inline void draw_entity_count(flecs::iter &it) {
             DrawRectangleRec({0, 30, 225, 60}, DARKGRAY);
             auto renderable_count = rendering::queries::query_all_renderables.count();
-            auto collidable_count = it.world().query<physics::Collider>().count();
             auto visible_renderable_count = rendering::queries::query_visible_renderables.count();
+            auto collidable_count = it.world().query<physics::Collider>().count();
             DrawText(TextFormat("%d entities", renderable_count), 10, 30 + 0, 20, GREEN);
             DrawText(TextFormat("%d visible entities", visible_renderable_count), 10, 30 + 20, 20,
                      GREEN);
-            DrawText(TextFormat("%d collidable entities", visible_renderable_count), 10, 30 + 60,
+            DrawText(TextFormat("%d collidable entities", visible_renderable_count), 10, 30 + 40,
                      20, GREEN);
         };
 
@@ -58,13 +58,25 @@ namespace debug {
                     nullptr);
         };
 
+        inline void draw_hash_grid(rendering::TrackingCamera &camera, physics::HashGrid &grid,
+                                   physics::GridCell &cell) {
+            auto cell_color = cell.items.empty() ? LIGHTGRAY : cell.items.size() < 3 ? ORANGE : RED;
+            cell_color.a = 70; // 70 / 255
+            Rectangle rect = {grid.offset.x + cell.x * grid.cell_size,
+                              grid.offset.y + cell.y * grid.cell_size, (float) grid.cell_size,
+                              (float) grid.cell_size};
+
+            DrawRectangleRec(rect, cell_color);
+        }
+
+
         inline void draw_closest_enemy(flecs::iter &it) {
             auto player = it.world().lookup("player");
             auto pos = player.try_get<core::Position>();
             float shortest_distance_sqr = 1e7;
             core::Position target_pos{pos->value};
 
-            core::queries::position_and_tag().each(
+            core::queries::position_and_tag.each(
                     [&](const core::Position &other_pos, const core::Tag &tag) {
                         if ("enemy" != tag.name)
                             return;

@@ -5,7 +5,7 @@
 #include "components.h"
 
 namespace rendering {
-    // namespace queries { cpp17
+    // namespace queries { cpp17 inline variables
     //     inline flecs::query<Renderable> query_all_renderables;
     //     inline flecs::query<Renderable> query_visible_renderables;
     // } // namespace queries
@@ -19,4 +19,16 @@ namespace rendering {
         static flecs::query<Renderable> query_all_renderables;
         static flecs::query<Renderable> query_visible_renderables;
     };
+
+    // namespace queries { // cpp11 workaround 3
+    //     inline flecs::query<Renderable> &query_all_renderables() {
+    //         static flecs::query<Renderable> query;
+    //         return query;
+    //     };
+    //     inline flecs::query<Renderable> &query_visible_renderables() {
+    //         static flecs::query<Renderable> query;
+    //         return query;
+    //     };
+    // }; // namespace queries
+
 } // namespace rendering

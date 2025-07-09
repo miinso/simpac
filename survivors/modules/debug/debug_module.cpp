@@ -3,6 +3,7 @@
 
 #include <modules/engine/core/components.h>
 #include <modules/engine/physics/components.h>
+#include <modules/engine/physics/physics_module.h>
 #include <modules/engine/rendering/components.h>
 #include <modules/engine/rendering/gui/components.h>
 #include <modules/engine/rendering/gui/gui_module.h>
@@ -19,13 +20,13 @@ namespace debug {
                                                   "Draw collidable entity id")
                                              .kind<rendering::RenderGizmo>()
                                              .each(systems::draw_collidable);
-        debug_collidable_entity_id.disable();
+        // debug_collidable_entity_id.disable();
 
         debug_collider_bound =
                 world.system<const core::Position, const physics::Collider>("Draw collider bound")
                         .kind<rendering::RenderGizmo>()
                         .each(systems::draw_collider_bound);
-        debug_collider_bound.disable();
+        // debug_collider_bound.disable();
 
         debug_circle_collider = world.system<const core::Position, const physics::CircleCollider>(
                                              "Draw circle collider")
@@ -56,14 +57,35 @@ namespace debug {
                                   .run(systems::draw_mouse_position);
         debug_mouse_pos.disable();
 
-        debug_grid =
-                world.system("Draw grid").kind<rendering::RenderGizmo>().run(systems::draw_grid);
+        debug_grid = world.system<rendering::TrackingCamera, physics::HashGrid, physics::GridCell>(
+                                  "Draw hash grid")
+                             .term_at(0)
+                             .singleton()
+                             .term_at(1)
+                             .singleton()
+                             .kind<rendering::RenderGizmo>()
+                             .each(systems::draw_hash_grid);
         debug_grid.disable();
 
         debug_closest_enemy = world.system("Draw ray to the closest target")
                                       .kind<rendering::RenderGizmo>()
                                       .run(systems::draw_closest_enemy);
         debug_closest_enemy.disable();
+
+        // hash grid util
+        grid_cell_grow = world.system<physics::HashGrid>().kind(0).each(
+                [](flecs::entity e, physics::HashGrid &grid) {
+                    grid.cell_size = grid.cell_size + 16;
+                    e.set<physics::HashGrid>({grid});
+                });
+        grid_cell_grow.disable();
+
+        grid_cell_shrink = world.system<physics::HashGrid>().kind(0).each(
+                [](flecs::entity e, physics::HashGrid &grid) {
+                    grid.cell_size = std::max(16, grid.cell_size - 16);
+                    e.set<physics::HashGrid>({grid});
+                });
+        grid_cell_shrink.disable();
     }
 
     void DebugModule::register_entities(flecs::world &world) {
@@ -108,5 +130,31 @@ namespace debug {
                 .child_of(dropdown)
                 .set<rendering::gui::MenuBarTabItem>(
                         {"Toggle View Closest Enemy", debug_closest_enemy, rendering::gui::TOGGLE});
+        world.entity("debug_collisions_item_7")
+                .child_of(dropdown)
+                .set<rendering::gui::MenuBarTabItem>(
+                        {"Toggle Baseline (O^2) Collisions",
+                         physics::PhysicsModule::m_collision_detection_baseline,
+                         rendering::gui::TOGGLE});
+        world.entity("debug_collisions_item_8")
+                .child_of(dropdown)
+                .set<rendering::gui::MenuBarTabItem>(
+                        {"Toggle Hashing Collisions",
+                         physics::PhysicsModule::m_collision_detection_with_hash_grid,
+                         rendering::gui::TOGGLE});
+        world.entity("debug_collisions_item_9")
+                .child_of(dropdown)
+                .set<rendering::gui::MenuBarTabItem>(
+                        {"Toggle Hashing Collisions ECS",
+                         physics::PhysicsModule::m_collision_detection_with_hash_grid_alt,
+                         rendering::gui::TOGGLE});
+        world.entity("debug_collisions_item_10")
+                .child_of(dropdown)
+                .set<rendering::gui::MenuBarTabItem>(
+                        {"Grow Cell Size", grid_cell_grow, rendering::gui::RUN});
+        world.entity("debug_collisions_item_11")
+                .child_of(dropdown)
+                .set<rendering::gui::MenuBarTabItem>(
+                        {"Shrink Cell Size", grid_cell_shrink, rendering::gui::RUN});
     }
 } // namespace debug

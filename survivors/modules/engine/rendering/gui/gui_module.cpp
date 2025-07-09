@@ -35,7 +35,7 @@ namespace rendering {
                     .each(systems::observe_parent_rectangle_change);
 
             world.system<core::GameSettings>("Resize window")
-                    .kind<PreRender>()
+                    .kind(flecs::PreFrame)
                     .each(systems::resize_window);
 
             world.system<const Button, const Rectangle>("Draw Button")

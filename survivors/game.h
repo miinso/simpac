@@ -6,14 +6,15 @@
 
 struct Game {
 public:
-    Game(const char *windowName, int windowWidth, int windowHeight);
+    Game(const char *window_name, int window_width, int window_height);
     void run();
 
 private:
     void update_draw_frame_desktop();
     static void update_draw_frame_browser(void *app);
+
     flecs::world m_world;
-    std::string m_windowName;
-    int m_windowWidth;
-    int m_windowHeight;
+    std::string m_window_name;
+    int m_window_width;
+    int m_window_height;
 };

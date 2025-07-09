@@ -97,7 +97,6 @@ cc_library(
 
 cc_library(
     name = "engine",
-    
     visibility = ["//visibility:public"],
     deps = [
         ":core",
@@ -157,8 +156,8 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":core",
-        ":rendering",
         ":physics",
+        ":rendering",
     ],
 )
 
@@ -175,6 +174,7 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":core",
+        ":physics",
         ":rendering",
     ],
 )

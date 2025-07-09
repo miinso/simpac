@@ -36,8 +36,8 @@ namespace rendering {
             };
             camera.camera.target = Vector2Lerp(camera.camera.target, Vector2{pos.x, pos.y},
                                                it.delta_time() * 2.0f);
-            camera.camera.offset.x = settings.windowWidth / 2.0f;
-            camera.camera.offset.y = settings.windowHeight / 2.0f;
+            camera.camera.offset.x = settings.window_width / 2.0f;
+            camera.camera.offset.y = settings.window_height / 2.0f;
             BeginMode2D(camera.camera);
         }
 
@@ -46,24 +46,24 @@ namespace rendering {
                                              const core::GameSettings &settings,
                                              const TrackingCamera &camera) {
             bool x_above_upperbound = position.value.x() - camera.camera.target.x >
-                                      settings.windowWidth * 1.05f + renderable.texture.width -
+                                      settings.window_width * 1.05f + renderable.texture.width -
                                               camera.camera.offset.x;
             bool x_below_lowerbound =
-                    position.value.x() - camera.camera.target.x + settings.windowWidth * 0.05f <
+                    position.value.x() - camera.camera.target.x + settings.window_width * 0.05f <
                     -renderable.texture.width - camera.camera.offset.x;
 
             bool y_above_upperbound = position.value.y() - camera.camera.target.y >
-                                      settings.windowHeight * 1.05f + renderable.texture.height -
+                                      settings.window_height * 1.05f + renderable.texture.height -
                                               camera.camera.offset.y;
             bool y_below_lowerbound =
-                    position.value.y() - camera.camera.target.y + settings.windowHeight * 0.05f <
+                    position.value.y() - camera.camera.target.y + settings.window_height * 0.05f <
                     -renderable.texture.height - camera.camera.offset.y;
 
             // auto x_above_upperbound =
-            //         position.value.x() > settings.windowWidth + renderable.texture.width;
+            //         position.value.x() > settings.window_width + renderable.texture.width;
             // auto x_below_lowerbound = position.value.x() < -renderable.texture.width;
             // auto y_above_upperbound =
-            //         position.value.y() > settings.windowHeight + renderable.texture.height;
+            //         position.value.y() > settings.window_height + renderable.texture.height;
             // auto y_below_lowerbound = position.value.y() < -renderable.texture.height;
 
             if (x_below_lowerbound || x_above_upperbound || y_below_lowerbound ||

@@ -23,12 +23,12 @@ namespace gameplay {
             for (int i = 0; i < 1; i++) {
                 float factor = rand() % 2 - 1;
                 float neg = rand() % 1 - 1;
-                float randX = outside_side_switch ? neg * factor * settings.windowWidth
-                                                  : rand() % settings.windowWidth;
-                randX += camera.camera.target.x - camera.camera.offset.x;
-                float randY = outside_side_switch ? rand() % settings.windowHeight
-                                                  : neg * factor * settings.windowHeight;
-                randY += camera.camera.target.y - camera.camera.offset.y;
+                float randX = outside_side_switch ? neg * factor * (settings.window_width + 200)
+                                                  : rand() % (settings.window_width + 200);
+                randX += camera.camera.target.x - camera.camera.offset.x - 100;
+                float randY = outside_side_switch ? rand() % (settings.window_height + 200)
+                                                  : neg * factor * (settings.window_height + 200);
+                randY += camera.camera.target.y - camera.camera.offset.y - 100;
                 bool is_valid = true;
 
                 physics::queries::box_collider_query.run([&](flecs::iter &it) {
@@ -83,7 +83,7 @@ namespace gameplay {
             float shortest_distance_sqr = 1e6;
             core::Position target_pos{pos.value};
 
-            core::queries::position_and_tag().each(
+            core::queries::position_and_tag.each(
                     [&](flecs::entity other, core::Position &other_pos, core::Tag &tag) {
                         if (attack.target_tag != tag.name)
                             return;
@@ -116,7 +116,7 @@ namespace gameplay {
                         .entity()
                         .is_a(prefab)
                         .child_of(weapon)
-                        .set<core::Position>({pos.value})
+                        .set<core::Position>({pos.value + Eigen::Vector3f::UnitX()})
                         .set<rendering::Rotation>({rot + angle_offset})
                         .set<core::Speed>({150})
                         .set<physics::Velocity>({rotation * velocity});
@@ -196,7 +196,7 @@ namespace gameplay {
             float shortest_distance_sqr = 1e6;
             core::Position target_pos{pos.value};
 
-            core::queries::position_and_tag().each(
+            core::queries::position_and_tag.each(
                     [&](flecs::entity collidable, core::Position &collidable_pos, core::Tag &tag) {
                         if (!chain.hits.count(collidable.id()) && attack.target_tag == tag.name &&
                             victim.id() != collidable.id()) {

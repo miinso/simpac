@@ -47,20 +47,8 @@ filegroup(
 refresh_compile_commands(
     name = "refresh",
     targets = {
-        # "//raw:all": "",
         "//survivors/modules:all": "",
-        # "//modules:core": "",
-        # "//modules:physics": "",
-        # "//modules:input": "",
-        # "//modules:engine": "",
-        # "//modules:rendering": "",
-        # "//modules:gui": "",
-        # "//modules:player": "",
-        # "//modules:gameplay": "",
-        # "//modules:ai": "",
-        # "//modules:debug": "",
-        "//survivors:library1": "",
+        "//survivors:game": "",
         "//survivors:main1": "",
-        "//survivors:tmx": "",
     },
 )

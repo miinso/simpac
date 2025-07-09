@@ -66,5 +66,7 @@ namespace rendering {
                 this->vertical_anchor = v;
             }
         };
+
+        struct WindowResizedEvent {};
     } // namespace gui
 } // namespace rendering

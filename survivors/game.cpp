@@ -26,12 +26,26 @@
 
 #include <raylib.h>
 
-Game::Game(const char *windowName, int windowWidth, int windowHeight) :
-    m_world(flecs::world()), m_windowName(windowName), m_windowWidth(windowWidth),
-    m_windowHeight(windowHeight) {
+// "{{entity}}" <{{component list}}>
+//
+// "player" <Position, Speed, Velocity, ...>
+//      "player_horizontal_input" <InputHorizontal>
+//          (anonymous) <KeyBinding>
+//          (anonymous) <KeyBinding>
+//          (anonymous) <KeyBinding>
+//          (anonymous) <KeyBinding>
+//      "player_vertical_input" <InputVertical>
+//          (anonymous) <KeyBinding>
+//          (anonymous) <KeyBinding>
+//          (anonymous) <KeyBinding>
+//          (anonymous) <KeyBinding>
+
+Game::Game(const char *window_name, int window_width, int window_height) :
+    m_world(flecs::world()), m_window_name(window_name), m_window_width(window_width),
+    m_window_height(window_height) {
 
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-    InitWindow(m_windowWidth, m_windowHeight, m_windowName.c_str());
+    InitWindow(m_window_width, m_window_height, m_window_name.c_str());
     // SetTargetFPS(60);
     // SetTargetFPS(GetMonitorRefreshRate(0));
 
@@ -51,22 +65,9 @@ Game::Game(const char *windowName, int windowWidth, int windowHeight) :
     m_world.import <tilemap::TilemapModule>();
 
     m_world.set<core::GameSettings>(
-            {m_windowName, m_windowWidth, m_windowHeight, m_windowWidth, m_windowHeight});
+            {m_window_name, m_window_width, m_window_height, m_window_width, m_window_height});
     m_world.add<physics::CollisionRecordList>();
-
-    // "{{entity}}" <{{component list}}>
-    //
-    // "player" <Position, Speed, Velocity, ...>
-    //      "player_horizontal_input" <InputHorizontal>
-    //          (anonymous) <KeyBinding>
-    //          (anonymous) <KeyBinding>
-    //          (anonymous) <KeyBinding>
-    //          (anonymous) <KeyBinding>
-    //      "player_vertical_input" <InputVertical>
-    //          (anonymous) <KeyBinding>
-    //          (anonymous) <KeyBinding>
-    //          (anonymous) <KeyBinding>
-    //          (anonymous) <KeyBinding>
+    m_world.set<physics::HashGrid>({48, {0, 0}}); // `.set` on `world` creates singleton
 
     flecs::entity player =
             m_world.entity("player")
@@ -98,15 +99,15 @@ Game::Game(const char *windowName, int windowWidth, int windowHeight) :
             .set<gameplay::Attack>({"projectile", "enemy"})
             .set<gameplay::Cooldown>({1.0f, 1})
             .add<gameplay::CooldownCompleted>()
-            .set<gameplay::MultiProj>({3, 30.0f, 150.0f, 30.0f})
+            // .set<gameplay::MultiProj>({3, 30.0f, 150.0f, 30.0f})
             .set<core::Speed>({150.0f});
 
     m_world.prefab("projectile")
             .add<gameplay::Projectile>()
             .set<gameplay::Attack>({"projectile", "enemy"})
-            .set<gameplay::Chain>({6, std::unordered_set<int>()})
-            .set<gameplay::Split>({std::unordered_set<int>()})
-            .set<gameplay::Bounce>({2})
+            // .set<gameplay::Chain>({6, std::unordered_set<int>()})
+            // .set<gameplay::Split>({std::unordered_set<int>()})
+            // .set<gameplay::Bounce>({2})
             .set<gameplay::Damage>({2})
             .set<physics::Velocity>({Eigen::Vector3f::Zero()})
             .set<physics::Collider>({false,

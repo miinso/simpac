@@ -18,8 +18,8 @@ namespace rendering {
             inline void init_canvas_size(core::GameSettings &settings) {
                 GUIModule::gui_canvas.set<Rectangle>({0, 0, static_cast<float>(GetScreenWidth()),
                                                       static_cast<float>(GetScreenHeight())});
-                settings.windowWidth = GetScreenWidth();
-                settings.windowHeight = GetScreenHeight();
+                settings.window_width = GetScreenWidth();
+                settings.window_height = GetScreenHeight();
             };
 
             inline void init_anchor_position(const Rectangle &rectangle, Anchor &anchor) {
@@ -33,41 +33,41 @@ namespace rendering {
                 if (!e.has<Rectangle>())
                     return;
 
-                auto anchor = e.try_get<Anchor>();
+                auto anchor = e.get<Anchor>();
+                Rectangle new_rect{e.get<Rectangle>()}; // deep copy
 
-                Rectangle temp{*e.try_get<Rectangle>()};
-                switch (anchor->horizontal_anchor) {
+                switch (anchor.horizontal_anchor) {
                     case HORIZONTAL_ANCHOR::CENTER:
-                        temp.x = anchor->position.x + parent.x + parent.width / 2;
+                        new_rect.x = anchor.position.x + parent.x + parent.width / 2;
                         break;
                     case HORIZONTAL_ANCHOR::RIGHT:
-                        temp.x = anchor->position.x + parent.x + parent.width;
+                        new_rect.x = anchor.position.x + parent.x + parent.width;
                         break;
                     default:
-                        temp.x = anchor->position.x + parent.x;
+                        new_rect.x = anchor.position.x + parent.x;
                         break;
                 }
-                switch (anchor->vertical_anchor) {
+                switch (anchor.vertical_anchor) {
                     case VERTICAL_ANCHOR::MIDDLE:
-                        temp.y = anchor->position.y + parent.y + parent.height / 2;
+                        new_rect.y = anchor.position.y + parent.y + parent.height / 2;
                         break;
                     case VERTICAL_ANCHOR::BOTTOM:
-                        temp.y = anchor->position.y + parent.y + parent.height;
+                        new_rect.y = anchor.position.y + parent.y + parent.height;
                         break;
                     default:
-                        temp.y = anchor->position.y + parent.y;
+                        new_rect.y = anchor.position.y + parent.y;
                         break;
                 }
-                e.set<Rectangle>({temp});
+                e.set<Rectangle>({new_rect});
             };
 
-            inline void resize_window(core::GameSettings &settings) {
+            inline void resize_window(flecs::entity e, core::GameSettings &settings) {
                 if (IsWindowResized()) {
                     init_canvas_size(settings);
                 }
 #ifndef EMSCRIPTEN
-                SetMouseScale(settings.windowWidth / (float) settings.initialWidth,
-                              settings.windowHeight / (float) settings.initialHeight);
+                SetMouseScale(settings.window_width / (float) settings.initial_width,
+                              settings.window_height / (float) settings.initial_height);
 #endif
             };
 

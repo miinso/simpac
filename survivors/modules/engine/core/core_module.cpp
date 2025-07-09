@@ -16,8 +16,9 @@ namespace core {
         world.component<DestroyAfterFrame>();
     }
 
+    flecs::query<Position, Tag> queries::position_and_tag;
     void CoreModule::register_queries(flecs::world &world) {
-        queries::position_and_tag() = world.query<Position, Tag>();
+        queries::position_and_tag = world.query<Position, Tag>();
     }
 
     void CoreModule::register_systems(flecs::world &world) {
