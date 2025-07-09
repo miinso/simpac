@@ -144,7 +144,7 @@ namespace physics {
 
         } // namespace detail
 
-        ////////////////////////////////////////////////////////////////////////
+        ////////////////////////////////////////////////////////////////////////////////////////////
 
         inline void reset_desired_velocity(const Velocity &vel, DesiredVelocity &desired_vel) {
             desired_vel.value = vel.value;
@@ -154,12 +154,14 @@ namespace physics {
                                        const DesiredVelocity &desired_vel,
                                        const AccelerationSpeed &acc) {
             float dt = std::min(PHYSICS_TICK_LENGTH, it.delta_system_time());
-            vel.value = vel.value + dt * acc.value * (desired_vel.value - vel.value);
+            vel.value += dt * acc.value * (desired_vel.value - vel.value);
+            // std::printf("%f\n", it.delta_system_time());
         };
 
         inline void integrate_position(flecs::iter &it, size_t, core::Position &pos,
                                        const Velocity &vel) {
-            pos.value += vel.value * std::min(PHYSICS_TICK_LENGTH, it.delta_system_time());
+            float dt = std::min(PHYSICS_TICK_LENGTH, it.delta_system_time());
+            pos.value += dt * vel.value;
         };
 
         // static??

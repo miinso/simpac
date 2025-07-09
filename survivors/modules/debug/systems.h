@@ -10,16 +10,11 @@
 
 namespace debug {
     namespace systems {
-        // inline void draw_collider(const physics::Collider &collider,
-        //                           const core::Position &position) {
-        //     DrawCircleLines(position.value.x(), position.value.y(), collider.radius, GREEN);
-        // };
-
         inline void draw_collidable(flecs::entity e, const core::Position &pos,
                                     const physics::Collider &col) {
             DrawText(TextFormat("%d", e.id()), pos.value.x() + col.bounds.x + 12,
                      pos.value.y() + col.bounds.y + 12, 16, GREEN);
-            DrawCircleLines(pos.value.x(), pos.value.y(), 0.02f, RED);
+            DrawCircleLines(pos.value.x(), pos.value.y(), 0.2f, RED);
         }
 
         inline void draw_collider_bound(const core::Position &pos, const physics::Collider &col) {
@@ -43,15 +38,15 @@ namespace debug {
         };
 
         inline void draw_entity_count(flecs::iter &it) {
-            DrawRectangleRec({0, 30, 225, 40}, DARKGRAY);
+            DrawRectangleRec({0, 30, 225, 60}, DARKGRAY);
             auto renderable_count = rendering::queries::query_all_renderables.count();
             auto collidable_count = it.world().query<physics::Collider>().count();
             auto visible_renderable_count = rendering::queries::query_visible_renderables.count();
-            DrawText(TextFormat("%d entities", renderable_count), 10, 30, 20, GREEN);
-            DrawText(TextFormat("%d visible entities", visible_renderable_count), 10, 50, 20,
+            DrawText(TextFormat("%d entities", renderable_count), 10, 30 + 0, 20, GREEN);
+            DrawText(TextFormat("%d visible entities", visible_renderable_count), 10, 30 + 20, 20,
                      GREEN);
-            DrawText(TextFormat("%d collidable entities", visible_renderable_count), 10, 50, 20,
-                     GREEN);
+            DrawText(TextFormat("%d collidable entities", visible_renderable_count), 10, 30 + 60,
+                     20, GREEN);
         };
 
         inline void draw_mouse_position(flecs::iter &iter) {

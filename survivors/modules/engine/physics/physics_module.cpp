@@ -4,7 +4,6 @@
 #include "queries.h"
 #include "systems.h"
 
-
 #include <modules/engine/core/components.h>
 #include <modules/engine/rendering/components.h>
 
@@ -15,8 +14,8 @@ namespace physics {
         world.component<CollidedWith>();
     }
 
-    flecs::query<core::Position, Collider> visible_collision_bodies_query;
-    flecs::query<core::Position, Collider> box_collider_query;
+    flecs::query<core::Position, Collider> queries::visible_collision_bodies_query;
+    flecs::query<core::Position, Collider> queries::box_collider_query;
     void PhysicsModule::register_queries(flecs::world &world) {
         queries::visible_collision_bodies_query =
                 world.query_builder<core::Position, Collider>().with<rendering::Visible>().build();

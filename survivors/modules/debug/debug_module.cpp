@@ -14,13 +14,6 @@ namespace debug {
     void DebugModule::register_components(flecs::world &world) {}
 
     void DebugModule::register_systems(flecs::world &world) {
-        // debug_colliders =
-        //         world.system<const physics::Collider, const core::Position>("Draw collider")
-        //                 .kind<rendering::Render>()
-        //                 .with<rendering::Visible>()
-        //                 .group_by<rendering::Priority>()
-        //                 .each(systems::draw_collider);
-        // debug_colliders.disable();
 
         debug_collidable_entity_id = world.system<const core::Position, const physics::Collider>(
                                                   "Draw collidable entity id")

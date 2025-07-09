@@ -10,9 +10,4 @@ namespace physics {
         extern flecs::query<core::Position, Collider> visible_collision_bodies_query;
         extern flecs::query<core::Position, Collider> box_collider_query;
     } // namespace queries
-
-    // struct queries {
-    //     static flecs::query<core::Position, Collider> visible_collision_bodies_query;
-    //     static flecs::query<core::Position, Collider> box_collider_query;
-    // };
 } // namespace physics
