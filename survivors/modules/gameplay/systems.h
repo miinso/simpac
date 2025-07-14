@@ -116,7 +116,7 @@ namespace gameplay {
                         .entity()
                         .is_a(prefab)
                         .child_of(weapon)
-                        .set<core::Position>({pos.value + Eigen::Vector3f::UnitX()})
+                        .set<core::Position>({pos.value})
                         .set<rendering::Rotation>({rot + angle_offset})
                         .set<core::Speed>({150})
                         .set<physics::Velocity>({rotation * velocity});
