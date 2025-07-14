@@ -311,7 +311,7 @@ namespace physics {
                     if (!grid.cells.count(key))
                         continue;
 
-                    const GridCell neighbour = grid.cells[key].get<GridCell>();
+                    const auto neighbour = grid.cells[key].get<GridCell>();
 
                     for (int i = 0; i < cell.items.size(); i++) {
                         flecs::entity self = cell.items[i];
@@ -319,36 +319,37 @@ namespace physics {
                         if (!self.is_alive())
                             continue;
 
-                        const core::Position pos = cell.items[i].get<core::Position>();
-                        const Collider collider = cell.items[i].get<Collider>();
+                        const auto pos = cell.items[i].get<core::Position>();
+                        const auto collider = cell.items[i].get<Collider>();
 
                         for (int j = 0; j < neighbour.items.size(); j++) {
-                            flecs::entity other = neighbour.items[j];
+                            auto other = neighbour.items[j];
 
                             if (!other.is_alive())
                                 continue;
 
-                            const core::Position other_pos =
-                                    neighbour.items[j].get<core::Position>();
-                            const Collider other_collider = neighbour.items[j].get<Collider>();
-
                             if (self.id() <= other.id())
                                 continue;
+
+                            // const auto other_pos = neighbour.items[j].get<core::Position>();
+                            const auto other_collider = neighbour.items[j].get<Collider>();
 
                             if ((collider.collision_filter & other_collider.collision_type) == none)
                                 continue;
 
-                            Rectangle self_rec = {pos.value.x() + collider.bounds.x,
-                                                  pos.value.y() + collider.bounds.y,
-                                                  collider.bounds.width, collider.bounds.height};
-                            Rectangle other_rec = {other_pos.value.x() + other_collider.bounds.x,
-                                                   other_pos.value.y() + other_collider.bounds.y,
-                                                   other_collider.bounds.width,
-                                                   other_collider.bounds.height};
+                            // Rectangle self_rec = {pos.value.x() + collider.bounds.x,
+                            //                       pos.value.y() + collider.bounds.y,
+                            //                       collider.bounds.width, collider.bounds.height};
+                            // Rectangle other_rec = {other_pos.value.x() + other_collider.bounds.x,
+                            //                        other_pos.value.y() + other_collider.bounds.y,
+                            //                        other_collider.bounds.width,
+                            //                        other_collider.bounds.height};
 
-                            if (CheckCollisionRecs(self_rec, other_rec)) {
-                                list.records.push_back({self, other});
-                            }
+                            // if (CheckCollisionRecs(self_rec, other_rec)) {
+                            //     list.records.push_back({self, other});
+                            // }
+
+                            list.records.push_back({self, other});
                         }
                     }
                 }
@@ -359,7 +360,7 @@ namespace physics {
                                                         CollisionRecordList &list, HashGrid &grid,
                                                         GridCell &cell) {
 
-            flecs::entity current_cell = it.entity(i);
+            auto current_cell = it.entity(i);
             auto cur_q = it.world()
                                  .query_builder<const core::Position, const Collider>()
                                  .with<ContainedIn>(current_cell)
@@ -374,9 +375,7 @@ namespace physics {
                     if (!grid.cells.count(key))
                         continue;
 
-                    auto pair = std::make_pair(x, y);
-                    flecs::entity neighbour_cell = grid.cells[pair];
-
+                    auto neighbour_cell = grid.cells[key];
                     auto other_q = it.world()
                                            .query_builder<const core::Position, const Collider>()
                                            .with<ContainedIn>(neighbour_cell)
@@ -384,29 +383,32 @@ namespace physics {
 
                     cur_q.each([&](flecs::iter &self_it, size_t self_i, const core::Position &pos,
                                    const Collider &collider) {
-                        flecs::entity self = self_it.entity(self_i);
+                        auto self = self_it.entity(self_i);
 
                         other_q.each([&](flecs::iter &other_it, size_t other_i,
                                          const core::Position &other_pos,
                                          const Collider &other_collider) {
-                            flecs::entity other = other_it.entity(other_i);
+                            auto other = other_it.entity(other_i);
+
                             if (other.id() <= self.id())
                                 return;
 
                             if ((collider.collision_filter & other_collider.collision_type) == none)
                                 return;
 
-                            Rectangle self_rec = {pos.value.x() + collider.bounds.x,
-                                                  pos.value.y() + collider.bounds.y,
-                                                  collider.bounds.width, collider.bounds.height};
-                            Rectangle other_rec = {other_pos.value.x() + other_collider.bounds.x,
-                                                   other_pos.value.y() + other_collider.bounds.y,
-                                                   other_collider.bounds.width,
-                                                   other_collider.bounds.height};
+                            // Rectangle self_rec = {pos.value.x() + collider.bounds.x,
+                            //                       pos.value.y() + collider.bounds.y,
+                            //                       collider.bounds.width, collider.bounds.height};
+                            // Rectangle other_rec = {other_pos.value.x() + other_collider.bounds.x,
+                            //                        other_pos.value.y() + other_collider.bounds.y,
+                            //                        other_collider.bounds.width,
+                            //                        other_collider.bounds.height};
 
-                            if (CheckCollisionRecs(self_rec, other_rec)) {
-                                list.records.push_back({self, other});
-                            }
+                            // if (CheckCollisionRecs(self_rec, other_rec)) {
+                            //     list.records.push_back({self, other});
+                            // }
+
+                            list.records.push_back({self, other});
                         });
                     });
                 }
@@ -439,8 +441,11 @@ namespace physics {
         // static??
         inline void detect_collision(flecs::entity body_a, CollisionRecordList &list,
                                      const core::Position &x_a, const Collider &collider_a) {
+            // baseline, O(n^2)
             flecs::world staged_world = body_a.world();
 
+            // what does `staging` do?
+            // https://www.flecs.dev/flecs/md_docs_2Systems.html#staging
             auto query_all_visibles =
                     staged_world.query_builder<const core::Position, const Collider>()
                             .without<StaticCollider>()

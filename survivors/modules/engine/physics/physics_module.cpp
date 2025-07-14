@@ -122,7 +122,7 @@ namespace physics {
                         .kind<CollisionDetection>()
                         .tick_source(m_physics_tick)
                         .each(systems::detect_collision_with_hash_grid);
-        m_collision_detection_with_hash_grid.disable();
+        // m_collision_detection_with_hash_grid.disable();
 
         m_collision_detection_with_hash_grid_alt =
                 world.system<CollisionRecordList, HashGrid, GridCell>(
