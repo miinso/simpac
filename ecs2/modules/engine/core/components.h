@@ -7,14 +7,33 @@
 
 using namespace Eigen;
 
+
 namespace core {
+    constexpr float PI = 3.14159265359f;
+
+    struct rotation {
+        float s, c;
+    };
+
+    struct transform {
+        Vector2f p;
+        rotation q;
+    };
+
+    struct bound {
+        Vector2f l;
+        Vector2f u;
+
+        // TODO: add the usual static methods
+    };
+
     // idea 1. use state variables with verbose name
     struct particle_q {
-        Eigen::Vector2f value;
+        Vector2f value;
     };
 
     struct particle_qd {
-        Eigen::Vector2f value;
+        Vector2f value;
     };
 
     // struct particle_q_new {
@@ -26,7 +45,7 @@ namespace core {
     // };
 
     struct particle_f {
-        Eigen::Vector2f value;
+        Vector2f value;
     };
 
     struct PARTICLE_FLAG_ACTIVE {};
@@ -54,7 +73,7 @@ namespace core {
     };
 
     struct gravity {
-        Eigen::Vector2f value;
+        Vector2f value;
     };
 
     struct state {
@@ -105,6 +124,13 @@ namespace core {
     //     Eigen::Vector2f _;
     // };
 
+    // TODO: decide how to treat flags
+    // enum body_type { STATIC_BODY = 0, KINEMATIC_BODY = 1, DYNAMIC_BODY = 2 };
+    // or
+    // struct BODY_TYPE_STATIC {};
+    // struct BODY_TYPE_KINEMATIC {};
+    // struct BODY_TYPE_DYNAMIC {};
+
     struct Position {
         Eigen::Vector2f value;
     };
@@ -116,4 +142,22 @@ namespace core {
         int window_width;
         int window_height;
     };
+} // namespace core
+
+namespace core {
+    inline rotation make_rotation(float angle) { return {sin(angle), cos(angle)}; }
+
+    static inline Matrix2f get_rotation_from_xf(const transform &xf) {
+        return Matrix2f{xf.q.c, -xf.q.s, xf.q.s, xf.q.c};
+    }
+    // local to world
+    static inline Vector2f transform_point(const Vector2f &p, const transform &xf) {
+        const auto R = get_rotation_from_xf(xf);
+        return R * p + xf.p;
+    }
+
+    static inline Vector2f transform_vector(const Vector2f &p, const transform &xf) {
+        const auto R = get_rotation_from_xf(xf);
+        return R * p;
+    }
 } // namespace core

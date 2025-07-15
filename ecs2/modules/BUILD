@@ -11,6 +11,7 @@ cc_library(
         "base_module.h",
         "engine/core/components.h",
         "engine/core/core_module.h",
+        "engine/core/geometry.h",
     ],
     includes = [".."],
     deps = [
