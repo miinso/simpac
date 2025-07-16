@@ -5,7 +5,6 @@
 #include <modules/engine/core/components.h>
 
 #include <flecs.h>
-// #include <raygui.h>
 #include <raylib.h>
 #include <raymath.h>
 #include <rlgl.h>
@@ -35,7 +34,7 @@ namespace rendering {
             Vector2 pos = camera.camera.target;
             if (camera.target.is_alive()) {
                 auto camera_pos = camera.target.try_get<core::Position>()->value;
-                pos = Vector2{camera_pos.x(), camera_pos.y()};
+                // pos = Vector2{camera_pos.x(), camera_pos.y()};
             };
             camera.camera.target = Vector2Lerp(camera.camera.target, Vector2{pos.x, pos.y},
                                                it.delta_time() * 2.0f);
@@ -48,8 +47,8 @@ namespace rendering {
             // rlTranslatef(0.0f, -settings.window_height, 0.0f);
         }
 
-        inline void draw_particle(const particle_q &q, const particle_qd &qd,
-                                  const particle_radius *radius) {
+        inline void draw_particle(const core::particle_q &q, const core::particle_qd &qd,
+                                  const core::particle_radius *radius) {
             // `radius` here is optional
             // y-up,
             auto x = q.value;

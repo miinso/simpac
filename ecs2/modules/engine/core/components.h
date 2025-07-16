@@ -5,35 +5,33 @@
 #include <string>
 #include <vector>
 
-using namespace Eigen;
-
 
 namespace core {
-    constexpr float PI = 3.14159265359f;
+
 
     struct rotation {
         float s, c;
     };
 
     struct transform {
-        Vector2f p;
+        Eigen::Vector2f p;
         rotation q;
     };
 
     struct bound {
-        Vector2f l;
-        Vector2f u;
+        Eigen::Vector2f l;
+        Eigen::Vector2f u;
 
         // TODO: add the usual static methods
     };
 
     // idea 1. use state variables with verbose name
     struct particle_q {
-        Vector2f value;
+        Eigen::Vector2f value;
     };
 
     struct particle_qd {
-        Vector2f value;
+        Eigen::Vector2f value;
     };
 
     // struct particle_q_new {
@@ -45,7 +43,7 @@ namespace core {
     // };
 
     struct particle_f {
-        Vector2f value;
+        Eigen::Vector2f value;
     };
 
     struct PARTICLE_FLAG_ACTIVE {};
@@ -73,16 +71,16 @@ namespace core {
     };
 
     struct gravity {
-        Vector2f value;
+        Eigen::Vector2f value;
     };
 
     struct state {
-        std::vector<Vector2f> particle_q;
-        std::vector<Vector2f> partice_qd;
-        std::vector<Vector2f> particle_f;
-        std::vector<Vector3f> body_q;
-        std::vector<Vector3f> body_qd;
-        std::vector<Vector3f> body_f;
+        std::vector<Eigen::Vector2f> particle_q;
+        std::vector<Eigen::Vector2f> partice_qd;
+        std::vector<Eigen::Vector2f> particle_f;
+        std::vector<Eigen::Vector3f> body_q;
+        std::vector<Eigen::Vector3f> body_qd;
+        std::vector<Eigen::Vector3f> body_f;
 
         inline int get_particle_count() { return particle_q.size(); }
         inline int get_body_count() { return body_q.size(); }
@@ -147,16 +145,20 @@ namespace core {
 namespace core {
     inline rotation make_rotation(float angle) { return {sin(angle), cos(angle)}; }
 
-    static inline Matrix2f get_rotation_from_xf(const transform &xf) {
-        return Matrix2f{xf.q.c, -xf.q.s, xf.q.s, xf.q.c};
+    static inline Eigen::Matrix2f get_rotation_from_xf(const transform &xf) {
+        Eigen::Matrix2f R;
+        R << xf.q.c, -xf.q.s, xf.q.s, xf.q.c;
+        return R;
+        // or
+        // return rotation(s, c);
     }
     // local to world
-    static inline Vector2f transform_point(const Vector2f &p, const transform &xf) {
+    static inline Eigen::Vector2f transform_point(const Eigen::Vector2f &p, const transform &xf) {
         const auto R = get_rotation_from_xf(xf);
         return R * p + xf.p;
     }
 
-    static inline Vector2f transform_vector(const Vector2f &p, const transform &xf) {
+    static inline Eigen::Vector2f transform_vector(const Eigen::Vector2f &p, const transform &xf) {
         const auto R = get_rotation_from_xf(xf);
         return R * p;
     }

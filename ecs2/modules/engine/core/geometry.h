@@ -6,28 +6,28 @@
 #include "components.h"
 
 
-using namespace Eigen;
+// using namespace Eigen;
 using namespace core;
 
 namespace geometry {
+    constexpr float PI = 3.14159265359f;
 
     struct mass_info {
         float mass;
-        Vector2f center;
+        Eigen::Vector2f center;
         float I;
     };
 
     enum shape_type { CIRCLE, CAPSULE };
 
     struct circle {
-        Vector2f p; // in world coords? no, it's wrt body origin.
+        Eigen::Vector2f p; // in world coords? no, it's wrt body origin.
         float radius;
-        Vector2f pad;
     };
 
     struct capsule {
-        Vector2f p1;
-        Vector2f p2;
+        Eigen::Vector2f p1;
+        Eigen::Vector2f p2;
         float radius;
     };
 
@@ -42,28 +42,13 @@ namespace geometry {
         bound aabb;
         bound aabb_fat;
 
-        shape() :
-            type(CIRCLE), density(1.0f), friction(1.0f), restitution(0.0f), collision_filter(0) {
-            circle.p = Vector2f::Zero();
-            circle.radius = 1.0f;
-        }
-
-        shape(const shape &s) :
-            type(s.type), density(s.density), friction(s.friction), restitution(s.restitution),
-            collision_filter(0) {
-            switch (s.type) {
-                case CIRCLE:
-                    circle = s.circle;
-                case CAPSULE:
-                    capsule = s.capsule;
-            }
-        }
-
-
-        union {
-            circle circle;
-            capsule capsule;
-        };
+        // union {
+        //     circle circle;
+        //     capsule capsule;
+        // };
+        
+        circle circle;
+        capsule capsule;
     };
 
     static mass_info compute_mass_circle(const circle &shape, float density) {
@@ -103,7 +88,7 @@ namespace geometry {
 
         bound aabb;
         aabb.l = p.array() - r;
-        aabb.u = p.array() + r; // p + Vector2f::Constant(r);
+        aabb.u = p.array() + r; // p + Eigen::Vector2f::Constant(r);
 
         return aabb;
     }
@@ -140,7 +125,7 @@ namespace geometry {
                 return compute_aabb_capsule(s.capsule, xf);
             default:
                 assert(false);
-                // return {Vector2f::Zero(), Vector2f::Zero()};
+                // return {Eigen::Vector2f::Zero(), Eigen::Vector2f::Zero()};
         }
     }
 

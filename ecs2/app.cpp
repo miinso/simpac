@@ -4,6 +4,7 @@
 #include <emscripten/emscripten.h>
 #endif
 
+#include "modules/engine/core/body.h"
 #include "modules/engine/core/components.h"
 #include "modules/engine/core/core_module.h"
 #include "modules/engine/physics/physics_module.h"
@@ -11,10 +12,14 @@
 #include "modules/engine/rendering/rendering_module.h"
 
 #include <flecs.h>
+#include <iostream>
 #include <raylib.h>
+
 
 using namespace core;
 using namespace Eigen;
+
+// void print(flecs::entity e) { std::cout << e.path() << " [" << e.type().str() << "]\n"; }
 
 App::App(const char *window_name, int window_width, int window_height) :
     m_world(flecs::world()), m_window_name(window_name), m_window_width(window_width),
@@ -51,9 +56,10 @@ App::App(const char *window_name, int window_width, int window_height) :
                 .set<particle_qd>({Vector2f::Random() * 10});
     }
 
-
     m_world.set<gravity>({Eigen::Vector2f(0, -10)});
     m_world.set<v_max>({1000});
+
+
 }
 
 void App::run() {
