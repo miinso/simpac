@@ -1,6 +1,11 @@
 """
 simpac: a meek peon, simulation package of mine.
 """
+module(
+    name = "simpac",
+    version = "0.0.0",
+    compatibility_level = 0,
+)
 
 # "@@ is the new @" to clarify the distinction between main repo targets (@@//)
 # and internal repo targets (//).
@@ -135,6 +140,30 @@ local_repository = use_repo_rule("@bazel_tools//tools/build_defs/repo:local.bzl"
 local_repository(
     name = "raylib",
     path = "third_party/raylib_alias",
+)
+
+##
+# GLFW2
+##
+GLFW2_VERSION = "3.4"
+
+http_archive(
+    name = "glfw2",
+    build_file = "//third_party/glfw2:BUILD",
+    strip_prefix = "glfw-{}".format(GLFW2_VERSION),
+    urls = ["https://github.com/glfw/glfw/archive/{}.tar.gz".format(GLFW2_VERSION)],
+)
+
+##
+# raylib (head)
+##
+git_repository(
+    name = "raylib-latest",
+    # branch = "master",
+    build_file = "//third_party:raylib-latest.BUILD",
+    commit = "718a841cfba2c1739b979ee068aafe018c03aa95",
+    # depth = 1,
+    remote = "https://github.com/raysan5/raylib.git",
 )
 
 ##
