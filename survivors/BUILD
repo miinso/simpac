@@ -19,7 +19,7 @@ cc_library(
         "//survivors/modules:debug",
         "//survivors/modules:tilemap",
         # third_party below
-        "//:raylib",
+        "@raylib",
         "@flecs",
     ],
 )
@@ -72,7 +72,7 @@ cc_binary(
     }),
     deps = [
         ":game",
-        # "//:raylib",
+        # "@raylib",
         # "@flecs",
     ],
 )

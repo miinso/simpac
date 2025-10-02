@@ -23,7 +23,7 @@ source_file_name_list = glob([
             ":pbd",
             "@eigen",
             "@flecs",
-            "@raylib-head",
+            "@raylib-latest",
         ],
     )
     for source_file_name in source_file_name_list
@@ -47,7 +47,7 @@ cc_library(
     deps = [
         "@eigen",
         "@flecs",
-        "@raylib-head",
+        "@raylib-latest",
     ],
 )
 
@@ -125,7 +125,7 @@ cc_binary(
         ":pbd",
         "@eigen",
         "@flecs",
-        "@raylib-head",
+        "@raylib-latest",
     ],
 )
 

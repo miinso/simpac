@@ -24,7 +24,7 @@ source_file_name_list = glob([
             "solve.hpp",
         ],
         deps = [
-            "//:raylib",
+            "@raylib",
             "@flecs",
             "@eigen",
             "@Discregrid",

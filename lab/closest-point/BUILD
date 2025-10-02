@@ -21,7 +21,7 @@ source_file_name_list = glob([
         ],
         deps = [
             ":graphics",
-            "//:raylib",
+            "@raylib",
             "@eigen",
             "@flecs",
         ],
@@ -45,7 +45,7 @@ cc_library(
     strip_include_prefix = "module",
     # visibility = ["//visibility:public"],
     deps = [
-        "//:raylib",
+        "@raylib",
         "@eigen",
         "@flecs",
     ],

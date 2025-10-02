@@ -27,7 +27,7 @@ source_file_name_list = glob([
         ],
         deps = [
             "//modules:graphics",
-            "//:raylib",
+            "@raylib",
             "@flecs",
             "@eigen",
             # "@Discregrid",

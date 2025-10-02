@@ -19,7 +19,7 @@ source_file_name_list = glob([
         ],
         deps = [
             ":graphics",
-            "//:raylib",
+            "@raylib",
             "@assimp//:assimp",
             "@eigen",
             "@flecs",
@@ -43,7 +43,7 @@ cc_library(
     # data = ["@com_minseopark_simpac//:resources"],
     strip_include_prefix = "module",
     deps = [
-        "//:raylib",
+        "@raylib",
         "@eigen",
         "@flecs",
     ],

@@ -22,7 +22,7 @@ source_file_name_list = glob([
         deps = [
             ":graphics",
             ":pbd",
-            "//:raylib",
+            "@raylib",
             "@eigen",
             "@flecs",
         ],
@@ -46,7 +46,7 @@ cc_library(
     includes = ["."],
     strip_include_prefix = "graphics",
     deps = [
-        "//:raylib",
+        "@raylib",
         "@eigen",
         "@flecs",
     ],
@@ -80,7 +80,7 @@ cc_library(
         "support.h",
     ],
     deps = [
-        "//:raylib",
+        "@raylib",
         "@eigen",
         "@flecs",
     ],
@@ -111,7 +111,7 @@ cc_library(
     ],
     deps = [
         ":collision",
-        "//:raylib",
+        "@raylib",
         "@eigen",
         "@flecs",
     ],
@@ -173,7 +173,7 @@ cc_binary(
     deps = [
         ":graphics",
         ":pbd",
-        "//:raylib",
+        "@raylib",
         "@eigen",
         "@flecs",
     ],

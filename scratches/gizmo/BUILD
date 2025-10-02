@@ -24,7 +24,7 @@ source_file_name_list = glob([
             "//modules:rlights",
             "@eigen",
             "@flecs",
-            "@raylib-head",
+            "@raylib-latest",
         ],
     )
     for source_file_name in source_file_name_list
@@ -48,7 +48,7 @@ cc_library(
     deps = [
         "@eigen",
         "@flecs",
-        "@raylib-head",
+        "@raylib-latest",
     ],
 )
 ### wasm
@@ -116,7 +116,7 @@ cc_binary(
         "//modules:rlights",
         "@eigen",
         "@flecs",
-        "@raylib-head",
+        "@raylib-latest",
     ],
 )
 

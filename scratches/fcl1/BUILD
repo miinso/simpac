@@ -16,7 +16,7 @@ source_file_name_list = glob([
         ],
         deps = [
             # ":util",
-            "//:raylib",
+            "@raylib",
             "@fcl",
             "@eigen",
             "@googletest//:gtest_main",

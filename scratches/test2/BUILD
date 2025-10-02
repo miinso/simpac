@@ -19,7 +19,7 @@ cpp_file_names = glob(["*.cpp"])
             # "rlights.h",
         ],
         deps = [
-            "//:raylib",
+            "@raylib",
             "@flecs",
             "@eigen",
             # modules
@@ -46,7 +46,7 @@ c_file_names = glob(["*.c"])
             "rlights.h",
         ],
         deps = [
-            "//:raylib",
+            "@raylib",
             "@flecs",
         ],
     )
@@ -92,7 +92,7 @@ cc_binary(
         "//conditions:default": [],
     }),
     deps = [
-        "//:raylib",
+        "@raylib",
         "@eigen",
         "@flecs",
         # modules

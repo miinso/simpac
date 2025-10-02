@@ -36,7 +36,7 @@ cc_library(
     deps = [
         ":core",
         # ":gui",
-        "//:raylib",
+        "@raylib",
     ],
 )
 
@@ -55,6 +55,6 @@ cc_library(
     includes = ["."],
     deps = [
         ":core",
-        "//:raylib",  # NOTE: make this third_party:raylib or such
+        "@raylib",  # NOTE: make this third_party:raylib or such
     ],
 )

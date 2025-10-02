@@ -21,7 +21,7 @@ cc_library(
     # linkstatic = True,
     visibility = ["//visibility:public"],
     deps = [
-        "//:raylib",
+        "@raylib",
         "@eigen",
         "@flecs",
     ],
@@ -46,7 +46,7 @@ cc_library(
     strip_include_prefix = "include",
     visibility = ["//visibility:public"],
     deps = [
-        "//:raylib",
+        "@raylib",
         "@eigen",
         "@flecs",
         "@raylib-cpp",
@@ -65,7 +65,7 @@ cc_library(
     strip_include_prefix = "include",
     visibility = ["//visibility:public"],
     deps = [
-        # "//:raylib",
+        # "@raylib",
         "@eigen",
         "@flecs",
     ],
@@ -83,7 +83,7 @@ cc_library(
     strip_include_prefix = "include",
     visibility = ["//visibility:public"],
     deps = [
-        "//:raylib",
+        "@raylib",
         "@eigen",
         "@flecs",
     ],
@@ -124,7 +124,7 @@ cc_library(
     strip_include_prefix = "raygizmo",
     visibility = ["//visibility:public"],
     deps = [
-        "@raylib-head",
+        "@raylib-latest",
     ],
 )
 
@@ -136,8 +136,8 @@ cc_library(
     strip_include_prefix = "rlights",
     visibility = ["//visibility:public"],
     deps = [
-        # "//:raylib",
-        "@raylib-head",
+        # "@raylib",
+        "@raylib-latest",
     ],
 )
 
@@ -149,8 +149,8 @@ cc_library(
     strip_include_prefix = "raygui",
     visibility = ["//visibility:public"],
     deps = [
-        "//:raylib",
-        # "@raylib-head",
+        "@raylib",
+        # "@raylib-latest",
     ],
 )
 
