@@ -1,16 +1,5 @@
 load("@hedron_compile_commands//:refresh_compile_commands.bzl", "refresh_compile_commands")
 
-alias(
-    name = "raylib",
-    actual = select({
-        "@platforms//os:windows": "@raylib_windows//:raylib",
-        "@platforms//os:macos": "@raylib_macos//:raylib",
-        "@platforms//os:linux": "@raylib_linux//:raylib",
-        "@platforms//os:emscripten": "@raylib_emscripten//:raylib",
-    }),
-    visibility = ["//visibility:public"],
-)
-
 filegroup(
     name = "resources",
     srcs = glob(["resources/**"]),

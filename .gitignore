@@ -6,7 +6,7 @@ bazel-testlogs/
 bazel-raylib/
 external
 
-MODULE.bazel.lock
+**/MODULE.bazel.lock
 
 # Temporary Bazel directories
 _bazel_*/
@@ -17,3 +17,5 @@ _bazel_*/
 compile_commands.json
 .cache
 .DS_Store
+
+.vscode/settings.json

@@ -19,7 +19,7 @@ cc_binary(
     srcs = ["2d_laplace.cpp"],
     deps = [
         "@eigen",
-        "//:raylib",
+        "@raylib",
     ],
 )
 
@@ -28,6 +28,6 @@ cc_binary(
     srcs = ["2d_laplace_interactive.cpp"],
     deps = [
         "@eigen",
-        "//:raylib",
+        "@raylib",
     ],
 )

@@ -130,6 +130,13 @@ http_archive(
     urls = ["https://github.com/raysan5/raylib/releases/download/5.5/raylib-5.5_webassembly.zip"],
 )
 
+local_repository = use_repo_rule("@bazel_tools//tools/build_defs/repo:local.bzl", "local_repository")
+
+local_repository(
+    name = "raylib",
+    path = "third_party/raylib_alias",
+)
+
 ##
 #  libccd
 ##
