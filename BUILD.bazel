@@ -47,9 +47,10 @@ filegroup(
 refresh_compile_commands(
     name = "refresh",
     targets = {
-        "//survivors/modules:all": "",
+        # "//survivors/modules:all": "",
         # "//survivors:game": "",
         # "//survivors:main1": "",
-        "//ecs2:all": "",
+        # "//ecs2:all": "",
+        "//linalg:all": "",
     },
 )
