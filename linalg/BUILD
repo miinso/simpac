@@ -2,11 +2,6 @@ load("@emsdk//emscripten_toolchain:wasm_rules.bzl", "wasm_cc_binary")
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 
-_CXX17_COPTS = select({
-    "@platforms//os:windows": ["/std:c++17"],
-    "//conditions:default": ["-std=c++17"],
-})
-
 filegroup(
     name = "web_shell",
     srcs = ["web_shell.html"],
@@ -16,7 +11,6 @@ cc_library(
     name = "app",
     srcs = ["app.cpp"],
     hdrs = ["app.h"],
-    copts = _CXX17_COPTS,
     deps = [
         "//linalg/modules:engine",
         "@eigen",
@@ -27,7 +21,6 @@ cc_library(
 cc_binary(
     name = "2d_laplace",
     srcs = ["2d_laplace.cpp"],
-    copts = _CXX17_COPTS,
     deps = [
         "@eigen",
         # "@raylib",
@@ -38,7 +31,6 @@ cc_binary(
 cc_binary(
     name = "2d_laplace_interactive",
     srcs = ["2d_laplace_interactive.cpp"],
-    copts = _CXX17_COPTS,
     data = [":web_shell"],
     linkopts = select({
         "@platforms//os:emscripten": [

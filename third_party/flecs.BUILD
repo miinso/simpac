@@ -5,27 +5,42 @@ cc_library(
     srcs = ["distr/flecs.c"],
     hdrs = ["distr/flecs.h"],
     copts = select({
-        # the manual says to build it as c, not cpp
-        "@platforms//os:windows": ["/TC"],
+        "@platforms//os:windows": [
+            "/TC",  # treat as C
+            # "/O2",      # optimize for speed
+        ],
+        "@platforms//os:emscripten": [
+            "-std=gnu99",
+            "-x",
+            "c",
+            # "-O3",
+            "-fno-strict-aliasing",
+            "-pthread",
+        ],
         "//conditions:default": [
             "-std=gnu99",
             "-x",
             "c",
+            # "-O3",
+            "-fno-strict-aliasing",
+            "-pthread",
         ],
     }),
-    # defines = [
-    #     "NDEBUG",
-    # ],
+    defines = ["NDEBUG"],
     includes = ["distr"],
     linkopts = select({
-        "@platforms//os:windows": ["/DEFAULTLIB:Ws2_32.lib"],  # winsocket
+        "@platforms//os:windows": [
+            "/DEFAULTLIB:Ws2_32.lib",
+        ],
         "@platforms//os:emscripten": [
-            # "-sALLOW_MEMORY_GROWTH=1",
-            # "-sSTACK_SIZE=1mb",
-            "-sEXPORTED_RUNTIME_METHODS=cwrap",  # TODO: what about ccall
-            # "-sMODULARIZE=1",
-        ],  # + @platforms//cpu:wasm32
-        "//conditions:default": [],
+            "-sALLOW_MEMORY_GROWTH=1",
+            "-sEXPORTED_RUNTIME_METHODS=cwrap",
+            "-sUSE_PTHREADS=1",
+            "-pthread",
+        ],
+        "//conditions:default": [
+            "-pthread",
+        ],
     }),
     visibility = ["//visibility:public"],
 )

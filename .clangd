@@ -1,0 +1,2 @@
+CompileFlags:
+  Add: [-std=c++17, -Wno-c++17-extensions, -D_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH]

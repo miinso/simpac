@@ -35,11 +35,9 @@ filegroup(
 
 refresh_compile_commands(
     name = "refresh",
+    # Optionally, filter out emscripten/wasm platform builds
     targets = {
-        # "//survivors/modules:all": "",
-        # "//survivors:game": "",
-        # "//survivors:main1": "",
-        # "//ecs2:all": "",
-        "//linalg:all": "",
+        # Only generate compile commands for the native linalg app, skip WebAssembly builds
+        "//linalg:app": "",
     },
 )

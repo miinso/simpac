@@ -1,8 +1,9 @@
 #pragma once
 
 #include <cstdio>
-#include <flecs.h>
 #include <typeinfo>
+
+#include <flecs.h>
 
 template<typename T>
 struct BaseModule {
