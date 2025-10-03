@@ -86,7 +86,7 @@ local_path_override(
 ##
 #  eigen
 ##
-bazel_dep(name = "eigen", version = "3.4.0")
+bazel_dep(name = "eigen", version = "3.4.0.bcr.3")
 
 ##
 #  googletest
@@ -100,8 +100,8 @@ bazel_dep(name = "googletest", version = "1.15.2")
 http_archive(
     name = "flecs",
     build_file = "//third_party:flecs.BUILD",
-    strip_prefix = "flecs-4.1.0",
-    urls = ["https://github.com/SanderMertens/flecs/archive/refs/tags/v4.1.0.tar.gz"],
+    strip_prefix = "flecs-4.1.1",
+    urls = ["https://github.com/SanderMertens/flecs/archive/refs/tags/v4.1.1.tar.gz"],
 )
 
 ##
@@ -143,7 +143,7 @@ local_repository(
 )
 
 ##
-# GLFW2
+# GLFW2 (post 3.3 glfw has many breaking changes hence the name)
 ##
 GLFW2_VERSION = "3.4"
 
@@ -155,7 +155,7 @@ http_archive(
 )
 
 ##
-# raylib (head)
+# raylib (latest)
 ##
 git_repository(
     name = "raylib-latest",
