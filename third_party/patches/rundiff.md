@@ -1,0 +1,1 @@
+git diff --no-index tbb-a.bazel tbb-b.bazel > patch.patch
