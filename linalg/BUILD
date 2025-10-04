@@ -38,6 +38,7 @@ cc_library(
     srcs = ["app.cpp"],
     hdrs = ["app.h"],
     copts = _CXX17_COPTS + _THREAD_COPTS,
+    data = [":web_shell"],
     linkopts = _THREAD_LINKOPTS,
     deps = [
         "//linalg/modules:engine",
@@ -114,9 +115,39 @@ cc_binary(
     }),
     data = [":web_shell"],
     defines = select({
+        "@platforms//os:emscripten": [
+            "PLATFORM_WEB",
+        ],
         "//conditions:default": ["PLATFORM_DESKTOP"],
     }),
     linkopts = select({
+        "@platforms//os:emscripten": [
+            "-pthread",
+            "-sUSE_PTHREADS=1",
+            "-sSTACK_SIZE=1000000",
+            "--oformat=html",
+            "-sMINIFY_HTML=0",
+            "--shell-file=$(location :web_shell)",
+            # "-sPROXY_TO_PTHREAD=1",
+            "-sPTHREAD_POOL_SIZE=navigator.hardwareConcurrency",
+            # "-sUSE_GLFW=3",
+            # "-sOFFSCREENCANVAS_SUPPORT=1",
+            # "-sOFFSCREEN_FRAMEBUFFER=1", # https://groups.google.com/g/emscripten-discuss/c/b9u2Mt_9lJw/m/NunM9h-GAAAJ
+            # "-sWASM_EXCEPTIONS=1",
+            # "-sNO_DISABLE_EXCEPTION_CATCHING",
+            # "-sEXCEPTION_CATCHING_ALLOWED",
+            # "-sASSERTIONS=1",
+            # "-fexceptions",
+            # "-fwasm-exceptions",
+            # "-sUSE_WEBGL2=1",
+            # "-sMIN_WEBGL_VERSION=2",
+            # "-sMAX_WEBGL_VERSION=2",
+            # "-sALLOW_MEMORY_GROWTH=1",
+            # "-sMALLOC=mimalloc",
+            # "-sEXIT_RUNTIME=1",
+            # "-Wl,--no-undefined",
+            # "-ldl",
+        ],
         "@platforms//os:linux": ["-pthread"],
         "@platforms//os:macos": ["-pthread"],
         "//conditions:default": [],
@@ -128,3 +159,13 @@ cc_binary(
     ],
 )
 
+wasm_cc_binary(
+    name = "mt_web",
+    cc_target = ":mt",
+    outputs = [
+        "mt.html",
+        "mt.js",
+        "mt.wasm",
+    ],
+    threads = "emscripten",
+)
