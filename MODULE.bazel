@@ -86,7 +86,7 @@ local_path_override(
 ##
 #  eigen
 ##
-bazel_dep(name = "eigen", version = "3.4.0.bcr.3")
+bazel_dep(name = "eigen", version = "4.0.0-20241125.bcr.3")
 
 ##
 #  googletest

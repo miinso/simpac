@@ -10,3 +10,9 @@
 # https://github.com/uxlfoundation/oneTBB/blob/981eb42aee3730ced4c296e16a3154e1803bd088/cmake/compilers/Clang.cmake#L22
 
 
+# eigen:
+# Emscripten compilation error when SIMD support is enabled
+# https://gitlab.com/libeigen/eigen/-/issues/2514
+
+# Don't enable AVX for wasm. 
+# https://gitlab.com/libeigen/eigen/-/commit/8a8fbc8f5e765ee33674729dec3a6514a93b6d8e

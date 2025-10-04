@@ -8,12 +8,23 @@ _CXX17_COPTS = select({
 })
 
 _THREAD_COPTS = select({
+    "@platforms//os:emscripten": [
+        "-pthread",
+        # "-fexceptions",
+        "-fwasm-exceptions",
+    ],
     "@platforms//os:linux": ["-pthread"],
     "@platforms//os:macos": ["-pthread"],
     "//conditions:default": [],
 })
 
 _THREAD_LINKOPTS = select({
+    "@platforms//os:emscripten": [
+        "-pthread",
+        "-sUSE_PTHREADS=1",
+        "--shell-file=$(location :web_shell)",
+        "-sPTHREAD_POOL_SIZE=navigator.hardwareConcurrency",
+    ],
     "@platforms//os:linux": ["-pthread"],
     "@platforms//os:macos": ["-pthread"],
     "//conditions:default": [],
@@ -109,6 +120,24 @@ cc_binary(
     name = "mt",
     srcs = ["mt.cpp"],
     copts = select({
+        "@platforms//os:emscripten": [
+            "-pthread",
+            # "-msimd128",
+            # "-mfpu=neon",
+            "-msse4",
+            # "-msse4.1",
+            # "-msse4.2",
+            # Don't enable AVX for wasm.
+            # https://gitlab.com/libeigen/eigen/-/commit/8a8fbc8f5e765ee33674729dec3a6514a93b6d8e
+        ],
+        "@platforms//os:windows": [
+            # "/O2",
+            "/GL",  # lto
+            "/arch:AVX2",
+            # "/fp:fast",
+            # "/favor:INTEL64",
+            # "/Qpar",
+        ],
         "@platforms//os:linux": ["-pthread"],
         "@platforms//os:macos": ["-pthread"],
         "//conditions:default": [],
@@ -148,6 +177,9 @@ cc_binary(
             # "-Wl,--no-undefined",
             # "-ldl",
         ],
+        "@platforms//os:windows": [
+            "/LTCG",
+        ],
         "@platforms//os:linux": ["-pthread"],
         "@platforms//os:macos": ["-pthread"],
         "//conditions:default": [],
@@ -167,5 +199,7 @@ wasm_cc_binary(
         "mt.js",
         "mt.wasm",
     ],
+    simd = True,  # this sets `-msimd128`, so flag this if you provided any of the intrinsic flags (or provide `-msimd128` to copt yourself)
+    # emcc: error: passing any of -msse, -msse2, -msse3, -mssse3, -msse4.1, -msse4.2, -msse4, -mavx, -mavx2, -mfpu=neon flags also requires passing -msimd128 (or -mrelaxed-simd)!
     threads = "emscripten",
 )
