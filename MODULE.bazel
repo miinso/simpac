@@ -247,9 +247,17 @@ bazel_dep(name = "onetbb", version = "2021.10.0")
 single_version_override(
     module_name = "onetbb",
     patch_strip = 1,
-    version = "2021.10.0",
-    patches = ["//third_party/patches:onetbb.patch"], # fix emcc quirks for "2021.10.0"
-)
+##
+# cpu_features
+##
+# bazel_dep(name = "cpu_features")
+# git_override(
+#     module_name = "cpu_features",
+#     remote = "https://github.com/google/cpu_features.git",
+#     commit = "d3b2440fcfc25fe8e6d0d4a85f06d68e98312f5b",
+# )
+
+bazel_dep(name = "cpuinfo", version = "0.0.0-20250925-877328f")
 
 ##
 # Boost

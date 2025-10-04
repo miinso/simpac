@@ -8,6 +8,15 @@ filegroup(
 )
 
 cc_library(
+    name = "info",
+    srcs = ["info.hpp"],
+    hdrs = ["info.hpp"],
+    deps = [
+        "@cpuinfo",
+    ],
+)
+
+cc_library(
     name = "app",
     srcs = ["app.cpp"],
     hdrs = ["app.h"],
