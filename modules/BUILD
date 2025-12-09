@@ -1,5 +1,43 @@
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 
+# Unified graphics module - use this for new projects
+cc_library(
+    name = "graphics2",
+    srcs = ["graphics/graphics.cpp"],
+    hdrs = [
+        "graphics/graphics.h",
+        "graphics/camera.h",
+        "graphics/lighting.h",
+        "graphics/pipelines.h",
+    ],
+    copts = select({
+        "@platforms//os:windows": ["/std:c++17", "-DPLATFORM_DESKTOP"],
+        "@platforms//os:emscripten": ["-std=c++17", "-DPLATFORM_WEB"],
+        "//conditions:default": ["-std=c++17", "-DPLATFORM_DESKTOP"],
+    }),
+    strip_include_prefix = "graphics",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@flecs",
+        "@raylib",
+    ],
+)
+
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+
+# Test binary for graphics2 module
+cc_binary(
+    name = "graphics2_test",
+    srcs = ["graphics/test_graphics.cpp"],
+    copts = select({
+        "@platforms//os:windows": ["/std:c++17", "-DPLATFORM_DESKTOP"],
+        "@platforms//os:emscripten": ["-std=c++17", "-DPLATFORM_WEB"],
+        "//conditions:default": ["-std=c++17", "-DPLATFORM_DESKTOP"],
+    }),
+    deps = [":graphics2"],
+)
+
+# Legacy graphics module - kept for backward compatibility
 cc_library(
     name = "graphics_module",
     srcs = [
