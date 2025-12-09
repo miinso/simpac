@@ -11,7 +11,9 @@
 #include <info.hpp>
 #include <iostream>
 #include <sstream>
+
 #include <tbb/blocked_range.h>
+#include <tbb/global_control.h>
 #include <tbb/parallel_for.h>
 
 
@@ -57,6 +59,11 @@ int main() {
     cpuinfo_initialize();
     isa_list = cpuinfo_utils::supported_isas();
 
+    std::cout << "num processors: " << cpuinfo_get_processors_count() << std::endl;
+
+    // set logical core count
+    // static tbb::global_control c(tbb::global_control::max_allowed_parallelism, 1);
+
     std::ostringstream oss;
     for (size_t i = 0; i < isa_list.size(); ++i) {
         if (i)
@@ -97,7 +104,7 @@ void UpdateDrawFrame(void) {
 
     DrawText("Congrats! You created your first window!", 190, 200, 20, LIGHTGRAY);
     DrawFPS(10, 10);
-    
+
     DrawText(TextFormat("isa: %s", flags.c_str()), 10, 40, 10, DARKGRAY);
     DrawText(TextFormat("GEMM %dx%d: %.1f ms", GEMM_N, GEMM_N, ms), 10, 50, 10, DARKGRAY);
 

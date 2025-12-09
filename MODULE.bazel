@@ -86,7 +86,8 @@ local_path_override(
 ##
 #  eigen
 ##
-bazel_dep(name = "eigen", version = "4.0.0-20241125.bcr.3")
+bazel_dep(name = "eigen", version = "5.0.1") 
+# eigen adopted new versioning semantics. v(3).5.0.0 corresponds to v3.5.0 (successor to v3.4.0)
 
 ##
 #  googletest
