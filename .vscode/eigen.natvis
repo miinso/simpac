@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+  
+  <!-- Vector3 (3x1 Matrix) -->
+  <Type Name="Eigen::Matrix&lt;*,3,1,*,3,1&gt;">
+    <DisplayString>{{ x={m_storage.m_data.array[0]}, y={m_storage.m_data.array[1]}, z={m_storage.m_data.array[2]} }}</DisplayString>
+    <Expand>
+      <Item Name="[x]">m_storage.m_data.array[0]</Item>
+      <Item Name="[y]">m_storage.m_data.array[1]</Item>
+      <Item Name="[z]">m_storage.m_data.array[2]</Item>
+    </Expand>
+  </Type>
+
+  <!-- Dynamic Vector -->
+  <Type Name="Eigen::Matrix&lt;*,-1,1,*,-1,1&gt;">
+    <DisplayString>Vector{m_storage.m_rows}d</DisplayString>
+    <Expand>
+      <Item Name="[size]">m_storage.m_rows</Item>
+      <ArrayItems>
+        <Size>m_storage.m_rows</Size>
+        <ValuePointer>m_storage.m_data</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <!-- Matrix3 (3x3 Matrix) -->
+  <Type Name="Eigen::Matrix&lt;*,3,3,*,3,3&gt;">
+    <DisplayString>Matrix3x3</DisplayString>
+    <Expand>
+      <ArrayItems>
+        <Size>9</Size>
+        <ValuePointer>m_storage.m_data.array</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <!-- Dynamic Matrix -->
+  <Type Name="Eigen::Matrix&lt;*,-1,-1,*,-1,-1&gt;">
+    <DisplayString>Matrix{m_storage.m_rows}x{m_storage.m_cols}</DisplayString>
+    <Expand>
+      <Item Name="[rows]">m_storage.m_rows</Item>
+      <Item Name="[cols]">m_storage.m_cols</Item>
+      <ArrayItems>
+        <Size>m_storage.m_rows * m_storage.m_cols</Size>
+        <ValuePointer>m_storage.m_data</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <!-- Sparse Matrix -->
+  <Type Name="Eigen::SparseMatrix&lt;*,*,*&gt;">
+    <DisplayString>SparseMatrix{m_outerSize}x{m_innerSize}, nnz={m_data.m_end - m_data.m_start}</DisplayString>
+    <Expand>
+      <Item Name="[rows]">m_outerSize</Item>
+      <Item Name="[cols]">m_innerSize</Item>
+      <Item Name="[nonzeros]">m_data.m_end - m_data.m_start</Item>
+    </Expand>
+  </Type>
+
+</AutoVisualizer>

@@ -8,7 +8,7 @@ cmake(
     cache_entries = {
         # always release build
         "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_CXX_FLAGS_RELEASE": "-O3 -DNDEBUG -fno-exceptions -fno-rtti",
+        "CMAKE_CXX_FLAGS_RELEASE": "-O3 -DNDEBUG",
 
         # defaults
         "BUILD_SHARED_LIBS": "OFF",
@@ -33,13 +33,15 @@ cmake(
         "ASSIMP_BUILD_DEBUG_LOGGING": "OFF",
         "CMAKE_INSTALL_DEBUG_LIBRARIES": "OFF",
         "ASSIMP_BUILD_OBJ_IMPORTER": "ON",
+
     },
     lib_source = ":all_srcs",
-    # out_static_libs = ["libassimp.a"],
-    out_static_libs = [
-        "assimp-vc142-mt.lib",
-        "zlibstatic.lib",
-    ],
+    out_static_libs = select({
+        "@platforms//os:windows": ["assimp-vc143-mt.lib", "zlibstatic.lib"],
+        "@platforms//os:linux": ["libassimp.a", "libzlibstatic.a"],
+        "@platforms//os:macos": ["libassimp.a", "libzlibstatic.a"],
+        "//conditions:default": ["libassimp.a", "libzlibstatic.a"],
+    }),
     visibility = ["//visibility:public"],
 )
 

@@ -14,6 +14,7 @@
 #include "camera.h"
 #include "lighting.h"
 #include "pipelines.h"
+#include "resources.h"
 
 // Platform-specific GLSL version
 #if defined(PLATFORM_DESKTOP)
@@ -39,6 +40,13 @@ namespace detail {
     inline bool draw_fps = true;
     inline int grid_slices = 12;
     inline float grid_spacing = 10.0f / 12.0f;
+    inline Font font = {0};
+    inline bool font_loaded = false;
+}
+
+// Get the loaded font (falls back to default if not loaded)
+[[nodiscard]] inline Font get_font() {
+    return detail::font_loaded ? detail::font : GetFontDefault();
 }
 
 // Configuration for window and rendering

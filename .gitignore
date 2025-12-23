@@ -3,7 +3,6 @@ bazel-bin/
 bazel-genfiles/
 bazel-out/
 bazel-testlogs/
-bazel-raylib/
 external
 
 **/MODULE.bazel.lock
@@ -19,3 +18,4 @@ compile_commands.json
 .DS_Store
 
 .vscode/settings.json
+.vscode/bin/

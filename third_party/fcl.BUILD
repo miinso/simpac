@@ -18,6 +18,7 @@ COPTS = select({
         "/W3",
         "/DWIN32",
         "/DNDEBUG",
+        "/FIcassert",  # Force include cassert for missing assert
         # "/arch:SSE2",  # Enable SSE2 for Win32
     ],
     "//conditions:default": [
@@ -44,7 +45,7 @@ cc_library(
     hdrs = glob([
         "include/fcl/**/*.h",
         "include/fcl/**/*.hxx",
-    ]) + [
+    ], allow_empty = True) + [
         # "include/fcl/config.h",  # We'll provide this
         # "include/fcl/export.h",  # We'll provide this
     ],

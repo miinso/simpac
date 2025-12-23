@@ -1,3 +1,9 @@
+### r7 (_December 12, 2025_)
+
+- refactor: migrate lab/rb-try1 to Flecs 4.x API (get returns reference)
+- refactor: migrate lab/pbd1 to Flecs 4.x API
+- refactor: migrate raw to Flecs 4.x API
+
 ### r6 (_April 11, 2025_)
 
 - chore: flush

@@ -1,19 +1,19 @@
 load("@rules_cc//cc:defs.bzl", "cc_binary")
 
 source_file_name_list = glob([
-    "*.c",
+    
     "*.cpp",
-])
+], allow_empty = True)
 
 [
     cc_binary(
-        name = source_file_name.replace(".cpp", "").replace(".c", ""),
+        name = source_file_name.replace(".cpp", ""),
         srcs = [source_file_name],
         copts = [
             "-DPLATFORM_DESKTOP",
         ],
         data = [
-            "@com_minseopark_simpac//:resources",
+            "//:resources",
         ],
         includes = [
             "components.hpp",

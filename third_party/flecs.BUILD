@@ -33,10 +33,10 @@ cc_library(
             "/DEFAULTLIB:Ws2_32.lib",
         ],
         "@platforms//os:emscripten": [
-            "-sALLOW_MEMORY_GROWTH=1",
+            # "-sALLOW_MEMORY_GROWTH=1",
             "-sEXPORTED_RUNTIME_METHODS=cwrap",
-            "-sUSE_PTHREADS=1",
-            "-pthread",
+            # "-sUSE_PTHREADS=1",
+            # "-pthread",
         ],
         "//conditions:default": [
             "-pthread",

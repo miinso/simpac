@@ -1,30 +1,33 @@
-# Visual Studio 2019
-build:vs2019 --cxxopt=/std:c++14
-build:vs2019 --cxxopt=/Zc:__cplusplus
-build:vs2019 --copt=-DWIN32_LEAN_AND_MEAN
-build:vs2019 --copt=-DNOGDI
-build:vs2019 --host_copt=-DWIN32_LEAN_AND_MEAN
-build:vs2019 --host_copt=-DNOGDI
-build:vs2019 --define compiler=vs2019
+# Auto-select platform config
+build --enable_platform_specific_config
 
-# GCC 11.3
-build:gcc11 --cxxopt=-std=c++14
-build:gcc11 --cxxopt=-Wall
-build:gcc11 --define compiler=gcc11
-build:gcc11 --cxxopt=-fpermissive # Needed for fmt
+# Host tools (genrules, code generators)
+build:windows --host_cxxopt=/std:c++17
+build:windows --host_copt=/FS
+build:linux --host_cxxopt=-std=c++17
+build:macos --host_cxxopt=-std=c++17
 
-# msys-gcc 11.3
-build:msys-gcc --cxxopt=-std=c++14
-build:msys-gcc --cxxopt=-Wall
-build:msys-gcc --define compiler=msys-gcc
-build:msys-gcc --cxxopt=-fpermissive # Needed for fmt
+# Linux/macOS: default to native builds (exclude wasm)
+build:linux --cxxopt=-std=c++17
+build:linux --build_tag_filters=-wasm
+build:macos --cxxopt=-std=c++17
+build:macos --build_tag_filters=-wasm
 
-# macOS (e.g. Clang 14.0.0)
-build:macos --cxxopt=-std=c++14 # see https://clang.llvm.org/cxx_status.html
-build:macos --cxxopt=-Wall
-build:macos --define compiler=macos
+# Windows: default to native builds (exclude wasm)
+build:windows --cxxopt=/std:c++17
+build:windows --copt=/FS                   # parallel PDB writes
+build:windows --build_tag_filters=-wasm
+# for profiler: --copt=/Zi --linkopt=/DEBUG --linkopt=/PROFILE
 
-# build --enable_platform_specific_config 
+# Wasm builds: use --config=wasm
+build:wasm --build_tag_filters=wasm
+
 # build:windows --enable_runfiles # https://github.com/bazelbuild/bazel/issues/8843
 
 # build --incompatible_enable_cc_toolchain_resolution
+
+# build all targets (except wasm):
+# `bazel build ...`
+
+# build only wasm targets:
+# `bazel build ... --config=wasm`

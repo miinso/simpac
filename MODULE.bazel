@@ -18,7 +18,7 @@ bazel_dep(name = "apple_support", version = "1.22.0", repo_name = "build_bazel_a
 bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "rules_cc", version = "0.1.2")
 bazel_dep(name = "rules_pkg", version = "1.1.0")
-bazel_dep(name = "rules_foreign_cc", version = "0.15.0")
+bazel_dep(name = "rules_foreign_cc", version = "0.14.0")
 
 http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 git_repository = use_repo_rule("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
@@ -101,8 +101,8 @@ bazel_dep(name = "googletest", version = "1.15.2")
 http_archive(
     name = "flecs",
     build_file = "//third_party:flecs.BUILD",
-    strip_prefix = "flecs-4.1.1",
-    urls = ["https://github.com/SanderMertens/flecs/archive/refs/tags/v4.1.1.tar.gz"],
+    strip_prefix = "flecs-4.1.4",
+    urls = ["https://github.com/SanderMertens/flecs/archive/refs/tags/v4.1.4.tar.gz"],
 )
 
 ##
@@ -150,7 +150,7 @@ GLFW2_VERSION = "3.4"
 
 http_archive(
     name = "glfw2",
-    build_file = "//third_party/glfw2:BUILD",
+    build_file = "//third_party:glfw2.BUILD",
     strip_prefix = "glfw-{}".format(GLFW2_VERSION),
     urls = ["https://github.com/glfw/glfw/archive/{}.tar.gz".format(GLFW2_VERSION)],
 )
@@ -162,7 +162,7 @@ git_repository(
     name = "raylib-latest",
     # branch = "master",
     build_file = "//third_party:raylib-latest.BUILD",
-    commit = "718a841cfba2c1739b979ee068aafe018c03aa95",
+    commit = "cf0d6fc664f1d0775c6b21ed79feaa1e38b2ddb4", # Dec 16, 2025
     # depth = 1,
     remote = "https://github.com/raysan5/raylib.git",
 )

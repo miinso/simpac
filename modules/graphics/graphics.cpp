@@ -12,6 +12,9 @@ namespace {
     // Stored window config for clear color
     Color clear_color = RAYWHITE;
 
+    // WASM shutdown safety flag - prevents use-after-free from pending RAF callbacks
+    bool shutdown_requested = false;
+
     // Setup the render pipeline systems
     void setup_render_pipeline() {
         auto* ecs = detail::ecs;
@@ -28,6 +31,11 @@ namespace {
             .kind(phase_pre_render)
             .run([](flecs::iter& it) {
                 if (!is_render_thread()) return;
+
+                // Handle canvas resize (web: JS ResizeObserver updates canvas.width/height)
+                if (IsWindowResized()) {
+                    SetWindowSize(GetScreenWidth(), GetScreenHeight());
+                }
 
                 BeginDrawing();
                 ClearBackground(clear_color);
@@ -88,6 +96,9 @@ namespace {
 #if defined(__EMSCRIPTEN__)
     // Emscripten main loop callback
     void main_loop_callback() {
+        // Bail early if shutdown was requested (handles pending RAF after cancel)
+        if (shutdown_requested) return;
+
         if (detail::ecs) {
             detail::ecs->progress();
         }
@@ -124,9 +135,36 @@ void init(flecs::world& world) {
 }
 
 void init_window(const WindowConfig& config) {
+#if defined(__EMSCRIPTEN__)
+    // Read actual canvas size BEFORE InitWindow (which overwrites it)
+    int canvas_w = EM_ASM_INT({ return Module.canvas.width; });
+    int canvas_h = EM_ASM_INT({ return Module.canvas.height; });
+    std::printf("graphics::init_window requested=%dx%d canvas=%dx%d\n",
+                config.width, config.height, canvas_w, canvas_h);
+#endif
+
     InitWindow(config.width, config.height, config.title);
+
+#if defined(__EMSCRIPTEN__)
+    // Restore actual canvas size if different from requested
+    if (canvas_w > 0 && canvas_h > 0 &&
+        (canvas_w != config.width || canvas_h != config.height)) {
+        SetWindowSize(canvas_w, canvas_h);
+    }
+#endif
+
     clear_color = config.clear_color;
     init_camera();
+
+    // Load custom font using resolved path
+    // NOTE: init_resource_paths(argv[0]) must be called before this!
+    const char* font_path = resolve_resource_path("resources/fonts/Px437_IBM_VGA_8x16.ttf");
+    detail::font = LoadFontEx(font_path, 16, nullptr, 0);
+    if (detail::font.texture.id > 0) {
+        detail::font_loaded = true;
+        detail::font.baseSize = 16;  // Add vertical line spacing (font is 16px tall)
+        // SetTextureFilter(detail::font.texture, TEXTURE_FILTER_POINT);
+    }
 
 #if !defined(__EMSCRIPTEN__)
     SetTargetFPS(config.target_fps);
@@ -139,6 +177,9 @@ bool window_should_close() {
 
 void close_window() {
 #if defined(__EMSCRIPTEN__)
+    // Set flag FIRST so any pending RAF callback bails early
+    shutdown_requested = true;
+
     // Cleanup resources
     if (detail::ecs) {
         detail::ecs->progress(0);
@@ -151,6 +192,12 @@ void close_window() {
     // Cleanup lighting if enabled
     disable_lighting();
 
+    // Unload custom font
+    if (detail::font_loaded) {
+        UnloadFont(detail::font);
+        detail::font_loaded = false;
+    }
+
     CloseWindow();
 }
 
@@ -158,17 +205,21 @@ void run_main_loop(std::function<void()> update) {
     detail::update_func = update;
 
 #if defined(__EMSCRIPTEN__)
+    // Reset shutdown flag for fresh start
+    shutdown_requested = false;
     std::printf("graphics::invoking emscripten rAF loop\n");
     emscripten_set_main_loop(main_loop_callback, 0, 1);
 #else
     std::printf("graphics::invoking native while loop\n");
     while (!window_should_close()) {
-        if (detail::ecs) {
-            detail::ecs->progress(0.01f);
-        }
-
+        // User update first (input handling before EndDrawing clears key state)
         if (detail::update_func) {
             detail::update_func();
+        }
+
+        // Then ECS progress (rendering systems)
+        if (detail::ecs) {
+            detail::ecs->progress(GetFrameTime());
         }
     }
     std::printf("graphics::destroying native while loop\n");
@@ -182,6 +233,11 @@ void run_main_loop(std::function<void()> update) {
 extern "C" {
     EMSCRIPTEN_KEEPALIVE void emscripten_shutdown() {
         graphics::close_window();
+    }
+
+    EMSCRIPTEN_KEEPALIVE void emscripten_resize(int width, int height) {
+        std::printf("graphics::emscripten_resize %dx%d\n", width, height);
+        SetWindowSize(width, height);
     }
 }
 #endif
