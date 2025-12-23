@@ -132,7 +132,7 @@ cc_library(
 
 # Objective-C build for macOS
 # NOTE: objc_library requires Apple toolchain, use cc_library instead
-cc_library(
+objc_library(
     name = "glfw2_cocoa",
     srcs = _COMMON_SRCS + _MACOS_SRCS,
     hdrs = _PUBLIC_HDRS + _COMMON_INTERNAL_HDRS + _MACOS_HDRS + _COMMON_EXTERNAL_HDRS,

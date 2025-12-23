@@ -17,7 +17,11 @@ cc_binary(
             "-g0",
             "-DNDEBUG",
         ],
-        "//conditions:default": ["-DPLATFORM_DESKTOP"],
+        "//conditions:default": [
+            "-DPLATFORM_DESKTOP",
+            # "-march=native",
+            # "-O3",
+        ],
     }),
     data = ["//:resources"],
     defines = [

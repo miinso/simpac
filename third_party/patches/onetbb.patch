@@ -11,7 +11,7 @@ index 7c479ca..3df076f 100644
 -        "@platforms//cpu:arm64": [""],
 -        "//conditions:default": ["-mwaitpkg"],
 +        "@platforms//os:linux": ["-mwaitpkg"], # FIXME: would fail on non x86_64
-+        "@platforms//os:macos": [""],
++        "@platforms//os:macos": ["-mwaitpkg"],
 +        "//conditions:default": [""],
      }),
      defines =

@@ -4,12 +4,12 @@
         {
             "label": "bazel-run",
             "type": "shell",
-            "command": "t=$(bazel query \"kind(cc_binary, rdeps(//..., ${relativeFile}))\" 2>/dev/null | head -1); [ -n \"$t\" ] && bazel run $t || echo 'No target found' >&2",
+            "command": "t=$(bazel query --keep_going \"kind(cc_binary, rdeps(//..., ${relativeFile}))\" 2>/dev/null | head -1); [ -n \"$t\" ] && bazel run $t || echo 'No target found' >&2",
             "windows": {
-                "command": "$f='${relativeFile}'.Replace('\\','/'); $q='kind(cc_binary, rdeps(//..., '+$f+'))'; $t=$(bazel query --keep_going $q 2>$null | Select -First 1); if($t){ bazel run $t }else{ Write-Error \"No target for $f\" }"
-            },
-            "options": {
-                "shell": { "executable": "powershell.exe", "args": ["-NoProfile"] }
+                "command": "$f='${relativeFile}'.Replace('\\','/'); $q='kind(cc_binary, rdeps(//..., '+$f+'))'; $t=$(bazel query --keep_going $q 2>$null | Select -First 1); if($t){ bazel run $t }else{ Write-Error \"No target for $f\" }",
+                "options": {
+                    "shell": { "executable": "powershell.exe", "args": ["-NoProfile"] }
+                }
             },
             "group": { "kind": "build", "isDefault": true },
             "problemMatcher": ["$gcc"]
@@ -17,12 +17,12 @@
         {
             "label": "bazel-build",
             "type": "shell",
-            "command": "t=$(bazel query \"kind(cc_binary, rdeps(//..., ${relativeFile}))\" 2>/dev/null | head -1); [ -n \"$t\" ] && bazel build $t || echo 'No target found' >&2",
+            "command": "t=$(bazel query --keep_going \"kind(cc_binary, rdeps(//..., ${relativeFile}))\" 2>/dev/null | head -1); [ -n \"$t\" ] && bazel build $t || echo 'No target found' >&2",
             "windows": {
-                "command": "$f='${relativeFile}'.Replace('\\','/'); $q='kind(cc_binary, rdeps(//..., '+$f+'))'; $t=$(bazel query --keep_going $q 2>$null | Select -First 1); if($t){ bazel build $t }else{ Write-Error \"No target for $f\" }"
-            },
-            "options": {
-                "shell": { "executable": "powershell.exe", "args": ["-NoProfile"] }
+                "command": "$f='${relativeFile}'.Replace('\\','/'); $q='kind(cc_binary, rdeps(//..., '+$f+'))'; $t=$(bazel query --keep_going $q 2>$null | Select -First 1); if($t){ bazel build $t }else{ Write-Error \"No target for $f\" }",
+                "options": {
+                    "shell": { "executable": "powershell.exe", "args": ["-NoProfile"] }
+                }
             },
             "group": "build",
             "problemMatcher": ["$gcc"]
@@ -30,12 +30,12 @@
         {
             "label": "bazel-build-debug",
             "type": "shell",
-            "command": "t=$(bazel query \"kind(cc_binary, rdeps(//..., ${relativeFile}))\" 2>/dev/null | head -1); if [ -n \"$t\" ]; then bazel build $t && exe=$(bazel cquery $t --output=files 2>/dev/null) && mkdir -p .vscode/bin && cp \"$exe\" .vscode/bin/debug && rf=\"${exe}.runfiles\"; [ -d \"$rf\" ] && cp -r \"$rf\" .vscode/bin/debug.runfiles; echo \">>> Ready: .vscode/bin/debug\"; else echo 'No target found' >&2; fi",
+            "command": "rm -rf .vscode/bin && t=$(bazel query --keep_going \"kind(cc_binary, rdeps(//..., ${relativeFile}))\" 2>/dev/null | head -1); if [ -n \"$t\" ]; then bazel build $t && exe=$(bazel cquery $t --output=files 2>/dev/null) && mkdir -p .vscode/bin && cp \"$exe\" .vscode/bin/debug && rf=\"${exe}.runfiles\"; [ -d \"$rf\" ] && cp -r \"$rf\" .vscode/bin/debug.runfiles; echo \">>> Ready: .vscode/bin/debug\"; else echo 'No target found' >&2; fi",
             "windows": {
-                "command": "$f='${relativeFile}'.Replace('\\','/'); $q='kind(cc_binary, rdeps(//..., '+$f+'))'; $t=$(bazel query --keep_going $q 2>$null | Select -First 1); if($t){ bazel build $t; $exe=$(bazel cquery $t --output=files 2>$null); $dir='.vscode/bin'; New-Item -ItemType Directory -Force -Path $dir | Out-Null; Copy-Item $exe \"$dir/debug.exe\" -Force; $rf=$exe+'.runfiles'; if(Test-Path $rf){ Copy-Item $rf \"$dir/debug.exe.runfiles\" -Recurse -Force }; Write-Host \"`n>>> Ready: $dir/debug.exe`n\" }else{ Write-Error \"No target for $f\" }"
-            },
-            "options": {
-                "shell": { "executable": "powershell.exe", "args": ["-NoProfile"] }
+                "command": "Remove-Item -Recurse -Force -ErrorAction SilentlyContinue .vscode/bin; $f='${relativeFile}'.Replace('\\','/'); $q='kind(cc_binary, rdeps(//..., '+$f+'))'; $t=$(bazel query --keep_going $q 2>$null | Select -First 1); if($t){ bazel build $t; $exe=$(bazel cquery $t --output=files 2>$null); $dir='.vscode/bin'; New-Item -ItemType Directory -Force -Path $dir | Out-Null; Copy-Item $exe \"$dir/debug.exe\" -Force; $rf=$exe+'.runfiles'; if(Test-Path $rf){ Copy-Item $rf \"$dir/debug.exe.runfiles\" -Recurse -Force }; Write-Host \"`n>>> Ready: $dir/debug.exe`n\" }else{ Write-Error \"No target for $f\" }",
+                "options": {
+                    "shell": { "executable": "powershell.exe", "args": ["-NoProfile"] }
+                }
             },
             "group": "build",
             "problemMatcher": ["$gcc"]
@@ -43,12 +43,12 @@
         {
             "label": "bazel-run-debug",
             "type": "shell",
-            "command": "t=$(bazel query \"kind(cc_binary, rdeps(//..., ${relativeFile}))\" 2>/dev/null | head -1); [ -n \"$t\" ] && bazel build $t && exe=$(bazel cquery $t --output=files 2>/dev/null) && echo \"Running: $exe\" && \"$exe\" || echo 'No target found' >&2",
+            "command": "t=$(bazel query --keep_going \"kind(cc_binary, rdeps(//..., ${relativeFile}))\" 2>/dev/null | head -1); [ -n \"$t\" ] && bazel build $t && exe=$(bazel cquery $t --output=files 2>/dev/null) && echo \"Running: $exe\" && \"$exe\" || echo 'No target found' >&2",
             "windows": {
-                "command": "$f='${relativeFile}'.Replace('\\','/'); $q='kind(cc_binary, rdeps(//..., '+$f+'))'; $t=$(bazel query --keep_going $q 2>$null | Select -First 1); if($t){ bazel build $t; $exe=$(bazel cquery $t --output=files 2>$null); Write-Host \"Running: $exe\"; & $exe }else{ Write-Error \"No target for $f\" }"
-            },
-            "options": {
-                "shell": { "executable": "powershell.exe", "args": ["-NoProfile"] }
+                "command": "$f='${relativeFile}'.Replace('\\','/'); $q='kind(cc_binary, rdeps(//..., '+$f+'))'; $t=$(bazel query --keep_going $q 2>$null | Select -First 1); if($t){ bazel build $t; $exe=$(bazel cquery $t --output=files 2>$null); Write-Host \"Running: $exe\"; & $exe }else{ Write-Error \"No target for $f\" }",
+                "options": {
+                    "shell": { "executable": "powershell.exe", "args": ["-NoProfile"] }
+                }
             },
             "group": "build",
             "problemMatcher": ["$gcc"]

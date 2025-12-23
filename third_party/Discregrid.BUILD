@@ -37,7 +37,7 @@ cc_library(
         ],
         "@platforms//os:emscripten": [],
         "//conditions:default": [
-            "-std=c++11",
+            "-std=c++17",
         ],
     }),
     includes = ["discregrid/include/Discregrid"],
