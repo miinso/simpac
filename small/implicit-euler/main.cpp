@@ -37,6 +37,10 @@ int main() {
     // Initialize graphics
     graphics::init(ecs);
     graphics::init_window(800, 600, "Implicit Euler");
+    graphics::init_camera({
+        .position = {50.0f, 10.0f, 50.0f},
+        .target = {0.0f, 0.5f, 0.0f},
+    });
 
     // =========================================================================
     // Simulation systems (we set .kind(0) to manually run them
@@ -125,13 +129,13 @@ int main() {
         .run([&](flecs::iter& it) {
             // build cloth
             ClothConfig cfg;
-            cfg.width = 50;
-            cfg.height = 50;
+            cfg.width = 200;
+            cfg.height = 200;
             cfg.mass = 1.0;
             cfg.k_s = 1000.0;
             cfg.k_b = 100.0;
             cfg.spacing = 1;
-            cfg.offset = Vector3r(-cfg.width/2, 2, 0);
+            cfg.offset = Vector3r(-cfg.width/2, cfg.height/2, 0);
             create_cloth(ecs, cfg);
 
             auto& scene = it.world().get<Scene>();

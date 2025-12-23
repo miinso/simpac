@@ -158,11 +158,10 @@ void init_window(const WindowConfig& config) {
 
     // Load custom font using resolved path
     // NOTE: init_resource_paths(argv[0]) must be called before this!
-    const char* font_path = resolve_resource_path("resources/fonts/Px437_IBM_VGA_8x16.ttf");
-    detail::font = LoadFontEx(font_path, 16, nullptr, 0);
+    const char* font_path = resolve_resource_path("resources/generic.fnt");
+    detail::font = LoadFont(font_path);
     if (detail::font.texture.id > 0) {
         detail::font_loaded = true;
-        detail::font.baseSize = 16;  // Add vertical line spacing (font is 16px tall)
         // SetTextureFilter(detail::font.texture, TEXTURE_FILTER_POINT);
     }
 

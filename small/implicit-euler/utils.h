@@ -55,6 +55,7 @@ inline void create_cloth(flecs::world& world, const ClothConfig& cfg) {
     };
     
     // Create springs
+    int spring_count = 0;
     for (int y = 0; y < cfg.height; y++) {
         for (int x = 0; x < cfg.width; x++) {
             auto current = get_particle(x, y);
@@ -68,6 +69,7 @@ inline void create_cloth(flecs::world& world, const ClothConfig& cfg) {
                     cfg.k_s, 
                     cfg.k_d
                 });
+                spring_count++;
             }
             
             if (y < cfg.height - 1) {  // vertical (warp)
@@ -78,6 +80,7 @@ inline void create_cloth(flecs::world& world, const ClothConfig& cfg) {
                     cfg.k_s,
                     cfg.k_d
                 });
+                spring_count++;
             }
             
             // Shear springs (diagonal)
@@ -89,6 +92,7 @@ inline void create_cloth(flecs::world& world, const ClothConfig& cfg) {
                     cfg.k_s,
                     cfg.k_d
                 });
+                spring_count++;
                 
                 auto right = get_particle(x + 1, y);
                 auto down = get_particle(x, y + 1);
@@ -98,6 +102,7 @@ inline void create_cloth(flecs::world& world, const ClothConfig& cfg) {
                     cfg.k_s,
                     cfg.k_d
                 });
+                spring_count++;
             }
             
             // Bending springs (skip one particle)
@@ -109,6 +114,7 @@ inline void create_cloth(flecs::world& world, const ClothConfig& cfg) {
                     cfg.k_b,
                     cfg.k_d * 0.5
                 });
+                spring_count++;
             }
             
             if (y < cfg.height - 2) {  // vertical bending
@@ -119,9 +125,12 @@ inline void create_cloth(flecs::world& world, const ClothConfig& cfg) {
                     cfg.k_b,
                     cfg.k_d * 0.5
                 });
+                spring_count++;
             }
         }
     }
+    
+    world.get_mut<Scene>().num_springs = spring_count;
     
     // Pin top corners (optional)
     // get_particle(0, 0).set(InverseMass{0.0}).add<IsPinned>();

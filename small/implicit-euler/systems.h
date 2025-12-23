@@ -90,24 +90,20 @@ inline void solve(Solver& solver) {
     // build sparse mat
     solver.A.setFromTriplets(solver.triplets.begin(), solver.triplets.end());
 
-    // TODO: solve with warm start? (use previous solution as initial guess)
     Eigen::ConjugateGradient<Eigen::SparseMatrix<Real>> cg;
-    cg.setMaxIterations(100);
-    cg.setTolerance(1e-6);
-    cg.compute(solver.A); // factor
-    solver.x = cg.solve(solver.b);
-    // solver.x = cg.solveWithGuess(solver.b, solver.x);
+    cg.setMaxIterations(solver.cg_max_iter);
+    cg.setTolerance(solver.cg_tolerance);
+    cg.compute(solver.A);
+    solver.x = cg.solveWithGuess(solver.b, solver.x); // warm start
 
-    if (cg.info() != Eigen::Success) {
-        printf("CG solver failed to converge (iterations: %lld, error: %e)\n", 
-               (long long)cg.iterations(), cg.error());
-    }
+    // store stats for debug display
+    solver.cg_iterations = (int)cg.iterations();
+    solver.cg_error = cg.error();
 
-    // print solver stats occasionally
-    static int frame_count = 0;
-    if (++frame_count % 60 == 0) {
-        printf("[Frame %d] CG iterations: %lld, residual: %e\n", 
-               frame_count, (long long)cg.iterations(), cg.error());
+    static int frame = 0;
+    if (++frame % 60 == 0 || cg.info() != Eigen::Success) {
+        printf("[%d] CG: %d iter, err=%e%s\n", frame, solver.cg_iterations, solver.cg_error,
+               cg.info() != Eigen::Success ? " FAILED" : "");
     }
 }
 
@@ -159,48 +155,25 @@ inline void draw_particle(const Position& x, const Mass& m) {
     DrawPoint3D(toRay3(x.value), BLUE);
 }
 
-inline void draw_mass_info(const Position& x, const Mass& m) {
-    Vector3 textPos = toRay3(x.value);
-    textPos.y += 0.2f;
-    Vector2 screenPos = GetWorldToScreen(textPos, graphics::detail::camera);
-
-    char buffer[32];
-    snprintf(buffer, sizeof(buffer), "%0.2f", m.value);
-    DrawText(buffer, (int)screenPos.x, (int)screenPos.y, 10, BLUE);
-}
-
-inline void draw_constraint_lambda(DistanceConstraint& c) {
-    auto& x1 = c.e1.get_mut<Position>().value;
-    auto& x2 = c.e2.get_mut<Position>().value;
-    Vector3r midpoint = (x1 + x2) / 2.0;
-
-    Vector3 textPos = toRay3(midpoint);
-    Vector2 screenPos = GetWorldToScreen(textPos, graphics::detail::camera);
-
-    char buffer[32];
-    snprintf(buffer, sizeof(buffer), "%0.6f", c.lambda);
-    DrawText(buffer, (int)screenPos.x, (int)screenPos.y, 10, BLUE);
-}
-
 inline void draw_timing_info(flecs::iter& it) {
     auto& scene = it.world().get_mut<Scene>();
+    auto& solver = it.world().get<Solver>();
     scene.elapsed += it.delta_time();
 
     Font font = graphics::get_font();
-    constexpr int font_size = 10;
-    constexpr float spacing = 0.0f;
-
-    char buffer[256];
-    snprintf(buffer, sizeof(buffer), "Elapsed: %.2fs", scene.elapsed);
-    DrawText(buffer, 20, 40, font_size, DARKGREEN);
-
-    snprintf(buffer, sizeof(buffer),
-             "timestep=%.3f  substeps=%d  solve_iter=%d\n"
-             "Random cloth config each run\n"
-             "Lambda: red(high) to green(low)\n"
-             "Camera: W,A,S,D,Q,E,Arrows,MouseDrag",
-             scene.timestep, scene.num_substeps, scene.solve_iter);
-    DrawText(buffer, 20, 50, font_size, DARKGRAY);
+    char buf[512];
+    snprintf(buf, sizeof(buf),
+        "Elapsed: %.2fs  dt=%.4f\n"
+        "CG: %d/%d iter, tol=%.0e, err=%.2e\n"
+        "\n"
+        "Particles: %d  Springs: %d\n"
+        "\n"
+        "Strain: red(tension) green(rest) blue(compression)\n"
+        "Camera: WASDQE / Arrows / MouseDrag / MouseScroll",
+        scene.elapsed, scene.timestep,
+        solver.cg_iterations, solver.cg_max_iter, solver.cg_tolerance, solver.cg_error,
+        scene.num_particles, scene.num_springs);
+    DrawTextEx(font, buf, {20, 40}, 12, 0, DARKGRAY);
 }
 
 } // namespace systems

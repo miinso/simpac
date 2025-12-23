@@ -48,6 +48,14 @@ struct Solver {
 
     std::vector<Eigen::Triplet<Real>> triplets;
     int particle_count = 0;
+
+    // CG solver config
+    int cg_max_iter = 100;
+    Real cg_tolerance = 1e-6;
+
+    // CG solver stats (updated each solve)
+    int cg_iterations = 0;
+    Real cg_error = 0;
 };
 
 // Scene
@@ -57,5 +65,6 @@ struct Scene {
     int solve_iter;
     Vector3r gravity;
     Real elapsed = 0;
-    int num_particles;
+    int num_particles = 0;
+    int num_springs = 0;
 };
