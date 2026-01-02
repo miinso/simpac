@@ -12,6 +12,8 @@ build:linux --cxxopt=-std=c++17
 build:linux --build_tag_filters=-wasm
 build:macos --cxxopt=-std=c++17
 build:macos --build_tag_filters=-wasm
+run:macos --run_under="env DYLD_LIBRARY_PATH=third_party/angle"
+
 
 # Windows: default to native builds (exclude wasm)
 build:windows --cxxopt=/std:c++17

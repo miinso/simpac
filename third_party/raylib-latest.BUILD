@@ -40,8 +40,10 @@ cc_library(
         ],
         "@platforms//os:macos": [
             "PLATFORM_DESKTOP",
+            "PLATFORM_DESKTOP_GLFW", # this is a must!
             "PLATFORM_OSX",
-            "GRAPHICS_API_OPENGL_33",
+            "GRAPHICS_API_OPENGL_ES2",
+            "GLFW_INCLUDE_NONE",
             "GL_SILENCE_DEPRECATION",
         ],
         "@platforms//os:emscripten": [
@@ -136,7 +138,11 @@ cc_library(
     deps = select({
         "@platforms//os:windows": ["@glfw2//:glfw2"],
         "@platforms//os:linux": ["@glfw2//:glfw2"],
-        "@platforms//os:macos": ["@glfw2//:glfw2"],
+        "@platforms//os:macos": [
+            "@glfw2//:glfw2", 
+            "@simpac//third_party/angle",
+            "@simpac//third_party/glad2"
+        ],
         "@platforms//os:emscripten": [], # no need
         "//conditions:default": [],
     }),
