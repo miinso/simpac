@@ -3,6 +3,7 @@
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 #include <flecs.h>
+#include <vector>
 
 using Real = double;
 using Vector3r = Eigen::Matrix<Real, 3, 1, Eigen::DontAlign>;
@@ -67,4 +68,29 @@ struct Scene {
     Real elapsed = 0;
     int num_particles = 0;
     int num_springs = 0;
+};
+
+// GPU Spring Renderer
+struct SpringRenderer {
+    // resources
+    unsigned int vao = 0;
+    unsigned int vbo = 0;
+    unsigned int shader_id = 0;
+
+    // uniform locations
+    int u_viewproj_loc = -1;
+    int u_strain_scale_loc = -1;
+
+    // some metadata
+    int num_springs = 0;
+    int num_particles = 0;
+
+    // CPU-side staging buffer (updated each frame)
+    // Layout: [pos_a.x, pos_a.y, pos_a.z, pos_b.x, pos_b.y, pos_b.z, rest_len, endpoint] per vertex
+    // 8 floats per vertex, 2 vertices per spring
+    std::vector<float> staging_buffer;
+
+    // static spring data (built once during init)
+    std::vector<int> spring_particle_indices;  // [idx_a, idx_b, ...] for each spring
+    std::vector<float> rest_lengths;           // Rest length for each spring
 };

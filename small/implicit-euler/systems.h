@@ -4,6 +4,11 @@
 #include "graphics.h"
 #include "flecs.h"
 #include <raylib.h>
+#include <rlgl.h>
+#include <raymath.h>
+
+#include <glad/glad.h>
+
 #include <cmath>
 
 namespace systems {
@@ -174,6 +179,136 @@ inline void draw_timing_info(flecs::iter& it) {
         solver.cg_iterations, solver.cg_max_iter, solver.cg_tolerance, solver.cg_error,
         scene.num_particles, scene.num_springs);
     DrawTextEx(font, buf, {20, 40}, 12, 0, DARKGRAY);
+}
+
+// =========================================================================
+// GPU Spring Rendering
+// =========================================================================
+
+inline void init_spring_gpu_renderer(flecs::world& ecs, SpringRenderer& gpu) {
+    auto& scene = ecs.get<Scene>();
+    gpu.num_particles = scene.num_particles;
+    gpu.num_springs = scene.num_springs;
+
+    // collect spring connectivity and rest lengths
+    gpu.spring_particle_indices.reserve(gpu.num_springs * 2);
+    gpu.rest_lengths.reserve(gpu.num_springs);
+
+    ecs.each<Spring>([&](flecs::entity e, Spring& s) {
+        gpu.spring_particle_indices.push_back(s.particle_a.get<ParticleIndex>().value);
+        gpu.spring_particle_indices.push_back(s.particle_b.get<ParticleIndex>().value);
+        gpu.rest_lengths.push_back((float)s.rest_length);
+    });
+
+    // allocate staging buffer: 8 floats/vertex, 2 vertices/spring
+    gpu.staging_buffer.resize(gpu.num_springs * 2 * 8);
+
+    // create GPU resources
+    gpu.vao = rlLoadVertexArray();
+    rlEnableVertexArray(gpu.vao);
+    gpu.vbo = rlLoadVertexBuffer(nullptr, gpu.staging_buffer.size() * sizeof(float), true);
+    rlDisableVertexArray();
+
+    // load and compile shaders
+    // Shader shader = LoadShader("small/implicit-euler/resources/shaders/glsl300es/spring.vs",
+    //                            "small/implicit-euler/resources/shaders/glsl300es/spring.fs");
+    Shader shader = LoadShader(graphics::resolve_resource_path("resources/shaders/glsl300es/spring.vs"),
+                               graphics::resolve_resource_path("resources/shaders/glsl300es/spring.fs"));
+
+    if (!IsShaderValid(shader)) {
+        gpu.shader_id = 0;
+        return;
+    }
+
+    gpu.shader_id = shader.id;
+    gpu.u_viewproj_loc = GetShaderLocation(shader, "u_viewproj");
+    gpu.u_strain_scale_loc = GetShaderLocation(shader, "u_strain_scale");
+}
+
+inline void upload_spring_positions_to_gpu(flecs::world& ecs, SpringRenderer& gpu) {
+    if (gpu.shader_id == 0) return;
+
+    // Build position lookup array
+    int max_idx = 0;
+    auto query = ecs.query<const Position, const ParticleIndex>();
+    query.each([&](flecs::entity e, const Position& pos, const ParticleIndex& idx) {
+        max_idx = std::max(max_idx, idx.value);
+    });
+
+    std::vector<Vector3r> positions(max_idx + 1);
+    query.each([&](flecs::entity e, const Position& pos, const ParticleIndex& idx) {
+        positions[idx.value] = pos.value;
+    });
+
+    // Build vertex buffer (2 vertices per spring)
+    int vert_idx = 0;
+    for (int i = 0; i < gpu.num_springs; ++i) {
+        int idx_a = gpu.spring_particle_indices[i * 2];
+        int idx_b = gpu.spring_particle_indices[i * 2 + 1];
+        Vector3r pa = positions[idx_a];
+        Vector3r pb = positions[idx_b];
+        float rest = gpu.rest_lengths[i];
+
+        // Vertex 0 (start)
+        gpu.staging_buffer[vert_idx++] = (float)pa.x();
+        gpu.staging_buffer[vert_idx++] = (float)pa.y();
+        gpu.staging_buffer[vert_idx++] = (float)pa.z();
+        gpu.staging_buffer[vert_idx++] = (float)pb.x();
+        gpu.staging_buffer[vert_idx++] = (float)pb.y();
+        gpu.staging_buffer[vert_idx++] = (float)pb.z();
+        gpu.staging_buffer[vert_idx++] = rest;
+        gpu.staging_buffer[vert_idx++] = 0.0f;
+
+        // Vertex 1 (end)
+        gpu.staging_buffer[vert_idx++] = (float)pa.x();
+        gpu.staging_buffer[vert_idx++] = (float)pa.y();
+        gpu.staging_buffer[vert_idx++] = (float)pa.z();
+        gpu.staging_buffer[vert_idx++] = (float)pb.x();
+        gpu.staging_buffer[vert_idx++] = (float)pb.y();
+        gpu.staging_buffer[vert_idx++] = (float)pb.z();
+        gpu.staging_buffer[vert_idx++] = rest;
+        gpu.staging_buffer[vert_idx++] = 1.0f;
+    }
+
+    rlUpdateVertexBuffer(gpu.vbo, gpu.staging_buffer.data(),
+                         gpu.staging_buffer.size() * sizeof(float), 0);
+}
+
+inline void draw_springs_gpu(SpringRenderer& gpu) {
+    if (gpu.shader_id == 0) return;
+
+    // setup shader and uniforms
+    Matrix viewproj = MatrixMultiply(rlGetMatrixModelview(), rlGetMatrixProjection());
+    rlEnableShader(gpu.shader_id);
+    rlSetUniformMatrix(gpu.u_viewproj_loc, viewproj);
+    float strain_scale = 10.0f;
+    rlSetUniform(gpu.u_strain_scale_loc, &strain_scale, SHADER_UNIFORM_FLOAT, 1);
+
+    // bind VAO/VBO and setup attributes
+    rlEnableVertexArray(gpu.vao);
+    rlEnableVertexBuffer(gpu.vbo);
+
+    int stride = 8 * sizeof(float);
+    rlEnableVertexAttribute(0);
+    rlSetVertexAttribute(0, 3, RL_FLOAT, false, stride, 0);                      // pos_a
+    rlEnableVertexAttribute(1);
+    rlSetVertexAttribute(1, 3, RL_FLOAT, false, stride, 3 * sizeof(float));      // pos_b
+    rlEnableVertexAttribute(2);
+    rlSetVertexAttribute(2, 1, RL_FLOAT, false, stride, 6 * sizeof(float));      // rest_len
+    rlEnableVertexAttribute(3);
+    rlSetVertexAttribute(3, 1, RL_FLOAT, false, stride, 7 * sizeof(float));      // endpoint
+
+    // draw all springs in single call
+    glDrawArrays(GL_LINES, 0, gpu.num_springs * 2);
+
+    // cleanup
+    rlDisableVertexAttribute(0);
+    rlDisableVertexAttribute(1);
+    rlDisableVertexAttribute(2);
+    rlDisableVertexAttribute(3);
+    rlDisableVertexBuffer();
+    rlDisableVertexArray();
+    rlDisableShader();
 }
 
 } // namespace systems

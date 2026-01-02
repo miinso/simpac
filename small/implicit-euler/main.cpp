@@ -22,7 +22,7 @@ int main() {
     ecs.component<Scene>().add(flecs::Singleton);
     ecs.set<Scene>({
         0.01,   // timestep
-        100,    // num_substeps
+        100,    // num_substeps (not used)
         10,     // solve_iter
         gravity,
         0.0     // elapsed
@@ -34,12 +34,16 @@ int main() {
     solver.b.setZero();
     solver.A.setZero();
 
+    // Register SpringRenderer as singleton component
+    ecs.component<SpringRenderer>().add(flecs::Singleton);
+    auto& gpu = ecs.ensure<SpringRenderer>();
+
     // Initialize graphics
     graphics::init(ecs);
     graphics::init_window(800, 600, "Implicit Euler");
     graphics::init_camera({
-        .position = {50.0f, 10.0f, 50.0f},
-        .target = {0.0f, 0.5f, 0.0f},
+        {50.0f, 10.0f, 50.0f}, // position
+        {0.0f, 0.5f, 0.0f}, // target
     });
 
     // =========================================================================
@@ -99,10 +103,26 @@ int main() {
     // Rendering systems (on graphics phases)
     // =========================================================================
 
-    ecs.system<Spring>("Draw Springs")
+    // cpu drawing
+    ecs.system<Spring>("Draw Springs CPU")
         .kind(graphics::phase_on_render)
         .each([](Spring& s) {
             systems::draw_spring(s);
+        }).disable();
+
+    // upload positions each frame before rendering
+    ecs.system("Upload Spring Positions")
+        .kind(graphics::phase_pre_render)
+        .run([&](flecs::iter& it) {
+            // auto& gpu = it.world().get_mut<SpringRenderer>();
+            systems::upload_spring_positions_to_gpu(ecs, gpu);
+        });
+
+    ecs.system("Draw Springs GPU")
+        .kind(graphics::phase_on_render)
+        .run([&](flecs::iter& it) {
+            // auto& gpu = it.world().get_mut<SpringRenderer>();
+            systems::draw_springs_gpu(gpu);
         });
 
     ecs.system<const Position, const Mass>("DrawParticles")
@@ -110,7 +130,7 @@ int main() {
         .kind(graphics::phase_on_render)
         .each([](const Position& x, const Mass& m) {
             systems::draw_particle(x, m);
-        });
+        }).disable();
 
     ecs.system("DrawTimingInfo")
         .kind(graphics::phase_post_render)
@@ -129,11 +149,12 @@ int main() {
         .run([&](flecs::iter& it) {
             // build cloth
             ClothConfig cfg;
-            cfg.width = 200;
-            cfg.height = 200;
+            cfg.width = 50;
+            cfg.height = 50;
             cfg.mass = 1.0;
             cfg.k_s = 1000.0;
             cfg.k_b = 100.0;
+            // cfg.k_d = 0.1;
             cfg.spacing = 1;
             cfg.offset = Vector3r(-cfg.width/2, cfg.height/2, 0);
             create_cloth(ecs, cfg);
@@ -146,6 +167,17 @@ int main() {
             solver.b.resize(n * 3);
             solver.x.resize(n * 3);
             solver.A.resize(n * 3, n * 3);
+        });
+
+    // Initialize GPU renderer on first frame (after entities are committed)
+    ecs.system("Init Spring Renderer")
+        .kind(flecs::PreUpdate)
+        .run([&](flecs::iter& it) {
+            static bool initialized = false;
+            if (!initialized) {
+                systems::init_spring_gpu_renderer(ecs, gpu);
+                initialized = true;
+            }
         });
 
     ecs.system("Implicit Euler")
