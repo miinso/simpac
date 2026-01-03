@@ -1,5 +1,6 @@
 ##
 #  ANGLE (dynamic/shared lib) (ANGLE 2.1.23876 git hash: fffbc739779a)
+#  from https://github.com/miinso/gl-boilerplate
 ##
 cc_import(
     name = "libEGL",
@@ -41,6 +42,8 @@ cc_library(
         "@platforms//os:windows": [
             # TODO: do we want to provide `d3dcompiler_47.dll` here?
             # "//third_party/angle:d3dcompiler_47.dll"
+            "//third_party/angle:libEGL.dll",
+            "//third_party/angle:libGLESv2.dll",
         ],
         "//conditions:default": [],
     }),

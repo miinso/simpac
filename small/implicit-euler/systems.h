@@ -7,7 +7,7 @@
 #include <rlgl.h>
 #include <raymath.h>
 
-#include <glad/glad.h>
+#include <glad/gl.h>
 
 #include <cmath>
 

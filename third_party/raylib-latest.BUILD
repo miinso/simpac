@@ -29,8 +29,11 @@ cc_library(
     defines = select({
         "@platforms//os:windows": [
             "PLATFORM_DESKTOP",
+            # "PLATFORM_DESKTOP_GLFW", # ANGEL introduces perf loss, suppress for now
             "PLATFORM_WINDOWS",
-            "GRAPHICS_API_OPENGL_33",
+            "GRAPHICS_API_OPENGL_33"
+            # "GRAPHICS_API_OPENGL_ES2",
+            # "GLFW_INCLUDE_NONE",
         ],
         "@platforms//os:linux": [
             "PLATFORM_DESKTOP",
@@ -40,9 +43,9 @@ cc_library(
         ],
         "@platforms//os:macos": [
             "PLATFORM_DESKTOP",
-            "PLATFORM_DESKTOP_GLFW", # this is a must!
+            "PLATFORM_DESKTOP_GLFW", # for ANGLE, this is a must!
             "PLATFORM_OSX",
-            "GRAPHICS_API_OPENGL_ES2",
+            "GRAPHICS_API_OPENGL_ES2", # should use ES3
             "GLFW_INCLUDE_NONE",
             "GL_SILENCE_DEPRECATION",
         ],
@@ -136,7 +139,11 @@ cc_library(
         "//conditions:default": [],
     }),
     deps = select({
-        "@platforms//os:windows": ["@glfw2//:glfw2"],
+        "@platforms//os:windows": [
+            "@glfw2//:glfw2",
+            # "@simpac//third_party/angle",
+            # "@simpac//third_party/glad2"
+        ],
         "@platforms//os:linux": ["@glfw2//:glfw2"],
         "@platforms//os:macos": [
             "@glfw2//:glfw2", 

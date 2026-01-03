@@ -65,7 +65,7 @@ cc_binary(
         "@eigen",
         "@flecs",
         "@raylib-latest",
-        "//third_party/glad-330-300es",
+        "//third_party/glad2",
     ],
 )
 
