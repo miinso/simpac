@@ -6,11 +6,11 @@
 #       ...
 #   })
 
-GRAPHICS2_WASM_EMBEDS = [
-    "--embed-file resources/fonts/Px437_IBM_VGA_8x16.ttf@resources/fonts/Px437_IBM_VGA_8x16.ttf",
-]
+# GRAPHICS2_WASM_EMBEDS = [
+#     "--embed-file resources/fonts/Px437_IBM_VGA_8x16.ttf@resources/fonts/Px437_IBM_VGA_8x16.ttf",
+# ]
 
 # Alternative: use --preload-file for async loading (creates .data file)
-GRAPHICS2_WASM_PRELOADS = [
-    "--preload-file resources/fonts/Px437_IBM_VGA_8x16.ttf@resources/fonts/Px437_IBM_VGA_8x16.ttf",
-]
+# GRAPHICS2_WASM_PRELOADS = [
+#     "--preload-file resources/fonts/Px437_IBM_VGA_8x16.ttf@resources/fonts/Px437_IBM_VGA_8x16.ttf",
+# ]

@@ -43,6 +43,7 @@ cc_binary(
         "@platforms//os:windows": ["-DPLATFORM_DESKTOP"],
         "//conditions:default": ["-DPLATFORM_DESKTOP"],
     }),
+    data = ["//:resources"],
     linkopts = select({
         "@platforms//os:emscripten": [
             "-sALLOW_MEMORY_GROWTH=1",
@@ -81,6 +82,7 @@ cc_binary(
         "@platforms//os:windows": ["-DPLATFORM_DESKTOP"],
         "//conditions:default": ["-DPLATFORM_DESKTOP"],
     }),
+    data = ["//:resources"],
     deps = [
         ":common",
         "//modules:graphics2",
@@ -102,6 +104,7 @@ cc_binary(
         "@platforms//os:windows": ["-DPLATFORM_DESKTOP"],
         "//conditions:default": ["-DPLATFORM_DESKTOP"],
     }),
+    data = ["//:resources"],
     deps = [
         ":common",
         "//modules:graphics2",
@@ -123,6 +126,7 @@ cc_binary(
         "@platforms//os:windows": ["-DPLATFORM_DESKTOP"],
         "//conditions:default": ["-DPLATFORM_DESKTOP"],
     }),
+    data = ["//:resources"],
     deps = [
         ":common",
         "//modules:graphics2",

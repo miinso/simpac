@@ -20,7 +20,6 @@ extern "C" __declspec(dllimport) unsigned long __stdcall GetModuleFileNameA(void
 
 namespace graphics {
 namespace detail {
-    inline std::string resolved_path_buffer;
     inline bool initialized = false;
 #if !defined(__EMSCRIPTEN__)
     inline std::unique_ptr<Runfiles> runfiles;
@@ -42,7 +41,7 @@ namespace detail {
 #endif
     }
 
-    inline void ensure_init() {
+    inline void init_once() {
         if (initialized) return;
         initialized = true;
         std::string err;
@@ -55,17 +54,21 @@ namespace detail {
 #endif
 }
 
-[[nodiscard]] inline const char* resolve_resource_path(const char* path) {
+// Get the normalized absolute path for a resource (platform-aware)
+[[nodiscard]] inline std::string normalized_path(const char* path) {
 #if defined(__EMSCRIPTEN__)
-    return path;
+    return std::string(path);
 #else
-    detail::ensure_init();
-    if (!detail::runfiles) return path;
-
-    detail::resolved_path_buffer = detail::runfiles->Rlocation(std::string("_main/") + path);
-
-    return detail::resolved_path_buffer.c_str();
+    detail::init_once();
+    if (!detail::runfiles) return std::string(path);
+    
+    return detail::runfiles->Rlocation(std::string("_main/") + path);
 #endif
+}
+
+// Short alias for convenience
+[[nodiscard]] inline std::string npath(const char* path) {
+    return normalized_path(path);
 }
 
 } // namespace graphics

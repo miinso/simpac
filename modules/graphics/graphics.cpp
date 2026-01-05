@@ -142,7 +142,7 @@ void init_window(const WindowConfig& config) {
     std::printf("graphics::init_window requested=%dx%d canvas=%dx%d\n",
                 config.width, config.height, canvas_w, canvas_h);
 #endif
-
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(config.width, config.height, config.title);
 
 #if defined(__EMSCRIPTEN__)
@@ -156,10 +156,9 @@ void init_window(const WindowConfig& config) {
     clear_color = config.clear_color;
     init_camera();
 
-    // Load custom font using resolved path
-    // NOTE: init_resource_paths(argv[0]) must be called before this!
-    const char* font_path = resolve_resource_path("resources/generic.fnt");
-    detail::font = LoadFont(font_path);
+    // Load custom font
+    std::string font_path = normalized_path("resources/generic.fnt");
+    detail::font = LoadFont(font_path.c_str());
     if (detail::font.texture.id > 0) {
         detail::font_loaded = true;
         // SetTextureFilter(detail::font.texture, TEXTURE_FILTER_POINT);

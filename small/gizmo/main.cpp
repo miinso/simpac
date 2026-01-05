@@ -51,10 +51,11 @@ int main() {
     graphics::init(ecs);
     graphics::init_window(800, 600, "Gizmo PBR");
 
-    // Load PBR shader (resolve paths separately to avoid buffer overwrite)
-    std::string vs_path = graphics::resolve_resource_path(TextFormat("resources/shaders/glsl%s/pbr.vs", GLSL_VERSION));
-    std::string fs_path = graphics::resolve_resource_path(TextFormat("resources/shaders/glsl%s/pbr.fs", GLSL_VERSION));
-    Shader shader = LoadShader(vs_path.c_str(), fs_path.c_str());
+    // Load PBR shader using npath
+    Shader shader = LoadShader(
+        graphics::npath(TextFormat("resources/shaders/glsl%s/pbr.vs", GLSL_VERSION)).c_str(),
+        graphics::npath(TextFormat("resources/shaders/glsl%s/pbr.fs", GLSL_VERSION)).c_str()
+    );
 
     // Setup shader locations
     shader.locs[SHADER_LOC_MAP_ALBEDO] = GetShaderLocation(shader, "albedoMap");
@@ -104,7 +105,7 @@ int main() {
     box.materials[0].maps[MATERIAL_MAP_EMISSION].texture = whiteTexture;
 
     // Create floor model
-    Model floor = LoadModel(graphics::resolve_resource_path("resources/models/plane.glb"));
+    Model floor = LoadModel(graphics::npath("resources/models/plane.glb").c_str());
     floor.materials[0].shader = shader;
     floor.materials[0].maps[MATERIAL_MAP_ALBEDO].color = WHITE;
     floor.materials[0].maps[MATERIAL_MAP_METALNESS].value = 0.0f;

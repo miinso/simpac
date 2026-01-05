@@ -209,13 +209,11 @@ inline void init_spring_gpu_renderer(flecs::world& ecs, SpringRenderer& gpu) {
     gpu.vbo = rlLoadVertexBuffer(nullptr, gpu.staging_buffer.size() * sizeof(float), true);
     rlDisableVertexArray();
 
-    // load and compile shaders
-    // Shader shader = LoadShader("small/implicit-euler/resources/shaders/glsl300es/spring.vs",
-    //                            "small/implicit-euler/resources/shaders/glsl300es/spring.fs");
-    // NOTE: Must copy to std::string to avoid buffer overwrite issue in resolve_resource_path
-    std::string vs_path = graphics::resolve_resource_path("resources/shaders/glsl300es/spring.vs");
-    std::string fs_path = graphics::resolve_resource_path("resources/shaders/glsl300es/spring.fs");
-    Shader shader = LoadShader(vs_path.c_str(), fs_path.c_str());
+    // Load and compile shaders
+    Shader shader = LoadShader(
+        graphics::npath("resources/shaders/glsl300es/spring.vs").c_str(),
+        graphics::npath("resources/shaders/glsl300es/spring.fs").c_str()
+    );
 
     if (!IsShaderValid(shader)) {
         gpu.shader_id = 0;
