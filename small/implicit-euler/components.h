@@ -57,17 +57,29 @@ struct Solver {
     // CG solver stats (updated each solve)
     int cg_iterations = 0;
     Real cg_error = 0;
+    
+    // Solver iterations per step
+    int solve_iter = 10;
 };
 
-// Scene
+// Scene configuration and state
 struct Scene {
-    Real timestep;
-    int num_substeps;
-    int solve_iter;
-    Vector3r gravity;
-    Real elapsed = 0;
+    // Simulation parameters
+    Real dt;                    // timestep per simulation step
+    Vector3r gravity;           // gravity vector
+    
+    // Runtime state
+    Real wall_time = 0;         // real elapsed time (wall-clock)
+    Real sim_time = 0;          // accumulated simulation time
+    int frame_count = 0;        // number of simulation steps executed
+    
+    // Scene statistics (updated by systems)
     int num_particles = 0;
     int num_springs = 0;
+    
+    // Optional: control flags
+    bool paused = false;        // simulation pause state
+    Real sim_speed = 1.0;       // simulation speed multiplier
 };
 
 // GPU Spring Renderer

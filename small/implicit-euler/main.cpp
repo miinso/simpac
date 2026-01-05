@@ -17,22 +17,20 @@ int main() {
 
     flecs::world ecs;
 
-    // Scene setup (timestep = 0.01)
+    // Scene setup
     Vector3r gravity(0, -9.81, 0);
     ecs.component<Scene>().add(flecs::Singleton);
     ecs.set<Scene>({
-        0.01,   // timestep
-        100,    // num_substeps (not used)
-        10,     // solve_iter
-        gravity,
-        0.0     // elapsed
+        0.01,       // dt (timestep)
+        gravity     // gravity
+        // rest are default initialized
     });
 
     ecs.component<Solver>().add(flecs::Singleton);
-    // ecs.set<Solver>();
     auto& solver = ecs.ensure<Solver>();
     solver.b.setZero();
     solver.A.setZero();
+    solver.solve_iter = 10;
 
     // Register SpringRenderer as singleton component
     ecs.component<SpringRenderer>().add(flecs::Singleton);
@@ -141,7 +139,8 @@ int main() {
     // =========================================================================
 
     // fixed 60 Hz simulation tick (decoupled from display rate)
-    auto sim_tick = ecs.timer().interval(1.0f / 100.0f);
+    // auto sim_tick = ecs.timer().interval(10.0f / 1000.0f);
+    auto sim_tick = ecs.get<Scene>().dt;
 
     // build particle grid cloth
     ecs.system("Create Cloth")
@@ -156,7 +155,7 @@ int main() {
             cfg.k_b = 100.0;
             // cfg.k_d = 0.1;
             cfg.spacing = 1;
-            cfg.offset = Vector3r(-cfg.width/2, cfg.height/2, 0);
+            cfg.offset = Vector3r(-cfg.width/2.0, cfg.height/2.0, 0);
             create_cloth(ecs, cfg);
 
             auto& scene = it.world().get<Scene>();
@@ -184,8 +183,12 @@ int main() {
         .kind(flecs::PreUpdate)
         .tick_source(sim_tick)
         .run([&](flecs::iter& it) {
-            const auto& scene = it.world().get<Scene>();
-            auto dt = scene.timestep;
+            auto& scene = it.world().get_mut<Scene>();
+            auto dt = scene.dt;
+
+            // accumulate simulation time and frame count
+            scene.sim_time += dt;
+            scene.frame_count++;
 
             // clear solver state for this frame
             auto& solver = it.world().get_mut<Solver>();

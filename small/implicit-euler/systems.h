@@ -163,21 +163,24 @@ inline void draw_particle(const Position& x, const Mass& m) {
 inline void draw_timing_info(flecs::iter& it) {
     auto& scene = it.world().get_mut<Scene>();
     auto& solver = it.world().get<Solver>();
-    scene.elapsed += it.delta_time();
+    scene.wall_time += it.delta_time();
 
     Font font = graphics::get_font();
     char buf[512];
     snprintf(buf, sizeof(buf),
-        "Elapsed: %.2fs  dt=%.4f\n"
+        "Wall time: %.2fs  |  Sim time: %.2fs  (dt=%.4f)\n"
+        "Frame: %d  |  Speed: %.2fx\n"
         "CG: %d/%d iter, tol=%.0e, err=%.2e\n"
         "\n"
         "Particles: %d  Springs: %d\n"
         "\n"
         "Strain: red(tension) green(rest) blue(compression)\n"
         "Camera: WASDQE / Arrows / MouseDrag / MouseScroll",
-        scene.elapsed, scene.timestep,
+        scene.wall_time, scene.sim_time, scene.dt,
+        scene.frame_count, scene.sim_time / (scene.wall_time + 1e-9),
         solver.cg_iterations, solver.cg_max_iter, solver.cg_tolerance, solver.cg_error,
         scene.num_particles, scene.num_springs);
+    DrawTextEx(font, buf, {21, 41}, 12, 0, WHITE);
     DrawTextEx(font, buf, {20, 40}, 12, 0, DARKGRAY);
 }
 
