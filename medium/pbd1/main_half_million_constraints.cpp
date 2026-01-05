@@ -18,7 +18,7 @@ Vector3f gravity(0, -9.81f, 0);
 
 int main() {
     flecs::world ecs;
-    ecs.set_threads(16); // it just works??
+    // ecs.set_threads(16); // it just works??
 
     graphics::init(ecs);
     graphics::init_window(800, 800, "muller2007position");
@@ -51,8 +51,10 @@ int main() {
 
     ////////// system registration
     ecs.system("progress").kind(flecs::OnUpdate).run([](flecs::iter& it) {
-        auto& params = it.world().get_mut<Scene>();
-        params.elapsed += params.timestep;
+        auto& scene = it.world().get_mut<Scene>();
+        scene.wall_time += it.delta_time();
+        scene.sim_time += scene.dt;
+        scene.frame_count++;
     });
 
     ecs.system<Acceleration>("clear acceleration")
@@ -98,18 +100,23 @@ int main() {
     auto q_constraint = ecs.query_builder().with<Constraint>().cached().build();
 
     // graphics2: use graphics::phase_post_render instead of graphics::PostRender
-    ecs.system("stats").kind(graphics::phase_post_render).run([&](flecs::iter& it) {
+    ecs.system("DrawTimingInfo").kind(graphics::phase_post_render).run([&](flecs::iter& it) {
         auto constraint_count = q_constraint.count();
         auto particle_count = q_particle.count();
 
-        const auto& params = it.world().get<Scene>();
+        const auto& scene = it.world().get<Scene>();
 
-        char buffer[64];
-        // clang-format off
-        DrawText((sprintf(buffer, "Elapsed time: %.2f", params.elapsed), buffer), 20, 100, 20, DARKGREEN);
-        DrawText((sprintf(buffer, "Particles: %llu", particle_count), buffer), 20, 130, 20, DARKGREEN);
-        DrawText((sprintf(buffer, "Constraints: %llu", constraint_count), buffer), 20, 160, 20, DARKGREEN);
-        // clang-format on
+        Font font = graphics::get_font();
+        char buffer[256];
+        snprintf(buffer, sizeof(buffer),
+            "Wall time: %.2fs  |  Sim time: %.2fs\n"
+            "Frame: %d  |  Speed: %.2fx\n"
+            "Particles: %d  |  Constraints: %d",
+            scene.wall_time, scene.sim_time,
+            scene.frame_count, scene.sim_time / (scene.wall_time + 1e-9f),
+            particle_count, constraint_count);
+        DrawTextEx(font, buffer, {21, 101}, 12, 0, WHITE);
+        DrawTextEx(font, buffer, {20, 100}, 12, 0, DARKGREEN);
     });
 
     graphics::run_main_loop();

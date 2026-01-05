@@ -96,8 +96,10 @@ int main() {
 
     ////////// system registration
     ecs.system("progress").kind(flecs::OnUpdate).run([](flecs::iter& it) {
-        auto params = it.world().get_mut<Scene>();
-        params->elapsed += params->timestep;
+        auto& scene = it.world().get_mut<Scene>();
+        scene.wall_time += it.delta_time();
+        scene.sim_time += scene.dt;
+        scene.frame_count++;
     });
 
     auto clear_acc =
@@ -241,19 +243,22 @@ int main() {
             DrawText(label, screenPos.x, screenPos.y, 20, BLUE);
         });
 
-    ecs.system("you can do it").kind(graphics::phase_post_render).run([](flecs::iter& it) {
-        auto params = it.world().get<Scene>();
+    ecs.system("DrawTimingInfo").kind(graphics::phase_post_render).run([](flecs::iter& it) {
+        const auto& scene = it.world().get<Scene>();
 
-        char buffer[64];
-        snprintf(buffer, sizeof(buffer), "Elapsed time: %.2f", params->elapsed);
-        DrawText(buffer, 20, 40, 20, DARKGREEN);
-
-        DrawText("dt=1/60 num_iter=10 num_substeps=100\nuses random config for each run\nlambda visualized by red-green color "
-                 "map\nInput: W,A,S,D,Q,E,Up,Down,Left,Top,MouseDrag",
-                 20,
-                 100,
-                 20,
-                 DARKGREEN);
+        Font font = graphics::get_font();
+        char buffer[512];
+        snprintf(buffer, sizeof(buffer),
+            "Wall time: %.2fs  |  Sim time: %.2fs\n"
+            "Frame: %d  |  Speed: %.2fx\n"
+            "dt=1/60 num_iter=10 num_substeps=100\n"
+            "uses random config for each run\n"
+            "lambda visualized by red-green color map\n"
+            "Input: W,A,S,D,Q,E,Up,Down,Left,Top,MouseDrag",
+            scene.wall_time, scene.sim_time,
+            scene.frame_count, scene.sim_time / (scene.wall_time + 1e-9f));
+        DrawTextEx(font, buffer, {21, 41}, 12, 0, WHITE);
+        DrawTextEx(font, buffer, {20, 40}, 12, 0, DARKGREEN);
     });
 
     // ecs.import <flecs::stats>(); % this causes problems on web build

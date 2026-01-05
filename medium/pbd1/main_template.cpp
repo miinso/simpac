@@ -21,8 +21,8 @@ int main() {
     graphics::init_window(800, 800, "Physics Simulator");
 
     // graphics2: use graphics::phase_post_render instead of graphics::PostRender
-    ecs.system("you can do it").kind(graphics::phase_post_render).run([](flecs::iter& it) {
-        DrawText("You Can DO iT!!!", 200, 200, 40, DARKGREEN);
+    ecs.system("DrawTimingInfo").kind(graphics::phase_post_render).run([](flecs::iter& it) {
+        DrawText("If tilapia can do it, so can you!!!", 200, 200, 40, DARKGREEN);
     });
 
     graphics::run_main_loop([]() { global_time += delta_time; });

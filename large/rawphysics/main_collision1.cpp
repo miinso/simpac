@@ -6,7 +6,6 @@
 #include "kernels.hpp"
 #include "types.h"
 
-#include <graphics/graphics.h>
 #include <iostream>
 
 float randf(int n)
@@ -55,8 +54,10 @@ int main()
 
 	////////// system registration
 	ecs.system("progress").kind(flecs::OnUpdate).run([](flecs::iter &it) {
-		auto& params = it.world().get_mut<Scene>();
-		params.elapsed += params.timestep;
+		auto& scene = it.world().get_mut<Scene>();
+		scene.wall_time += it.delta_time();
+		scene.sim_time += scene.dt;
+		scene.frame_count++;
 	});
 
 	auto identify_island =
@@ -253,11 +254,17 @@ int main()
 
 	// PostRender
 	ecs.system("info").kind(graphics::phase_post_render).run([](flecs::iter &it) {
-		const auto& params = it.world().get<Scene>();
+		const auto& scene = it.world().get<Scene>();
 
-		char buffer[64];
-		snprintf(buffer, sizeof(buffer), "Elapsed time: %.2f", params.elapsed);
-		DrawText(buffer, 20, 40, 20, DARKGREEN);
+		Font font = graphics::get_font();
+		char buffer[256];
+		snprintf(buffer, sizeof(buffer),
+			"Wall time: %.2fs  |  Sim time: %.2fs\n"
+			"Frame: %d  |  Speed: %.2fx",
+			scene.wall_time, scene.sim_time,
+			scene.frame_count, scene.sim_time / (scene.wall_time + 1e-9f));
+		DrawTextEx(font, buffer, {21, 41}, 12, 0, WHITE);
+		DrawTextEx(font, buffer, {20, 40}, 12, 0, DARKGREEN);
 	});
 
 	// handle keyboard input

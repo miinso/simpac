@@ -29,6 +29,7 @@ source_file_name_list = glob(
         deps = [
             "//modules:graphics2",
             ":pbd",
+            ":collision",
             "@raylib",
             "@eigen",
             "@flecs",
@@ -118,7 +119,7 @@ cc_binary(
         ],
         "//conditions:default": ["-DPLATFORM_DESKTOP"],
     }),
-    # data = ["//:resources"],
+    data = ["//:resources"],
     defines = [
     ],
     includes = [
@@ -158,6 +159,7 @@ cc_binary(
     deps = [
         "//modules:graphics2",
         ":pbd",
+        ":collision",
         "@raylib",
         "@eigen",
         "@flecs",

@@ -39,8 +39,10 @@ int main() {
 
     ////////// system registration
     ecs.system("progress").kind(flecs::OnUpdate).run([](flecs::iter& it) {
-        auto& params = it.world().get_mut<Scene>();
-        params.elapsed += params.timestep;
+        auto& scene = it.world().get_mut<Scene>();
+        scene.wall_time += it.delta_time();
+        scene.sim_time += scene.dt;
+        scene.frame_count++;
     });
 
     ecs.system<Acceleration>("clear acceleration")
@@ -113,14 +115,19 @@ int main() {
             DrawText(label, screenPos.x, screenPos.y, 20, BLUE);
         });
 
-    ecs.system("you can do it").kind(graphics::phase_post_render).run([](flecs::iter& it) {
-        DrawText("You Can DO iT!!!", 200, 200, 40, DARKGREEN);
+    ecs.system("DrawTimingInfo").kind(graphics::phase_post_render).run([](flecs::iter& it) {
+        Font font = graphics::get_font();
 
-        const auto& params = it.world().get<Scene>();
+        const auto& scene = it.world().get<Scene>();
 
-        char buffer[64];
-        snprintf(buffer, sizeof(buffer), "Elapsed time: %.2f", params.elapsed);
-        DrawText(buffer, 20, 100, 20, DARKGREEN);
+        char buffer[256];
+        snprintf(buffer, sizeof(buffer),
+            "Wall time: %.2fs  |  Sim time: %.2fs\n"
+            "Frame: %d  |  Speed: %.2fx",
+            scene.wall_time, scene.sim_time,
+            scene.frame_count, scene.sim_time / (scene.wall_time + 1e-9f));
+        DrawTextEx(font, buffer, {21, 101}, 12, 0, WHITE);
+        DrawTextEx(font, buffer, {20, 100}, 12, 0, DARKGREEN);
     });
 
     graphics::run_main_loop([]() { global_time += delta_time; });

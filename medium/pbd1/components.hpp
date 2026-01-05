@@ -18,10 +18,16 @@ struct IsPinned { };
 
 struct Particle {};
 
+// Scene configuration and state
 struct Scene {
-    float timestep;
-    int num_substeps;
-    int solve_iter;
-    Vector3f gravity;
-    float elapsed = 0;
+    // Simulation parameters
+    float dt;                   // timestep per simulation step
+    int num_substeps;           // PBD substeps
+    int solve_iter;             // constraint solver iterations
+    Vector3f gravity;           // gravity vector
+    
+    // Runtime state
+    float wall_time = 0;        // real elapsed time (wall-clock)
+    float sim_time = 0;         // accumulated simulation time
+    int frame_count = 0;        // number of simulation steps executed
 };

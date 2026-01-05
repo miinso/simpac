@@ -281,16 +281,16 @@ int main() {
             else
                 DrawSphereWires(lights[i].position, 0.2f, 8, 8, ColorAlpha(lightColor, 0.3f));
 
-            // 기즈모 그리기 및 transform 업데이트
+            // draw, handle interaction
             DrawGizmo3D(GIZMO_TRANSLATE, &lights[i].transform);
 
-            // 업데이트된 transform 기반으로 조명 위치 갱신
+            // apply gizmo transform to the light's
             lights[i].position = lights[i].transform.translation;
             UpdateLight(shader, lights[i]);
         }
     });
 
-    ecs.system("you can do it").kind(graphics::phase_post_render).run([&](flecs::iter& it) {
+    ecs.system("DrawTimingInfo").kind(graphics::phase_post_render).run([&](flecs::iter& it) {
         DrawText("Toggle lights: [1][2][3][4]", 10, 40, 20, LIGHTGRAY);
 
         DrawText(TextFormat("elapsed: %f", global_time), 10, 90, 20, GREEN);
@@ -347,7 +347,6 @@ static Light CreateLight(
 
         UpdateLight(shader, light);
 
-        // transform 초기화 - 위치를 transform에도 저장
         light.transform = GizmoIdentity();
         light.transform.translation = position;
 

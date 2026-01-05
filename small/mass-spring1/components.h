@@ -28,11 +28,16 @@ struct DistanceConstraint {
     Real lambda = 0;
 };
 
-// Scene
+// Scene configuration and state
 struct Scene {
-    Real timestep;
-    int num_substeps;
-    int solve_iter;
-    Vector3r gravity;
-    Real elapsed = 0;
+    // Simulation parameters
+    Real dt;                    // timestep per simulation step
+    int num_substeps;           // PBD substeps
+    int solve_iter;             // constraint solver iterations
+    Vector3r gravity;           // gravity vector
+    
+    // Runtime state
+    Real wall_time = 0;         // real elapsed time (wall-clock)
+    Real sim_time = 0;          // accumulated simulation time
+    int frame_count = 0;        // number of simulation steps executed
 };

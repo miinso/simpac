@@ -117,23 +117,23 @@ inline void draw_constraint_lambda(DistanceConstraint& c) {
 
 inline void draw_timing_info(flecs::iter& it) {
     auto& scene = it.world().get_mut<Scene>();
-    scene.elapsed += it.delta_time();
+    scene.wall_time += it.delta_time();
 
     Font font = graphics::get_font();
-    constexpr int font_size = 10;
-    constexpr float spacing = 0.0f;
-
-    char buffer[256];
-    snprintf(buffer, sizeof(buffer), "Elapsed: %.2fs", scene.elapsed);
-    DrawText(buffer, 20, 40, font_size, DARKGREEN);
-
-    snprintf(buffer, sizeof(buffer),
-             "timestep=%.3f  substeps=%d  solve_iter=%d\n"
-             "Random cloth config each run\n"
-             "Lambda: red(high) to green(low)\n"
-             "Camera: W,A,S,D,Q,E,Arrows,MouseDrag",
-             scene.timestep, scene.num_substeps, scene.solve_iter);
-    DrawText(buffer, 20, 50, font_size, DARKGRAY);
+    char buf[512];
+    snprintf(buf, sizeof(buf),
+        "Wall time: %.2fs  |  Sim time: %.2fs  (dt=%.4f)\n"
+        "Frame: %d  |  Speed: %.2fx\n"
+        "Substeps: %d  |  Solver iter: %d\n"
+        "\n"
+        "Random cloth config each run\n"
+        "Lambda: red(high) to green(low)\n"
+        "Camera: WASDQE / Arrows / MouseDrag / MouseScroll",
+        scene.wall_time, scene.sim_time, scene.dt,
+        scene.frame_count, scene.sim_time / (scene.wall_time + 1e-9),
+        scene.num_substeps, scene.solve_iter);
+    DrawTextEx(font, buf, {21, 41}, 12, 0, WHITE);
+    DrawTextEx(font, buf, {20, 40}, 12, 0, DARKGRAY);
 }
 
 } // namespace systems

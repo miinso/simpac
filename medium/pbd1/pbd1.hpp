@@ -67,7 +67,7 @@ void pbd_particle_integrate(flecs::iter& it,
                             Velocity& v,
                             Acceleration& a) {
     const auto& params = it.world().get<Scene>();
-    float dt = params.timestep / params.num_substeps;
+    float dt = params.dt / params.num_substeps;
 
     if (it.entity(i).has<IsPinned>()) return;
 
@@ -81,7 +81,7 @@ void pbd_particle_integrate(flecs::iter& it,
 // ecs.system<Constraint>().run([](flecs::iter& it) {
 void pbd_particle_solve_constraint(flecs::iter& it) {
     const auto& params = it.world().get<Scene>();
-    float dt = params.timestep / params.num_substeps;
+    float dt = params.dt / params.num_substeps;
 
     // it.next() is some special concept employed in flecs. it's not that cpp iter
     // maybe hopping over some virtual tables that is match to our query?
@@ -101,7 +101,7 @@ void pbd_particle_solve_constraint(flecs::iter& it) {
 
 void pbd_particle_ground_collision(flecs::iter& it, size_t, Position& x, const OldPosition& x_old) {
     const auto& params = it.world().get<Scene>();
-    float dt = params.timestep / params.num_substeps;
+    float dt = params.dt / params.num_substeps;
 
     const float friction = 0.8f;
 
@@ -119,7 +119,7 @@ void pbd_particle_ground_collision(flecs::iter& it, size_t, Position& x, const O
 void pbd_particle_update_velocity(
     flecs::iter& it, size_t, const Position& x, const OldPosition& x_old, Velocity& v) {
     const auto& params = it.world().get<Scene>();
-    float dt = params.timestep / params.num_substeps;
+    float dt = params.dt / params.num_substeps;
 
     v.value = (x.value - x_old.value) / dt;
 }
@@ -130,7 +130,7 @@ void pbd_particle_update_velocity(
 // `step` requires particle query, and constraint query
 // void pbd_step(flecs::iter& it) {
 //     auto params = it.world().get<Scene>();
-//     float dt = params->timestep / params->num_substeps;
+//     float dt = params->dt / params->num_substeps;
 
 //     // for all particles
 //     while (it.next()) {

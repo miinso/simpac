@@ -17,7 +17,7 @@ int main() {
     graphics::init_window(800, 800, "PBDSimulation");
 
     Vector3r gravity(0, -9.81f, 0);
-    ecs.set<Scene>({0.005f, 2, 2, gravity, 0.0f});
+    ecs.set<Scene>({0.005f, 2, 2, gravity});
 
     std::vector<flecs::entity> particles;
     int num_particles = 1000;
@@ -99,14 +99,18 @@ int main() {
     // =========================================================================
 
     // auto sim_tick = ecs.timer().interval(1.0f / 60.0f);
-    auto sim_tick = ecs.timer().interval(ecs.get<Scene>().timestep);
+    auto sim_tick = ecs.timer().interval(ecs.get<Scene>().dt);
 
     ecs.system("PBDSimulation")
         .kind(flecs::PreUpdate)
         .tick_source(sim_tick)
         .run([&](flecs::iter& it) {
-            const auto& scene = it.world().get<Scene>();
-            Real sub_dt = scene.timestep / scene.num_substeps;
+            auto& scene = it.world().get_mut<Scene>();
+            Real sub_dt = scene.dt / scene.num_substeps;
+
+            // accumulate simulation time and frame count
+            scene.sim_time += scene.dt;
+            scene.frame_count++;
 
             for (int i = 0; i < scene.num_substeps; ++i) {
                 clear_acc.run();
@@ -120,8 +124,6 @@ int main() {
                 ground_collision.run(sub_dt);
                 update_velocity.run(sub_dt);
             }
-
-            it.world().get_mut<Scene>().elapsed += scene.timestep;
         });
 
     // =========================================================================
@@ -143,12 +145,20 @@ int main() {
         .run([&](flecs::iter& it) {
             auto constraint_count = q_constraint.count();
             auto particle_count = q_particle.count();
-            const auto& scene = it.world().get<Scene>();
+            auto& scene = it.world().get_mut<Scene>();
+            scene.wall_time += it.delta_time();
 
-            char buffer[64];
-            DrawText((sprintf(buffer, "Elapsed time: %.2f", scene.elapsed), buffer), 20, 100, 20, DARKGREEN);
-            DrawText((sprintf(buffer, "Particles: %d", (int)particle_count), buffer), 20, 130, 20, DARKGREEN);
-            DrawText((sprintf(buffer, "Constraints: %d", (int)constraint_count), buffer), 20, 160, 20, DARKGREEN);
+            Font font = graphics::get_font();
+            char buffer[256];
+            snprintf(buffer, sizeof(buffer),
+                "Wall time: %.2fs  |  Sim time: %.2fs\n"
+                "Frame: %d  |  Speed: %.2fx\n"
+                "Particles: %d  |  Constraints: %d",
+                scene.wall_time, scene.sim_time,
+                scene.frame_count, scene.sim_time / (scene.wall_time + 1e-9f),
+                (int)particle_count, (int)constraint_count);
+            DrawTextEx(font, buffer, {21, 41}, 12, 0, WHITE);
+            DrawTextEx(font, buffer, {20, 40}, 12, 0, DARKGREEN);
         });
 
     // =========================================================================

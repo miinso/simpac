@@ -43,14 +43,14 @@ int main() {
 
     flecs::world ecs;
 
-    // Scene setup (timestep = 0.01)
+    // Scene setup
     Vector3r gravity(0, -9.81, 0);
     ecs.set<Scene>({
-        0.01,   // timestep
-        100,    // num_substeps
-        10,     // solve_iter
-        gravity,
-        0.0     // elapsed
+        0.01,       // dt (timestep)
+        100,        // num_substeps
+        10,         // solve_iter
+        gravity     // gravity
+        // rest are default initialized
     });
 
     // Initialize graphics
@@ -163,8 +163,12 @@ int main() {
         .kind(flecs::PreUpdate)
         .tick_source(sim_tick)
         .run([&](flecs::iter& it) {
-            const auto& scene = it.world().get<Scene>();
-            Real sub_dt = scene.timestep / scene.num_substeps;
+            auto& scene = it.world().get_mut<Scene>();
+            Real sub_dt = scene.dt / scene.num_substeps;
+
+            // accumulate simulation time and frame count
+            scene.sim_time += scene.dt;
+            scene.frame_count++;
 
             for (int i = 0; i < scene.num_substeps; ++i) {
                 clear_acc.run();
