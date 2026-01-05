@@ -22,7 +22,10 @@ build:windows --build_tag_filters=-wasm
 # for profiler: --copt=/Zi --linkopt=/DEBUG --linkopt=/PROFILE
 
 # Wasm builds: use --config=wasm
+build:wasm --noenable_platform_specific_config  # Disable auto platform detection
 build:wasm --build_tag_filters=wasm
+build:wasm --cxxopt=-std=c++17
+build:wasm --host_cxxopt=-std=c++17
 
 # build:windows --enable_runfiles # https://github.com/bazelbuild/bazel/issues/8843
 
