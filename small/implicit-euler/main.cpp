@@ -21,7 +21,7 @@ int main() {
     Vector3r gravity(0, -9.81, 0);
     ecs.component<Scene>().add(flecs::Singleton);
     ecs.set<Scene>({
-        0.01,       // dt (timestep)
+        0.01666,       // dt (timestep)
         gravity     // gravity
         // rest are default initialized
     });
@@ -30,7 +30,8 @@ int main() {
     auto& solver = ecs.ensure<Solver>();
     solver.b.setZero();
     solver.A.setZero();
-    solver.solve_iter = 10;
+    solver.cg_tolerance = 1e-6;
+    solver.cg_max_iter = 100;
 
     // Register SpringRenderer as singleton component
     ecs.component<SpringRenderer>().add(flecs::Singleton);
@@ -50,6 +51,7 @@ int main() {
 
     auto collect_external_force = ecs.system<const Mass, const Velocity, const ParticleIndex, Solver>("Collect External Force")
         .with<Particle>()
+        .without<IsPinned>()
         .kind(0)
         .each([&](flecs::iter& it, size_t, const Mass& m, const Velocity& v, const ParticleIndex& idx, Solver& solver) {
             systems::collect_external_force(m, v, idx, gravity, it.delta_time(), solver);
@@ -64,6 +66,7 @@ int main() {
 
     auto collect_mass = ecs.system<const Mass, const ParticleIndex, Solver>("Collect Mass")
         .with<Particle>()
+        .without<IsPinned>()
         .kind(0)
         .each(systems::collect_mass);
 
@@ -108,27 +111,27 @@ int main() {
             systems::draw_spring(s);
         }).disable();
 
-    // upload positions each frame before rendering
-    ecs.system("Upload Spring Positions")
-        .kind(graphics::phase_pre_render)
-        .run([&](flecs::iter& it) {
-            // auto& gpu = it.world().get_mut<SpringRenderer>();
-            systems::upload_spring_positions_to_gpu(ecs, gpu);
-        });
-
-    ecs.system("Draw Springs GPU")
-        .kind(graphics::phase_on_render)
-        .run([&](flecs::iter& it) {
-            // auto& gpu = it.world().get_mut<SpringRenderer>();
-            systems::draw_springs_gpu(gpu);
-        });
-
     ecs.system<const Position, const Mass>("DrawParticles")
         .with<Particle>()
         .kind(graphics::phase_on_render)
         .each([](const Position& x, const Mass& m) {
             systems::draw_particle(x, m);
         }).disable();
+
+    // upload positions each frame before rendering
+    ecs.system("Upload Spring Positions")
+        .kind(graphics::phase_pre_render)
+        .run([&](flecs::iter& it) {
+            // auto& gpu = it.world().get_mut<SpringRenderer>();
+            systems::upload_spring_positions_to_gpu(ecs, gpu);
+        }).disable(0);
+
+    ecs.system("Draw Springs GPU")
+        .kind(graphics::phase_on_render)
+        .run([&](flecs::iter& it) {
+            // auto& gpu = it.world().get_mut<SpringRenderer>();
+            systems::draw_springs_gpu(gpu);
+        }).disable(0);
 
     ecs.system("DrawTimingInfo")
         .kind(graphics::phase_post_render)
@@ -150,10 +153,10 @@ int main() {
             ClothConfig cfg;
             cfg.width = 50;
             cfg.height = 50;
-            cfg.mass = 1.0;
-            cfg.k_s = 1000.0;
-            cfg.k_b = 100.0;
-            // cfg.k_d = 0.1;
+            cfg.mass = 1;
+            cfg.k_s = 10000.0;
+            cfg.k_b = 10.0;
+            cfg.k_d = 0.0;
             cfg.spacing = 1;
             cfg.offset = Vector3r(-cfg.width/2.0, cfg.height/2.0, 0);
             create_cloth(ecs, cfg);
@@ -164,7 +167,8 @@ int main() {
             auto n = scene.num_particles;
             solver.particle_count = n;
             solver.b.resize(n * 3);
-            solver.x.resize(n * 3);
+            solver.x.setZero(n * 3);
+            solver.x_prev.setZero(n * 3);
             solver.A.resize(n * 3, n * 3);
         });
 
@@ -203,7 +207,7 @@ int main() {
             // build lhs, A
             // LHS = M + h^2 * ddE_ddx  (mass matrix + timestep^2 * Hessian)
             collect_mass.run(dt);
-            // collect_spring_hessian.run(dt);
+            collect_spring_hessian.run(dt);
             
             // solve for x
             solve.run(); 

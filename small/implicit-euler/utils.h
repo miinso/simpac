@@ -7,11 +7,11 @@
 struct ClothConfig {
     int width = 10;      // number of particles in width
     int height = 10;     // number of particles in height
-    Real spacing = 0.1;  // distance between particles
-    Real mass = 1.0;     // mass per particle
-    Real k_s = 1000.0;   // spring (weft, warp, diagonal) stiffness
-    Real k_b = 100.0;    // spring bending stiffness
-    Real k_d = 10.0;     // particle damping
+    Real spacing = Real(0.1);  // distance between particles
+    Real mass = Real(1.0);     // mass per particle
+    Real k_s = Real(1000.0);   // spring (weft, warp, diagonal) stiffness
+    Real k_b = Real(100.0);    // spring bending stiffness
+    Real k_d = Real(1.0);     // particle damping
     Vector3r offset = Vector3r::Zero();
 };
 
@@ -38,7 +38,7 @@ inline void create_cloth(flecs::world& world, const ClothConfig& cfg) {
                 .set(Velocity{Vector3r::Zero()})
                 .set(Acceleration{Vector3r::Zero()})
                 .set(Mass{cfg.mass})
-                .set(InverseMass{1.0 / cfg.mass})
+                .set(InverseMass{Real(1.0) / cfg.mass})
                 .set(ParticleIndex{particle_count++})
                 .add<Particle>();
 
@@ -88,7 +88,7 @@ inline void create_cloth(flecs::world& world, const ClothConfig& cfg) {
                 auto diagonal1 = get_particle(x + 1, y + 1);
                 world.entity().set(Spring{
                     current, diagonal1,
-                    cfg.spacing * std::sqrt(2.0),
+                    cfg.spacing * std::sqrt(Real(2.0)),
                     cfg.k_s,
                     cfg.k_d
                 });
@@ -98,7 +98,7 @@ inline void create_cloth(flecs::world& world, const ClothConfig& cfg) {
                 auto down = get_particle(x, y + 1);
                 world.entity().set(Spring{
                     right, down,
-                    cfg.spacing * std::sqrt(2.0),
+                    cfg.spacing * std::sqrt(Real(2.0)),
                     cfg.k_s,
                     cfg.k_d
                 });
@@ -110,9 +110,9 @@ inline void create_cloth(flecs::world& world, const ClothConfig& cfg) {
                 auto right2 = get_particle(x + 2, y);
                 world.entity().set(Spring{
                     current, right2,
-                    cfg.spacing * 2.0,
+                    cfg.spacing * Real(2.0),
                     cfg.k_b,
-                    cfg.k_d * 0.5
+                    cfg.k_d * Real(0.5)
                 });
                 spring_count++;
             }
@@ -121,9 +121,9 @@ inline void create_cloth(flecs::world& world, const ClothConfig& cfg) {
                 auto down2 = get_particle(x, y + 2);
                 world.entity().set(Spring{
                     current, down2,
-                    cfg.spacing * 2.0,
+                    cfg.spacing * Real(2.0),
                     cfg.k_b,
-                    cfg.k_d * 0.5
+                    cfg.k_d * Real(0.5)
                 });
                 spring_count++;
             }
@@ -133,10 +133,11 @@ inline void create_cloth(flecs::world& world, const ClothConfig& cfg) {
     world.get_mut<Scene>().num_springs = spring_count;
     
     // Pin top corners (optional)
-    // get_particle(0, 0).set(InverseMass{0.0}).add<IsPinned>();
-    // get_particle(cfg.width - 1, 0).set(InverseMass{0.0}).add<IsPinned>();
-    for (int i = 0; i < cfg.width; ++i) {
-        get_particle(i, 0)
-            .add<IsPinned>();
-    }
+    get_particle(0, 0).set(InverseMass{0}).add<IsPinned>();
+    get_particle(cfg.width - 1, 0).set(InverseMass{0}).add<IsPinned>();
+    
+    // for (int i = 0; i < cfg.width; ++i) {
+    //     get_particle(i, 0)
+    //         .add<IsPinned>();
+    // }
 }

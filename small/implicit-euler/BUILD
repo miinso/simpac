@@ -14,8 +14,8 @@ cc_binary(
         "@platforms//os:emscripten": [
             "-DPLATFORM_WEB",
             "-Os",
-            "-g0",
-            "-DNDEBUG",
+            # "-g0",
+            # "-DNDEBUG",
         ],
         "//conditions:default": [
             "-DPLATFORM_DESKTOP",
@@ -30,33 +30,34 @@ cc_binary(
     ],
     linkopts = select({
         "@platforms//os:emscripten": [
-            # "-sWASM=1",
+            # with known memory usage and expected size
+            # "-sALLOW_MEMORY_GROWTH=0", # sometimes it's a good idea to clamp it
+            # "-sSTACK_SIZE=1mb",
+            # "-sINITIAL_HEAP=4mb",
+            # with no picture of memory footprint
             "-sALLOW_MEMORY_GROWTH=1",
-            # "-sNO_EXIT_RUNTIME=0",
-            "-sSTACK_SIZE=1mb",
+            "-sSTACK_SIZE=16mb",
+            "-sINITIAL_HEAP=16mb",
+            "-sMAXIMUM_MEMORY=1024mb", # paired with allow_memory_growth
+            # ---
             "-sSINGLE_FILE",
-            # "-sASSERTIONS=1",
-            # "-sDISABLE_EXCEPTION_CATCHING=2",  # Enable exception catching in Emscripten
-            # "-sERROR_ON_UNDEFINED_SYMBOLS=0",
-            # "-pthread",  # requires wasm_cc_binary `threads` flag to be raised
-            # "-sPTHREAD_POOL_SIZE=navigator.hardwareConcurrency",
-            # "-sPROXY_TO_PTHREAD",
-            # "--shell-file resources/index.html",
-            "-Os",
-            # "-sWASM_BIGINT",
-            # "-flto",
-            "-g0",
-            # MODULARIZE for SPA reloading
+            "-sASSERTIONS=1",
+            # "-pthread", # this introduces the SharedArrayBuffer
+            "-O2",
+            # "-g0",
             "-sMODULARIZE=1",
             "-sEXPORT_NAME=createModule",
+            "-sMIN_WEBGL_VERSION=2",
+            "-sMAX_WEBGL_VERSION=2",
+            # "-sFULL_ES3=1",
             # "-sUSE_GLFW=3",
-            # "-sUSE_WEBGL2=1",
-            # "-sMIN_WEBGL_VERSION=2",
-            # "-sMAX_WEBGL_VERSION=2",
             "-sENVIRONMENT=web,worker",
-            # "-sEXPORT_ES6=1",
             "-sEXPORTED_RUNTIME_METHODS=['ccall','cwrap']",
             "-sEXPORTED_FUNCTIONS=['_main','_emscripten_shutdown','_emscripten_resize']",
+            "--embed-file resources/shaders/glsl300es/spring.fs@resources/shaders/glsl300es/spring.fs",
+            "--embed-file resources/shaders/glsl300es/spring.vs@resources/shaders/glsl300es/spring.vs",
+            "--embed-file resources/generic.fnt@resources/generic.fnt",
+            "--embed-file resources/generic.png@resources/generic.png",
         ],
         "//conditions:default": [],
     }),

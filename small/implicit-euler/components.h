@@ -4,9 +4,12 @@
 #include <Eigen/Sparse>
 #include <flecs.h>
 #include <vector>
+#include <deque>
+#include <string>
 
-using Real = double;
+using Real = float;
 using Vector3r = Eigen::Matrix<Real, 3, 1, Eigen::DontAlign>;
+using Matrix3r = Eigen::Matrix<Real, 3, 3>;
 using VectorXr = Eigen::Matrix<Real, Eigen::Dynamic, 1>;
 using ArrayXr = Eigen::Array<Real, Eigen::Dynamic, 1>;
 using MatrixXr = Eigen::Matrix<Real, Eigen::Dynamic, Eigen::Dynamic>;
@@ -46,6 +49,7 @@ struct Solver {
     Eigen::SparseMatrix<Real> A; // system matrix (3n x 3n)
     VectorXr b; // rhs vector (3n x 1)
     VectorXr x; // solution (3n x 1)
+    VectorXr x_prev; // prev soultion (3n x 1)
 
     std::vector<Eigen::Triplet<Real>> triplets;
     int particle_count = 0;
@@ -57,9 +61,14 @@ struct Solver {
     // CG solver stats (updated each solve)
     int cg_iterations = 0;
     Real cg_error = 0;
-    
-    // Solver iterations per step
-    int solve_iter = 10;
+
+    // CG history log (for display)
+    std::deque<std::string> cg_history;
+    int cg_history_max_lines = 15;
+
+    // Eigen::ConjugateGradient<Eigen::SparseMatrix<Real>, Eigen::Lower|Eigen::Upper, Eigen::IncompleteCholesky<Real>> cg;
+    Eigen::ConjugateGradient<Eigen::SparseMatrix<Real>, Eigen::Lower|Eigen::Upper, Eigen::IdentityPreconditioner> cg;
+    // Eigen::ConjugateGradient<Eigen::SparseMatrix<Real>> cg;
 };
 
 // Scene configuration and state

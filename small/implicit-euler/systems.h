@@ -7,7 +7,11 @@
 #include <rlgl.h>
 #include <raymath.h>
 
-#include <glad/gl.h>
+#ifdef __EMSCRIPTEN__
+    #include <GLES3/gl3.h> // for browser
+#else
+    #include <glad/gles2.h>
+#endif
 
 #include <cmath>
 
@@ -44,6 +48,9 @@ inline void collect_spring_gradient(Spring& spring, Real dt, Solver& solver) {
     auto a = spring.particle_a;
     auto b = spring.particle_b;
 
+    bool a_pinned = a.has<IsPinned>();
+    bool b_pinned = b.has<IsPinned>();
+
     auto x_a = a.get<Position>().value;
     auto x_b = b.get<Position>().value;
     auto v_a = a.get<Velocity>().value;
@@ -65,8 +72,9 @@ inline void collect_spring_gradient(Spring& spring, Real dt, Solver& solver) {
     Vector3r grad_b = -grad_a;
 
     // RHS contribution: -h*∇E (elastic forces)
-    solver.b.segment<3>(idx_a * 3) += -dt * grad_a;
-    solver.b.segment<3>(idx_b * 3) += -dt * grad_b;
+    // Only add contributions for non-pinned particles
+    if (!a_pinned) solver.b.segment<3>(idx_a * 3) += -dt * grad_a;
+    if (!b_pinned) solver.b.segment<3>(idx_b * 3) += -dt * grad_b;
 }
 
 inline void collect_mass(const Mass& m, const ParticleIndex& idx, Solver& solver) {
@@ -76,8 +84,12 @@ inline void collect_mass(const Mass& m, const ParticleIndex& idx, Solver& solver
 }
 
 inline void collect_spring_hessian(Spring& spring, Real dt, Solver& solver) {
+    // maybe i should merge grad/hess evals into one system
     auto a = spring.particle_a;
     auto b = spring.particle_b;
+
+    bool a_pinned = a.has<IsPinned>();
+    bool b_pinned = b.has<IsPinned>();
 
     auto x_a = a.get<Position>().value;
     auto x_b = b.get<Position>().value;
@@ -87,28 +99,69 @@ inline void collect_spring_hessian(Spring& spring, Real dt, Solver& solver) {
     auto diff = x_a - x_b;
     auto l = diff.norm();
     if (l < kEpsilon) return;
-    
+
     auto dir = diff / l;
+
+    Real k = spring.k_s;
+    Real L0 = spring.rest_length;
+    Real ratio = L0 / l;
+
+    Matrix3r I = Matrix3r::Identity();
+    Matrix3r ddT = dir * dir.transpose();
+    Matrix3r H_block = k * ((1.0 - ratio) * I + ratio * ddT);
+
+    Real h2 = dt * dt;
+
+    for (int r = 0; r < 3; ++r) {
+        for (int c = 0; c < 3; ++c) {
+            Real val = h2 * H_block(r, c);
+            // diagonal blocks
+            if (!a_pinned) solver.triplets.push_back({idx_a*3+r, idx_a*3+c, val});
+            if (!b_pinned) solver.triplets.push_back({idx_b*3+r, idx_b*3+c, val});
+            // off-diagonal blocks (only if both particles are not pinned)
+            if (!a_pinned && !b_pinned) {
+                solver.triplets.push_back({idx_a*3+r, idx_b*3+c, -val});
+                solver.triplets.push_back({idx_b*3+r, idx_a*3+c, -val});
+            }
+        }
+    }
 }
+
 
 inline void solve(Solver& solver) {
     // build sparse mat
     solver.A.setFromTriplets(solver.triplets.begin(), solver.triplets.end());
 
-    Eigen::ConjugateGradient<Eigen::SparseMatrix<Real>> cg;
-    cg.setMaxIterations(solver.cg_max_iter);
-    cg.setTolerance(solver.cg_tolerance);
-    cg.compute(solver.A);
-    solver.x = cg.solveWithGuess(solver.b, solver.x); // warm start
+    solver.cg.setMaxIterations(solver.cg_max_iter);
+    solver.cg.setTolerance(solver.cg_tolerance);
+    
+    if (solver.cg.info() == Eigen::InvalidInput) {
+        solver.cg.compute(solver.A);
+    } else {
+        solver.cg.factorize(solver.A);
+    }
+
+    solver.x = solver.cg.solveWithGuess(solver.b, solver.x_prev); // warm start, should check same size
+    // solver.x = cg.solve(solver.b); // cold start
+    solver.x_prev = solver.x;
 
     // store stats for debug display
-    solver.cg_iterations = (int)cg.iterations();
-    solver.cg_error = cg.error();
+    solver.cg_iterations = (int)solver.cg.iterations();
+    solver.cg_error = solver.cg.error();
 
     static int frame = 0;
-    if (++frame % 60 == 0 || cg.info() != Eigen::Success) {
-        printf("[%d] CG: %d iter, err=%e%s\n", frame, solver.cg_iterations, solver.cg_error,
-               cg.info() != Eigen::Success ? " FAILED" : "");
+    if (++frame % 50 == 0 || solver.cg.info() != Eigen::Success) {
+        char buf[128];
+        snprintf(buf, sizeof(buf), "[%d] CG: %d iter, err=%e%s",
+                 frame, solver.cg_iterations, solver.cg_error,
+                 solver.cg.info() != Eigen::Success ? " FAILED" : "");
+
+        printf("%s\n", buf);
+
+        solver.cg_history.push_back(buf);
+        if (solver.cg_history.size() > (size_t)solver.cg_history_max_lines) {
+            solver.cg_history.pop_front();
+        }
     }
 }
 
@@ -117,7 +170,7 @@ inline void ground_collision(Position& x, const OldPosition& x_old, Real dt, Rea
     if (x.value.y() < 0) {
         x.value.y() = 0;
         auto displacement = x.value - x_old.value;
-        auto friction_factor = std::min(1.0, dt * friction);
+        auto friction_factor = std::min(Real(1), dt * friction);
         x.value.x() = x_old.value.x() + displacement.x() * (1 - friction_factor);
         x.value.z() = x_old.value.z() + displacement.z() * (1 - friction_factor);
     }
@@ -150,13 +203,10 @@ inline void draw_spring(Spring& spring) {
         color = ColorLerp(GREEN, BLUE, t);
     }
     
-    float thickness = 0.002f;
-    // DrawCylinderEx(toRay3(x1), toRay3(x2), thickness, thickness, 3, color);
     DrawLine3D(toRay3(x1), toRay3(x2), color);
 }
 
 inline void draw_particle(const Position& x, const Mass& m) {
-    // DrawSphere(toRay3(x.value), 0.05f * std::pow((float)m.value, 1.0f / 3.0f), BLUE);
     DrawPoint3D(toRay3(x.value), BLUE);
 }
 
@@ -174,7 +224,7 @@ inline void draw_timing_info(flecs::iter& it) {
         "\n"
         "Particles: %d  Springs: %d\n"
         "\n"
-        "Strain: red(tension) green(rest) blue(compression)\n"
+        "Strain: Red (tension), Green (rest), Blue (compression)\n"
         "Camera: WASDQE / Arrows / MouseDrag / MouseScroll",
         scene.wall_time, scene.sim_time, scene.dt,
         scene.frame_count, scene.sim_time / (scene.wall_time + 1e-9),
@@ -182,6 +232,21 @@ inline void draw_timing_info(flecs::iter& it) {
         scene.num_particles, scene.num_springs);
     DrawTextEx(font, buf, {21, 41}, 12, 0, WHITE);
     DrawTextEx(font, buf, {20, 40}, 12, 0, DARKGRAY);
+
+    // Draw CG history (right-aligned)
+    if (!solver.cg_history.empty()) {
+        std::string history_text;
+        for (const auto& line : solver.cg_history) {
+            history_text += line + "\n";
+        }
+
+        int screen_width = GetScreenWidth();
+        Vector2 text_size = MeasureTextEx(font, history_text.c_str(), 12, 0);
+        float x = screen_width - text_size.x - 20;  // 20px padding from right edge
+
+        DrawTextEx(font, history_text.c_str(), {x + 1, 21}, 12, 0, BLACK);  // shadow
+        // DrawTextEx(font, history_text.c_str(), {x, 20}, 12, 0, WHITE);
+    }
 }
 
 // =========================================================================
@@ -303,6 +368,7 @@ inline void draw_springs_gpu(SpringRenderer& gpu) {
 
     // draw all springs in single call
     glDrawArrays(GL_LINES, 0, gpu.num_springs * 2);
+    // we directly use gl call here
 
     // cleanup
     rlDisableVertexAttribute(0);
