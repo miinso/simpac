@@ -142,7 +142,7 @@ inline void solve(Solver& solver) {
     }
 
     solver.x = solver.cg.solveWithGuess(solver.b, solver.x_prev); // warm start, should check same size
-    // solver.x = cg.solve(solver.b); // cold start
+    // solver.x = solver.cg.solve(solver.b); // cold start
     solver.x_prev = solver.x;
 
     // store stats for debug display
@@ -229,7 +229,7 @@ inline void draw_timing_info(flecs::iter& it) {
         scene.wall_time, scene.sim_time, scene.dt,
         scene.frame_count, scene.sim_time / (scene.wall_time + 1e-9),
         solver.cg_iterations, solver.cg_max_iter, solver.cg_tolerance, solver.cg_error,
-        scene.num_particles, scene.num_springs);
+        scene.num_particles(), scene.num_springs());
     DrawTextEx(font, buf, {21, 41}, 12, 0, WHITE);
     DrawTextEx(font, buf, {20, 40}, 12, 0, DARKGRAY);
 
@@ -253,64 +253,59 @@ inline void draw_timing_info(flecs::iter& it) {
 // GPU Spring Rendering
 // =========================================================================
 
-inline void init_spring_gpu_renderer(flecs::world& ecs, SpringRenderer& gpu) {
-    auto& scene = ecs.get<Scene>();
-    gpu.num_particles = scene.num_particles;
-    gpu.num_springs = scene.num_springs;
-
-    // collect spring connectivity and rest lengths
-    gpu.spring_particle_indices.reserve(gpu.num_springs * 2);
-    gpu.rest_lengths.reserve(gpu.num_springs);
-
-    ecs.each<Spring>([&](flecs::entity e, Spring& s) {
-        gpu.spring_particle_indices.push_back(s.particle_a.get<ParticleIndex>().value);
-        gpu.spring_particle_indices.push_back(s.particle_b.get<ParticleIndex>().value);
-        gpu.rest_lengths.push_back((float)s.rest_length);
-    });
-
-    // allocate staging buffer: 8 floats/vertex, 2 vertices/spring
-    gpu.staging_buffer.resize(gpu.num_springs * 2 * 8);
-
-    // create GPU resources
-    gpu.vao = rlLoadVertexArray();
-    rlEnableVertexArray(gpu.vao);
-    gpu.vbo = rlLoadVertexBuffer(nullptr, gpu.staging_buffer.size() * sizeof(float), true);
-    rlDisableVertexArray();
-
-    // Load and compile shaders
-    Shader shader = LoadShader(
-        graphics::npath("resources/shaders/glsl300es/spring.vs").c_str(),
-        graphics::npath("resources/shaders/glsl300es/spring.fs").c_str()
-    );
-
-    if (!IsShaderValid(shader)) {
-        gpu.shader_id = 0;
-        return;
-    }
-
-    gpu.shader_id = shader.id;
-    gpu.u_viewproj_loc = GetShaderLocation(shader, "u_viewproj");
-    gpu.u_strain_scale_loc = GetShaderLocation(shader, "u_strain_scale");
-}
-
 inline void upload_spring_positions_to_gpu(flecs::world& ecs, SpringRenderer& gpu) {
     if (gpu.shader_id == 0) return;
 
-    // Build position lookup array
-    int max_idx = 0;
-    auto query = ecs.query<const Position, const ParticleIndex>();
-    query.each([&](flecs::entity e, const Position& pos, const ParticleIndex& idx) {
-        max_idx = std::max(max_idx, idx.value);
-    });
+    auto& scene = ecs.get<Scene>();
+    int num_particles = scene.num_particles();
+    int num_springs = scene.num_springs();
 
-    std::vector<Vector3r> positions(max_idx + 1);
-    query.each([&](flecs::entity e, const Position& pos, const ParticleIndex& idx) {
-        positions[idx.value] = pos.value;
+    // Lazy buffer allocation/reallocation on topology change
+    if (gpu.allocated_springs != num_springs) {
+        gpu.allocated_springs = num_springs;
+
+        // Collect spring connectivity
+        gpu.spring_particle_indices.clear();
+        gpu.spring_particle_indices.reserve(num_springs * 2);
+        gpu.rest_lengths.clear();
+        gpu.rest_lengths.reserve(num_springs);
+
+        ecs.each<Spring>([&](flecs::entity e, Spring& s) {
+            gpu.spring_particle_indices.push_back(s.particle_a.get<ParticleIndex>().value);
+            gpu.spring_particle_indices.push_back(s.particle_b.get<ParticleIndex>().value);
+            gpu.rest_lengths.push_back((float)s.rest_length);
+        });
+
+        // Resize staging buffer
+        gpu.staging_buffer.resize(num_springs * 2 * 8);
+
+        // Recreate GPU buffers
+        if (gpu.vao) rlUnloadVertexArray(gpu.vao);
+        if (gpu.vbo) rlUnloadVertexBuffer(gpu.vbo);
+
+        gpu.vao = rlLoadVertexArray();
+        rlEnableVertexArray(gpu.vao);
+        gpu.vbo = rlLoadVertexBuffer(nullptr, gpu.staging_buffer.size() * sizeof(float), true);
+        rlDisableVertexArray();
+    }
+
+    if (num_springs == 0) return;
+
+    // Collect positions using cached query with run + iter pattern
+    std::vector<Vector3r> positions(num_particles);
+    gpu.position_query.run([&](flecs::iter& it) {
+        while (it.next()) {
+            auto pos = it.field<const Position>(0);
+            auto idx = it.field<const ParticleIndex>(1);
+            for (auto i : it) {
+                positions[idx[i].value] = pos[i].value;
+            }
+        }
     });
 
     // Build vertex buffer (2 vertices per spring)
     int vert_idx = 0;
-    for (int i = 0; i < gpu.num_springs; ++i) {
+    for (int i = 0; i < num_springs; ++i) {
         int idx_a = gpu.spring_particle_indices[i * 2];
         int idx_b = gpu.spring_particle_indices[i * 2 + 1];
         Vector3r pa = positions[idx_a];
@@ -367,8 +362,7 @@ inline void draw_springs_gpu(SpringRenderer& gpu) {
     rlSetVertexAttribute(3, 1, RL_FLOAT, false, stride, 7 * sizeof(float));      // endpoint
 
     // draw all springs in single call
-    glDrawArrays(GL_LINES, 0, gpu.num_springs * 2);
-    // we directly use gl call here
+    glDrawArrays(GL_LINES, 0, gpu.allocated_springs * 2);
 
     // cleanup
     rlDisableVertexAttribute(0);

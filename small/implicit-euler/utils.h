@@ -19,8 +19,9 @@ inline void create_cloth(flecs::world& world, const ClothConfig& cfg) {
     // Create particles in grid
     std::vector<flecs::entity> particles;
     particles.resize(cfg.width * cfg.height);
-    
-    int particle_count = world.get_mut<Scene>().num_particles;
+
+    // Start particle index from current count (for multiple cloths)
+    int particle_count = world.get<Scene>().num_particles();
     
     for (int y = 0; y < cfg.height; y++) {
         for (int x = 0; x < cfg.width; x++) {
@@ -44,9 +45,7 @@ inline void create_cloth(flecs::world& world, const ClothConfig& cfg) {
 
         }
     }
-    
-    world.get_mut<Scene>().num_particles = particle_count;
-    
+
     // Helper to get particle at grid position
     auto get_particle = [&](int x, int y) -> flecs::entity {
         if (x < 0 || x >= cfg.width || y < 0 || y >= cfg.height)
@@ -55,23 +54,21 @@ inline void create_cloth(flecs::world& world, const ClothConfig& cfg) {
     };
     
     // Create springs
-    int spring_count = 0;
     for (int y = 0; y < cfg.height; y++) {
         for (int x = 0; x < cfg.width; x++) {
             auto current = get_particle(x, y);
-            
+
             // Structural springs (weft and warp)
             if (x < cfg.width - 1) {  // horizontal (weft)
                 auto right = get_particle(x + 1, y);
                 world.entity().set(Spring{
-                    current, right, 
-                    cfg.spacing, 
-                    cfg.k_s, 
+                    current, right,
+                    cfg.spacing,
+                    cfg.k_s,
                     cfg.k_d
                 });
-                spring_count++;
             }
-            
+
             if (y < cfg.height - 1) {  // vertical (warp)
                 auto down = get_particle(x, y + 1);
                 world.entity().set(Spring{
@@ -80,9 +77,8 @@ inline void create_cloth(flecs::world& world, const ClothConfig& cfg) {
                     cfg.k_s,
                     cfg.k_d
                 });
-                spring_count++;
             }
-            
+
             // Shear springs (diagonal)
             if (x < cfg.width - 1 && y < cfg.height - 1) {
                 auto diagonal1 = get_particle(x + 1, y + 1);
@@ -92,8 +88,7 @@ inline void create_cloth(flecs::world& world, const ClothConfig& cfg) {
                     cfg.k_s,
                     cfg.k_d
                 });
-                spring_count++;
-                
+
                 auto right = get_particle(x + 1, y);
                 auto down = get_particle(x, y + 1);
                 world.entity().set(Spring{
@@ -102,9 +97,8 @@ inline void create_cloth(flecs::world& world, const ClothConfig& cfg) {
                     cfg.k_s,
                     cfg.k_d
                 });
-                spring_count++;
             }
-            
+
             // Bending springs (skip one particle)
             if (x < cfg.width - 2) {  // horizontal bending
                 auto right2 = get_particle(x + 2, y);
@@ -114,9 +108,8 @@ inline void create_cloth(flecs::world& world, const ClothConfig& cfg) {
                     cfg.k_b,
                     cfg.k_d * Real(0.5)
                 });
-                spring_count++;
             }
-            
+
             if (y < cfg.height - 2) {  // vertical bending
                 auto down2 = get_particle(x, y + 2);
                 world.entity().set(Spring{
@@ -125,16 +118,17 @@ inline void create_cloth(flecs::world& world, const ClothConfig& cfg) {
                     cfg.k_b,
                     cfg.k_d * Real(0.5)
                 });
-                spring_count++;
             }
         }
     }
     
-    world.get_mut<Scene>().num_springs = spring_count;
-    
-    // Pin top corners (optional)
+    // pin top corners
     get_particle(0, 0).set(InverseMass{0}).add<IsPinned>();
     get_particle(cfg.width - 1, 0).set(InverseMass{0}).add<IsPinned>();
+
+    // bottom corners
+    // get_particle(0, cfg.height - 1).set(InverseMass{0}).add<IsPinned>();
+    // get_particle(cfg.width - 1, cfg.height - 1).set(InverseMass{0}).add<IsPinned>();
     
     // for (int i = 0; i < cfg.width; ++i) {
     //     get_particle(i, 0)

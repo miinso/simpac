@@ -17,33 +17,60 @@ int main() {
 
     flecs::world ecs;
 
-    // Scene setup
+    // Scene setup with on_set hook for query initialization
     Vector3r gravity(0, -9.81, 0);
-    ecs.component<Scene>().add(flecs::Singleton);
+    ecs.component<Scene>()
+        .on_set([](flecs::entity e, Scene& scene) {
+            auto world = e.world();
+            scene.particle_query = world.query_builder<Particle>().cached().build();
+            scene.spring_query = world.query_builder<Spring>().cached().build();
+        })
+        .add(flecs::Singleton);
     ecs.set<Scene>({
         0.01666,       // dt (timestep)
-        gravity     // gravity
-        // rest are default initialized
+        gravity        // gravity
     });
 
-    ecs.component<Solver>().add(flecs::Singleton);
+    ecs.component<Solver>()
+        .add(flecs::Singleton);
     auto& solver = ecs.ensure<Solver>();
     solver.b.setZero();
     solver.A.setZero();
     solver.cg_tolerance = 1e-6;
     solver.cg_max_iter = 100;
 
-    // Register SpringRenderer as singleton component
-    ecs.component<SpringRenderer>().add(flecs::Singleton);
-    auto& gpu = ecs.ensure<SpringRenderer>();
+    // SpringRenderer with on_set hook for query and shader initialization
+    ecs.component<SpringRenderer>()
+        .on_set([](flecs::entity e, SpringRenderer& gpu) {
+            auto world = e.world();
+            // Cached query for per-frame position lookup
+            gpu.position_query = world.query_builder<const Position, const ParticleIndex>()
+                .cached()
+                .build();
+            // Load shader (requires graphics to be initialized first)
+            Shader shader = LoadShader(
+                graphics::npath("resources/shaders/glsl300es/spring.vs").c_str(),
+                graphics::npath("resources/shaders/glsl300es/spring.fs").c_str()
+            );
+            if (IsShaderValid(shader)) {
+                gpu.shader_id = shader.id;
+                gpu.u_viewproj_loc = GetShaderLocation(shader, "u_viewproj");
+                gpu.u_strain_scale_loc = GetShaderLocation(shader, "u_strain_scale");
+            }
+        })
+        .add(flecs::Singleton);
 
-    // Initialize graphics
+    // Initialize graphics (must be before SpringRenderer set for shader loading)
     graphics::init(ecs);
     graphics::init_window(800, 600, "Implicit Euler");
     graphics::init_camera({
         {50.0f, 10.0f, 50.0f}, // position
         {0.0f, 0.5f, 0.0f}, // target
     });
+
+    // Now set SpringRenderer to trigger on_set hook (after graphics init)
+    ecs.set<SpringRenderer>({});
+    auto& gpu = ecs.get_mut<SpringRenderer>();
 
     // =========================================================================
     // Simulation systems (we set .kind(0) to manually run them
@@ -145,42 +172,38 @@ int main() {
     // auto sim_tick = ecs.timer().interval(10.0f / 1000.0f);
     auto sim_tick = ecs.get<Scene>().dt;
 
-    // build particle grid cloth
+    // Build particle grid cloth (immediate mode to ensure query counts are correct)
     ecs.system("Create Cloth")
         .kind(flecs::OnStart)
+        .immediate()
         .run([&](flecs::iter& it) {
-            // build cloth
+            auto world = it.world();
+
+            // Suspend deferred operations so entities are created immediately
+            world.defer_suspend();
+
             ClothConfig cfg;
-            cfg.width = 50;
-            cfg.height = 50;
+            cfg.width = 10;
+            cfg.height = 40;
             cfg.mass = 1;
             cfg.k_s = 10000.0;
             cfg.k_b = 10.0;
-            cfg.k_d = 0.0;
+            cfg.k_d = 0.05;
             cfg.spacing = 1;
             cfg.offset = Vector3r(-cfg.width/2.0, cfg.height/2.0, 0);
             create_cloth(ecs, cfg);
 
-            auto& scene = it.world().get<Scene>();
-            auto& solver = it.world().get_mut<Solver>();
+            world.defer_resume();
 
-            auto n = scene.num_particles;
-            solver.particle_count = n;
+            // Now query counts are correct
+            auto& scene = world.get<Scene>();
+            auto& solver = world.get_mut<Solver>();
+
+            int n = scene.num_particles();
             solver.b.resize(n * 3);
             solver.x.setZero(n * 3);
             solver.x_prev.setZero(n * 3);
             solver.A.resize(n * 3, n * 3);
-        });
-
-    // Initialize GPU renderer on first frame (after entities are committed)
-    ecs.system("Init Spring Renderer")
-        .kind(flecs::PreUpdate)
-        .run([&](flecs::iter& it) {
-            static bool initialized = false;
-            if (!initialized) {
-                systems::init_spring_gpu_renderer(ecs, gpu);
-                initialized = true;
-            }
         });
 
     ecs.system("Implicit Euler")
