@@ -58,6 +58,11 @@ int main() {
                 gpu.u_strain_scale_loc = GetShaderLocation(shader, "u_strain_scale");
             }
         })
+        .on_remove([](flecs::entity e, SpringRenderer& gpu) {
+            if (gpu.shader_id) UnloadShader({gpu.shader_id});
+            if (gpu.vbo) rlUnloadVertexBuffer(gpu.vbo);
+            if (gpu.vao) rlUnloadVertexArray(gpu.vao);
+        })
         .add(flecs::Singleton);
 
     // Initialize graphics (must be before SpringRenderer set for shader loading)
