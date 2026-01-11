@@ -101,4 +101,17 @@ inline void set_draw_fps(bool draw) {
     detail::draw_fps = draw;
 }
 
+// ============================================================================
+// Camera helpers
+// ============================================================================
+
+// Create a camera entity with optional activation
+// If make_active is true, this camera becomes the rendering camera
+flecs::entity create_camera(flecs::world& ecs, const char* name,
+                            const Camera& cam = {},
+                            bool make_active = false);
+
+// Switch the active camera for rendering
+void set_active_camera(flecs::world& ecs, flecs::entity camera_entity);
+
 } // namespace graphics

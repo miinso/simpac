@@ -20,10 +20,20 @@ namespace {
         auto* ecs = detail::ecs;
 
         // Camera update in OnLoad (before rendering)
-        ecs->system("graphics::update_camera")
+        // Query for Camera with ActiveCamera tag
+        ecs->system<Camera>("graphics::update_camera")
+            .with<ActiveCamera>()
             .kind(flecs::OnLoad)
-            .run([](flecs::iter& it) {
-                update_camera_controls();
+            .each([](Camera& cam) {
+                update_camera_controls(cam);
+            });
+
+        // Sync active camera to raylib before rendering
+        ecs->system<const Camera>("graphics::sync_camera")
+            .with<ActiveCamera>()
+            .kind(flecs::PostUpdate)
+            .each([](const Camera& cam) {
+                detail::raylib_camera = to_raylib(cam);
             });
 
         // PreRender: begin drawing, clear, update lighting
@@ -42,7 +52,7 @@ namespace {
 
                 // Update lighting with camera position if enabled
                 if (is_lighting_enabled()) {
-                    update_lighting_camera_pos(detail::camera.position);
+                    update_lighting_camera_pos(detail::raylib_camera.position);
                 }
             });
 
@@ -52,7 +62,7 @@ namespace {
             .run([](flecs::iter& it) {
                 if (!is_render_thread()) return;
 
-                BeginMode3D(detail::camera);
+                BeginMode3D(detail::raylib_camera);
 
                 // Enable shader mode if lighting is active
                 if (is_lighting_enabled()) {
@@ -114,6 +124,9 @@ namespace {
 void init(flecs::world& world) {
     detail::ecs = &world;
 
+    // Register camera components with reflection
+    register_camera_components(world);
+
     // Create custom rendering phases
     phase_pre_render = world.entity("PreRender")
         .add(flecs::Phase)
@@ -154,7 +167,16 @@ void init_window(const WindowConfig& config) {
 #endif
 
     clear_color = config.clear_color;
-    init_camera();
+
+    // Create default camera entity if none exists
+    if (detail::ecs) {
+        auto active_cam_query = detail::ecs->query<Camera, ActiveCamera>();
+        if (active_cam_query.count() == 0) {
+            detail::ecs->entity("DefaultCamera")
+                .set<Camera>({})
+                .add<ActiveCamera>();
+        }
+    }
 
     // Load custom font
     std::string font_path = normalized_path("resources/generic.fnt");
@@ -223,6 +245,42 @@ void run_main_loop(std::function<void()> update) {
     std::printf("graphics::destroying native while loop\n");
     close_window();
 #endif
+}
+
+// ============================================================================
+// Camera helper functions
+// ============================================================================
+
+flecs::entity create_camera(flecs::world& ecs, const char* name, const Camera& cam, bool make_active) {
+    auto entity = ecs.entity(name).set<Camera>(cam);
+
+    if (make_active) {
+        // Remove ActiveCamera from any existing camera
+        ecs.query_builder<Camera>()
+            .with<ActiveCamera>()
+            .build()
+            .each([](flecs::entity e, Camera&) {
+                e.remove<ActiveCamera>();
+            });
+        entity.add<ActiveCamera>();
+    }
+
+    return entity;
+}
+
+void set_active_camera(flecs::world& ecs, flecs::entity camera_entity) {
+    // Remove ActiveCamera from all cameras
+    ecs.query_builder<Camera>()
+        .with<ActiveCamera>()
+        .build()
+        .each([](flecs::entity e, Camera&) {
+            e.remove<ActiveCamera>();
+        });
+
+    // Add to the specified camera
+    if (camera_entity.has<Camera>()) {
+        camera_entity.add<ActiveCamera>();
+    }
 }
 
 } // namespace graphics

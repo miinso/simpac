@@ -241,10 +241,11 @@ inline void draw_timing_info(flecs::iter& it) {
         }
 
         int screen_width = GetScreenWidth();
+        int screen_height = GetScreenHeight();
         Vector2 text_size = MeasureTextEx(font, history_text.c_str(), 12, 0);
         float x = screen_width - text_size.x - 20;  // 20px padding from right edge
-
-        DrawTextEx(font, history_text.c_str(), {x + 1, 21}, 12, 0, BLACK);  // shadow
+        float y = screen_height - text_size.y;
+        DrawTextEx(font, history_text.c_str(), {x, y}, 12, 0, BLACK);  // shadow
         // DrawTextEx(font, history_text.c_str(), {x, 20}, 12, 0, WHITE);
     }
 }

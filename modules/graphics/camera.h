@@ -1,90 +1,132 @@
 #pragma once
 
+#include <flecs.h>
 #include <raylib.h>
 #include <raymath.h>
 
 namespace graphics {
 
-// Forward declare detail namespace for camera reference
-namespace detail {
-    inline Camera3D camera{};
-}
+// ============================================================================
+// Camera Component - state + controls in one
+// ============================================================================
 
-// Camera configuration - all fields have sensible defaults
-struct CameraConfig {
-    Vector3 position = {5.0f, 5.0f, 5.0f};
-    Vector3 target = {0.0f, 0.0f, 0.0f};
-    Vector3 up = {0.0f, 1.0f, 0.0f};
+struct Camera {
+    // State
+    float position[3] = {5.0f, 5.0f, 5.0f};
+    float target[3] = {0.0f, 0.0f, 0.0f};
+    float up[3] = {0.0f, 1.0f, 0.0f};
     float fovy = 60.0f;
-    int projection = CAMERA_PERSPECTIVE;
-};
+    int projection = 0;  // 0 = CAMERA_PERSPECTIVE, 1 = CAMERA_ORTHOGRAPHIC
 
-// Control speeds for camera movement
-struct CameraControlConfig {
+    // Controls
     float move_speed = 0.1f;
     float rotation_speed = 0.2f;
     float zoom_speed = 1.0f;
+    bool controls_enabled = true;
 };
 
-// Default configs as constexpr
-inline constexpr CameraConfig default_camera_config{
-    {5.0f, 5.0f, 5.0f},  // position
-    {0.0f, 0.0f, 0.0f},  // target
-    {0.0f, 1.0f, 0.0f},  // up
-    60.0f,               // fovy
-    CAMERA_PERSPECTIVE   // projection
-};
+// Tag: which camera is used for rendering
+struct ActiveCamera {};
 
-inline constexpr CameraControlConfig default_control_config{
-    0.1f,  // move_speed
-    0.2f,  // rotation_speed
-    1.0f   // zoom_speed
-};
+// ============================================================================
+// Internal state - raylib Camera3D synced from active Camera component
+// ============================================================================
 
-// Initialize camera with config
-inline void init_camera(const CameraConfig& config = default_camera_config) {
-    auto& cam = detail::camera;
-    cam.position = config.position;
-    cam.target = config.target;
-    cam.up = config.up;
-    cam.fovy = config.fovy;
-    cam.projection = config.projection;
+namespace detail {
+    inline Camera3D raylib_camera{};
 }
 
-// Update camera with WASD + mouse drag + scroll wheel controls
-// WASD/QE: move forward/back/left/right/up/down
-// Mouse drag (left button): rotate
-// Scroll wheel: zoom
-inline void update_camera_controls(const CameraControlConfig& config = default_control_config) {
+// ============================================================================
+// Component registration with reflection (for REST API)
+// ============================================================================
+
+inline void register_camera_components(flecs::world& ecs) {
+    ecs.component<Camera>()
+        .member<float>("position", 3)
+        .member<float>("target", 3)
+        .member<float>("up", 3)
+        .member<float>("fovy")
+        .member<int>("projection")
+        .member<float>("move_speed")
+        .member<float>("rotation_speed")
+        .member<float>("zoom_speed")
+        .member<bool>("controls_enabled");
+
+    ecs.component<ActiveCamera>();
+}
+
+// ============================================================================
+// Conversion helpers
+// ============================================================================
+
+inline Camera3D to_raylib(const Camera& cam) {
+    Camera3D rc{};
+    rc.position = {cam.position[0], cam.position[1], cam.position[2]};
+    rc.target = {cam.target[0], cam.target[1], cam.target[2]};
+    rc.up = {cam.up[0], cam.up[1], cam.up[2]};
+    rc.fovy = cam.fovy;
+    rc.projection = cam.projection;
+    return rc;
+}
+
+inline void from_raylib(Camera& cam, const Camera3D& rc) {
+    cam.position[0] = rc.position.x;
+    cam.position[1] = rc.position.y;
+    cam.position[2] = rc.position.z;
+    cam.target[0] = rc.target.x;
+    cam.target[1] = rc.target.y;
+    cam.target[2] = rc.target.z;
+    cam.up[0] = rc.up.x;
+    cam.up[1] = rc.up.y;
+    cam.up[2] = rc.up.z;
+    cam.fovy = rc.fovy;
+    cam.projection = rc.projection;
+}
+
+// ============================================================================
+// Camera control update (called by system)
+// ============================================================================
+
+inline void update_camera_controls(Camera& cam) {
+    if (!cam.controls_enabled) return;
+
+    // Convert to raylib, apply controls, convert back
+    Camera3D rc = to_raylib(cam);
+
     UpdateCameraPro(
-        &detail::camera,
+        &rc,
         // Movement: WASD for horizontal, QE for vertical
         {
-            static_cast<float>(IsKeyDown(KEY_W) - IsKeyDown(KEY_S)) * config.move_speed,
-            static_cast<float>(IsKeyDown(KEY_D) - IsKeyDown(KEY_A)) * config.move_speed,
-            static_cast<float>(IsKeyDown(KEY_E) - IsKeyDown(KEY_Q)) * config.move_speed
+            static_cast<float>(IsKeyDown(KEY_W) - IsKeyDown(KEY_S)) * cam.move_speed,
+            static_cast<float>(IsKeyDown(KEY_D) - IsKeyDown(KEY_A)) * cam.move_speed,
+            static_cast<float>(IsKeyDown(KEY_E) - IsKeyDown(KEY_Q)) * cam.move_speed
         },
         // Rotation: mouse drag or arrow keys
         {
-            GetMouseDelta().x * static_cast<float>(IsMouseButtonDown(MOUSE_LEFT_BUTTON)) * config.rotation_speed +
+            GetMouseDelta().x * static_cast<float>(IsMouseButtonDown(MOUSE_LEFT_BUTTON)) * cam.rotation_speed +
                 static_cast<float>(IsKeyDown(KEY_RIGHT) - IsKeyDown(KEY_LEFT)) * 1.5f,
-            GetMouseDelta().y * static_cast<float>(IsMouseButtonDown(MOUSE_LEFT_BUTTON)) * config.rotation_speed +
+            GetMouseDelta().y * static_cast<float>(IsMouseButtonDown(MOUSE_LEFT_BUTTON)) * cam.rotation_speed +
                 static_cast<float>(IsKeyDown(KEY_DOWN) - IsKeyDown(KEY_UP)) * 1.5f,
             0.0f
         },
         // Zoom: mouse wheel
-        GetMouseWheelMove() * -config.zoom_speed
+        GetMouseWheelMove() * -cam.zoom_speed
     );
+
+    from_raylib(cam, rc);
 }
 
-// Get current camera (mutable reference for direct manipulation)
-[[nodiscard]] inline Camera3D& get_camera() {
-    return detail::camera;
+// ============================================================================
+// Accessors
+// ============================================================================
+
+// Get the synced raylib camera (updated each frame from active Camera)
+[[nodiscard]] inline Camera3D& get_raylib_camera() {
+    return detail::raylib_camera;
 }
 
-// Get current camera (const reference for read-only access)
-[[nodiscard]] inline const Camera3D& get_camera_const() {
-    return detail::camera;
+[[nodiscard]] inline const Camera3D& get_raylib_camera_const() {
+    return detail::raylib_camera;
 }
 
 } // namespace graphics

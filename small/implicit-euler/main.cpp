@@ -68,10 +68,10 @@ int main() {
     // Initialize graphics (must be before SpringRenderer set for shader loading)
     graphics::init(ecs);
     graphics::init_window(800, 600, "Implicit Euler");
-    graphics::init_camera({
-        {50.0f, 10.0f, 50.0f}, // position
-        {0.0f, 0.5f, 0.0f}, // target
-    });
+    graphics::create_camera(ecs, "MainCamera", {
+        {50.0f, 10.0f, 50.0f},  // position
+        {0.0f, 0.5f, 0.0f},     // target
+    }, true);
 
     // Now set SpringRenderer to trigger on_set hook (after graphics init)
     ecs.set<SpringRenderer>({});
