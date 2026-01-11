@@ -15,7 +15,7 @@ cc_library(
             "c",
             # "-O3",
             "-fno-strict-aliasing",
-            "-pthread",
+            # "-pthread",
         ],
         "//conditions:default": [
             "-std=gnu99",

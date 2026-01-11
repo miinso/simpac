@@ -163,7 +163,6 @@ cc_binary(
             # "-sASSERTIONS=1",
             # "-fexceptions",
             # "-fwasm-exceptions",
-            # "-sUSE_WEBGL2=1",
             # "-sMIN_WEBGL_VERSION=2",
             # "-sMAX_WEBGL_VERSION=2",
             # "-sALLOW_MEMORY_GROWTH=1",

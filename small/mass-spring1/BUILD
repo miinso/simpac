@@ -45,7 +45,6 @@ cc_binary(
             "-sMODULARIZE=1",
             "-sEXPORT_NAME=createModule",
             # "-sUSE_GLFW=3",
-            # "-sUSE_WEBGL2=1",
             # "-sMIN_WEBGL_VERSION=2",
             # "-sMAX_WEBGL_VERSION=2",
             "-sENVIRONMENT=web,worker",

@@ -92,7 +92,7 @@ int main() {
         });
 
     // graphics2: use graphics::phase_post_render instead of graphics::PostRender
-    // graphics2: use graphics::get_camera_const() instead of graphics::camera1
+    // graphics2: use graphics::get_raylib_camera_const() instead of graphics::camera1
     ecs.system<DistanceConstraint>("draw_constraint_lambda")
         .kind(graphics::phase_post_render)
         .each([](DistanceConstraint& c) {
@@ -106,7 +106,7 @@ int main() {
             auto x = (x1 + x2) / 2;
 
             Vector3 textPos = {x.x(), x.y(), x.z()};
-            Vector2 screenPos = GetWorldToScreen(textPos, graphics::get_camera_const());
+            Vector2 screenPos = GetWorldToScreen(textPos, graphics::get_raylib_camera_const());
 
             char id_buffer[32];
 

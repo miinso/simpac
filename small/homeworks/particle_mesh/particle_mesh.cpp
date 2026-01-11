@@ -77,7 +77,7 @@ int main() {
     auto update_disk_generator = ecs.system<DiskGenerator>("UpdateDiskGenerator")
         .kind(0)
         .each([](DiskGenerator& generator) {
-            const auto& camera = graphics::get_camera_const();
+            const auto& camera = graphics::get_raylib_camera_const();
             generator.center = toEig(camera.position);
             generator.normal = toEig(camera.target) - toEig(camera.position);
             generator.normal.normalize();
