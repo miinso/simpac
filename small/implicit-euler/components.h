@@ -82,7 +82,7 @@ struct Scene {
     int frame_count = 0;        // number of simulation steps executed
 
     // Cached queries (initialized via on_set hook)
-    flecs::query<Particle> particle_query;
+    flecs::query<Particle, ParticleIndex> particle_query;
     flecs::query<Spring> spring_query;
 
     // Query-based count accessors
@@ -92,6 +92,39 @@ struct Scene {
     // Control flags
     bool paused = false;        // simulation pause state
     Real sim_speed = 1.0;       // simulation speed multiplier
+};
+
+// Pin modes for cloth
+enum class PinMode : int {
+    Corners = 0,    // pin top-left and top-right corners
+    TopRow = 1,     // pin entire top row
+    None = 2        // no pinning
+};
+
+// Grid-based cloth component
+// When set on an entity, creates particles and springs as children
+struct GridCloth {
+    // Geometry
+    int width = 10;             // particles in x direction
+    int height = 10;            // particles in z direction
+    float spacing = 1.0f;       // distance between adjacent particles
+
+    // Physics parameters
+    float mass = 1.0f;          // mass per particle
+    float k_structural = 10000.0f;  // structural spring stiffness
+    float k_shear = 10000.0f;       // shear (diagonal) spring stiffness
+    float k_bending = 100.0f;       // bending spring stiffness
+    float k_damping = 0.0f;         // velocity damping coefficient
+
+    // Position offset
+    float offset[3] = {0, 0, 0};
+
+    // Pinning
+    int pin_mode = 0;           // 0=corners, 1=top_row, 2=none
+
+    // Runtime info (read-only, populated by hook)
+    int particle_count = 0;
+    int spring_count = 0;
 };
 
 // GPU Spring Renderer

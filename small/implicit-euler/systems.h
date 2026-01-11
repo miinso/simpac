@@ -254,7 +254,7 @@ inline void draw_timing_info(flecs::iter& it) {
 // GPU Spring Rendering
 // =========================================================================
 
-inline void upload_spring_positions_to_gpu(flecs::world& ecs, SpringRenderer& gpu) {
+inline void upload_spring_positions_to_gpu(const flecs::world& ecs, SpringRenderer& gpu) {
     if (gpu.shader_id == 0) return;
 
     auto& scene = ecs.get<Scene>();
@@ -271,7 +271,7 @@ inline void upload_spring_positions_to_gpu(flecs::world& ecs, SpringRenderer& gp
         gpu.rest_lengths.clear();
         gpu.rest_lengths.reserve(num_springs);
 
-        ecs.each<Spring>([&](flecs::entity e, Spring& s) {
+        scene.spring_query.each([&](Spring& s) {
             gpu.spring_particle_indices.push_back(s.particle_a.get<ParticleIndex>().value);
             gpu.spring_particle_indices.push_back(s.particle_b.get<ParticleIndex>().value);
             gpu.rest_lengths.push_back((float)s.rest_length);
@@ -338,7 +338,7 @@ inline void upload_spring_positions_to_gpu(flecs::world& ecs, SpringRenderer& gp
                          gpu.staging_buffer.size() * sizeof(float), 0);
 }
 
-inline void draw_springs_gpu(SpringRenderer& gpu) {
+inline void draw_springs_gpu(const SpringRenderer& gpu) {
     if (gpu.shader_id == 0) return;
 
     // setup shader and uniforms

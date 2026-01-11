@@ -16,13 +16,15 @@ int main() {
     printf("Hi from %s\n", __FILE__);
 
     flecs::world ecs;
+    // Register cloth component with hooks (must be before any cloth creation)
+    register_cloth_component(ecs);
 
     // Scene setup with on_set hook for query initialization
     Vector3r gravity(0, -9.81, 0);
     ecs.component<Scene>()
         .on_set([](flecs::entity e, Scene& scene) {
             auto world = e.world();
-            scene.particle_query = world.query_builder<Particle>().cached().build();
+            scene.particle_query = world.query_builder<Particle, ParticleIndex>().cached().build();
             scene.spring_query = world.query_builder<Spring>().cached().build();
         })
         .add(flecs::Singleton);
@@ -154,19 +156,19 @@ int main() {
     // upload positions each frame before rendering
     ecs.system("Upload Spring Positions")
         .kind(graphics::phase_pre_render)
-        .run([&](flecs::iter& it) {
-            // auto& gpu = it.world().get_mut<SpringRenderer>();
-            systems::upload_spring_positions_to_gpu(ecs, gpu);
+        .run([](flecs::iter& it) {
+            auto& ctx = it.world().get_mut<SpringRenderer>();
+            systems::upload_spring_positions_to_gpu(it.world(), ctx);
         }).disable(0);
 
     ecs.system("Draw Springs GPU")
         .kind(graphics::phase_on_render)
-        .run([&](flecs::iter& it) {
-            // auto& gpu = it.world().get_mut<SpringRenderer>();
-            systems::draw_springs_gpu(gpu);
+        .run([](flecs::iter& it) {
+            auto& ctx = it.world().get_mut<SpringRenderer>();
+            systems::draw_springs_gpu(ctx);
         }).disable(0);
 
-    ecs.system("DrawTimingInfo")
+    ecs.system("Draw Timing Info")
         .kind(graphics::phase_post_render)
         .run(systems::draw_timing_info);
 
@@ -178,38 +180,67 @@ int main() {
     // auto sim_tick = ecs.timer().interval(10.0f / 1000.0f);
     auto sim_tick = ecs.get<Scene>().dt;
 
-    // Build particle grid cloth (immediate mode to ensure query counts are correct)
+    // Build particle grid cloth
+    // Observer handles solver resizing automatically
     ecs.system("Create Cloth")
         .kind(flecs::OnStart)
         .immediate()
         .run([&](flecs::iter& it) {
             auto world = it.world();
 
-            // Suspend deferred operations so entities are created immediately
-            world.defer_suspend();
+            // Create cloth using GridCloth component
+            GridCloth cloth;
+            cloth.width = 10;
+            cloth.height = 40;
+            cloth.spacing = 1.0f;
+            cloth.mass = 1.0f;
+            cloth.k_structural = 10000.0f;
+            cloth.k_shear = 10000.0f;
+            cloth.k_bending = 10.0f;
+            cloth.k_damping = 0.05f;
+            cloth.offset[0] = -cloth.width / 2.0f;
+            cloth.offset[1] = cloth.height / 2.0f;
+            cloth.offset[2] = 0.0f;
+            cloth.pin_mode = 0;  // corners
 
-            ClothConfig cfg;
-            cfg.width = 10;
-            cfg.height = 40;
-            cfg.mass = 1;
-            cfg.k_s = 10000.0;
-            cfg.k_b = 10.0;
-            cfg.k_d = 0.05;
-            cfg.spacing = 1;
-            cfg.offset = Vector3r(-cfg.width/2.0, cfg.height/2.0, 0);
-            create_cloth(ecs, cfg);
+            world.entity("Cloth").set<GridCloth>(cloth);
+        });
 
-            world.defer_resume();
-
-            // Now query counts are correct
+    // Collect system DOF - ensures solver is correctly sized
+    // Runs before simulation, reassigns particle indices if topology changed
+    ecs.system("Collect System DOF")
+        .kind(flecs::PreUpdate)
+        .run([](flecs::iter& it) {
+            auto world = it.world();
             auto& scene = world.get<Scene>();
             auto& solver = world.get_mut<Solver>();
 
             int n = scene.num_particles();
-            solver.b.resize(n * 3);
-            solver.x.setZero(n * 3);
-            solver.x_prev.setZero(n * 3);
-            solver.A.resize(n * 3, n * 3);
+            int dof = n * 3;
+
+            // only resize if needed
+            if (solver.b.size() != dof) {
+                // assign sequential indices to all particles
+                int new_idx = 0;
+
+                scene.particle_query.each([&](Particle&, ParticleIndex& idx) {
+                    idx.value = new_idx++;
+                });
+
+                // resize solver
+                solver.b.resize(dof);
+                solver.b.setZero();
+                solver.x.setZero(dof);
+                solver.x_prev.setZero(dof);
+                solver.A.resize(dof, dof);
+
+                printf("[Solver] Resized: %d particles, %d DOF\n", n, dof);
+            }
+
+            // TODO: should reset spring renderer bc ordering might not be preserved
+
+            solver.b.setZero();
+            solver.triplets.clear();
         });
 
     ecs.system("Implicit Euler")
@@ -222,11 +253,6 @@ int main() {
             // accumulate simulation time and frame count
             scene.sim_time += dt;
             scene.frame_count++;
-
-            // clear solver state for this frame
-            auto& solver = it.world().get_mut<Solver>();
-            solver.b.setZero();
-            solver.triplets.clear();
 
             // build rhs, b
             // RHS = M*v_n + h*f_gravity - h*dE_dx
