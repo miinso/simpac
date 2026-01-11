@@ -109,9 +109,10 @@ int main() {
             systems::collect_spring_hessian(spring, it.delta_time(), solver);
         });
         
-    auto solve = ecs.system<Solver>("Solve Linear System")
+    auto solve = ecs.system("Solve Linear System")
         .kind(0)
         .run([](flecs::iter& it) {
+            // `Solver` here is a singleton
             auto& solver = it.world().get_mut<Solver>();
             systems::solve(solver);
         });
