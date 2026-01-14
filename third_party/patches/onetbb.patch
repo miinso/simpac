@@ -24,7 +24,7 @@ index 7c479ca..3df076f 100644
      ],
      linkopts =
          select({
-+            "@platforms//os:emscripten": ["-fexceptions", "-pthread", "-ldl", "-sALLOW_MEMORY_GROWTH=1", "-sMALLOC=mimalloc", "-sEXIT_RUNTIME=1", "-sERROR_ON_UNDEFINED_SYMBOLS=0"], # FIXME: `-Wl,--no-undefined` here sounds dangerous
++            "@platforms//os:emscripten": ["-fexceptions", "-pthread", "-ldl", "-sALLOW_MEMORY_GROWTH=0", "-sMALLOC=mimalloc", "-sEXIT_RUNTIME=1", "-sERROR_ON_UNDEFINED_SYMBOLS=0"], # FIXME: `-Wl,--no-undefined` here sounds dangerous
              "@platforms//os:windows": [],
              "@platforms//os:linux": [
                  "-ldl",
