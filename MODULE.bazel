@@ -93,6 +93,7 @@ bazel_dep(name = "eigen", version = "5.0.1")
 #  googletest
 ##
 bazel_dep(name = "googletest", version = "1.15.2")
+bazel_dep(name = "google_benchmark", version = "1.9.4")
 
 ##
 #  flecs
@@ -266,6 +267,7 @@ single_version_override(
 # )
 
 bazel_dep(name = "cpuinfo", version = "0.0.0-20250925-877328f")
+
 
 ##
 # Boost
