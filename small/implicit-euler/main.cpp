@@ -83,12 +83,20 @@ int main() {
     // Simulation systems (we set .kind(0) to manually run them
     // =========================================================================
 
-    auto collect_external_force = ecs.system<const Mass, const Velocity, const ParticleIndex, Solver>("Collect External Force")
+    auto collect_momentum = ecs.system<const Mass, const Velocity, const ParticleIndex, Solver>("Collect Momentum")
         .with<Particle>()
         .without<IsPinned>()
         .kind(0)
         .each([&](flecs::iter& it, size_t, const Mass& m, const Velocity& v, const ParticleIndex& idx, Solver& solver) {
-            systems::collect_external_force(m, v, idx, gravity, it.delta_time(), solver);
+            systems::collect_momentum(m, v, idx, solver);
+        });
+
+    auto collect_external_force = ecs.system<const Mass, const ParticleIndex, Solver>("Collect External Force")
+        .with<Particle>()
+        .without<IsPinned>()
+        .kind(0)
+        .each([&](flecs::iter& it, size_t, const Mass& m, const ParticleIndex& idx, Solver& solver) {
+            systems::collect_external_force(m, idx, gravity, it.delta_time(), solver);
         });
 
     auto collect_spring_gradient = ecs.system<Spring, Solver>("Collect Spring Gradient")
@@ -257,9 +265,10 @@ int main() {
             scene.frame_count++;
 
             // build rhs, b
-            // RHS = M*v_n + h*f_gravity - h*dE_dx
-            collect_external_force.run(dt); // M*v_n + h*m*g
-            collect_spring_gradient.run(dt); // -h*dE_dx (elastic forces)
+            // RHS = M * v_n + h * f_gravity - h * dE_dx
+            collect_momentum.run(); // M * v_n
+            collect_external_force.run(dt); // h * m * g
+            collect_spring_gradient.run(dt); // h * -dE_dx (elastic forces)
 
             // build lhs, A
             // LHS = M + h^2 * ddE_ddx  (mass matrix + timestep^2 * Hessian)

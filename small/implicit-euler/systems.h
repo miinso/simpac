@@ -35,13 +35,18 @@ inline void update_position(Position& x, const Velocity& v, Real dt) {
 //     a.value = gravity;
 // }
 
-inline void collect_external_force(const Mass& mass, const Velocity& vel, 
-                                   const ParticleIndex& idx, const Vector3r& gravity,
-                                   Real dt, Solver& solver) {
-    // RHS contribution: M*v_n + h*f_ext
-    // where f_ext = m*g (gravity)
-    Vector3r f_gravity = mass.value * gravity;
-    solver.b.segment<3>(idx.value * 3) += mass.value * vel.value + dt * f_gravity;
+inline void collect_momentum(const Mass& mass, const Velocity& vel, 
+                                   const ParticleIndex& idx, Solver& solver) {
+    // RHS contribution: M*v_n (momentum)
+    auto momentum = mass.value * vel.value;
+    solver.b.segment<3>(idx.value * 3) += momentum;
+}
+
+inline void collect_external_force(const Mass& mass, const ParticleIndex& idx, 
+                                    const Vector3r& gravity, Real dt, Solver& solver) {
+    // RHS contribution: h*f_ext (external forces, e.g., gravity)
+    auto f_gravity = mass.value * gravity;
+    solver.b.segment<3>(idx.value * 3) += dt * f_gravity;
 }
 
 inline void collect_spring_gradient(Spring& spring, Real dt, Solver& solver) {
