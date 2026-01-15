@@ -1,4 +1,4 @@
-// Implicit Euler Mass-Spring Simulator
+// Mass-Spring Simulator Base
 
 #include "components.h"
 #include "systems.h"
@@ -217,13 +217,13 @@ int main() {
     // =========================================================================
 
     // cpu drawing
-    ecs.system<Spring>("Draw Springs CPU")
+    ecs.system<Spring>("graphics::Draw Springs CPU")
         .kind(graphics::phase_on_render)
         .each([](Spring& s) {
             systems::draw_spring(s);
         }).disable();
 
-    ecs.system<const Position, const Mass>("Draw Particles")
+    ecs.system<const Position, const Mass>("graphics::Draw Particles CPU")
         .with<Particle>()
         .kind(graphics::phase_on_render)
         .each([](const Position& x, const Mass& m) {
@@ -231,14 +231,14 @@ int main() {
         }).disable();
 
     // upload positions each frame before rendering
-    ecs.system("Upload Spring Positions")
+    ecs.system("graphics::Upload Spring Positions")
         .kind(graphics::phase_pre_render)
         .run([](flecs::iter& it) {
             auto& ctx = it.world().get_mut<SpringRenderer>();
             systems::upload_spring_positions_to_gpu(it.world(), ctx);
         }).disable(0);
 
-    ecs.system("Draw Springs GPU")
+    ecs.system("graphics::Draw Springs GPU")
         .kind(graphics::phase_on_render)
         .run([](flecs::iter& it) {
             auto& ctx = it.world().get_mut<SpringRenderer>();
@@ -246,21 +246,21 @@ int main() {
         }).disable(0);
 
     // upload particle positions each frame before rendering
-    ecs.system("Upload Particle Positions")
+    ecs.system("graphics::Upload Particle Positions")
         .kind(graphics::phase_pre_render)
         .run([](flecs::iter& it) {
             auto& ctx = it.world().get_mut<ParticleRenderer>();
             systems::upload_particle_positions_to_gpu(it.world(), ctx);
         });
 
-    ecs.system("Draw Particles GPU")
+    ecs.system("graphics::Draw Particles GPU")
         .kind(graphics::phase_on_render)
         .run([](flecs::iter& it) {
             auto& ctx = it.world().get_mut<ParticleRenderer>();
             systems::draw_particles_gpu(ctx);
         });
 
-    ecs.system("Draw Timing Info")
+    ecs.system("graphics::Draw Timing Info")
         .kind(graphics::phase_post_render)
         .run(systems::draw_timing_info);
 
