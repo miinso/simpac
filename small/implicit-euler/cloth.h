@@ -11,16 +11,17 @@
 // Internal: Build cloth geometry (particles + springs) as children
 // =========================================================================
 
-namespace detail {
+// TODO: add tri mesh helper
 
+namespace detail {
 inline void build_cloth_geometry(flecs::entity cloth_entity, GridCloth& cloth) {
     auto world = cloth_entity.world();
     world.defer_suspend();
 
-    // Get current global particle index (for solver indexing)
+    // get current global particle index (for solver indexing)
     int particle_base_idx = world.get<Scene>().num_particles();
 
-    // Create particles in grid as children of cloth entity
+    // create particles in grid as children of cloth entity
     std::vector<flecs::entity> particles;
     particles.resize(cloth.width * cloth.height);
 
@@ -52,21 +53,21 @@ inline void build_cloth_geometry(flecs::entity cloth_entity, GridCloth& cloth) {
 
     cloth.particle_count = cloth.width * cloth.height;
 
-    // Helper to get particle at grid position
+    // helper to get particle at grid position
     auto get_particle = [&](int x, int y) -> flecs::entity {
         if (x < 0 || x >= cloth.width || y < 0 || y >= cloth.height)
             return flecs::entity::null();
         return particles[y * cloth.width + x];
     };
 
-    // Create springs as children of cloth entity
+    // create springs as children of cloth entity
     int spring_count = 0;
 
     for (int y = 0; y < cloth.height; y++) {
         for (int x = 0; x < cloth.width; x++) {
             auto current = get_particle(x, y);
 
-            // Structural springs (horizontal)
+            // structural springs (horizontal)
             if (x < cloth.width - 1) {
                 auto right = get_particle(x + 1, y);
                 world.entity()
@@ -80,7 +81,7 @@ inline void build_cloth_geometry(flecs::entity cloth_entity, GridCloth& cloth) {
                 spring_count++;
             }
 
-            // Structural springs (vertical)
+            // structural springs (vertical)
             if (y < cloth.height - 1) {
                 auto down = get_particle(x, y + 1);
                 world.entity()
@@ -94,7 +95,7 @@ inline void build_cloth_geometry(flecs::entity cloth_entity, GridCloth& cloth) {
                 spring_count++;
             }
 
-            // Shear springs (diagonals)
+            // shear springs (diagonals)
             if (x < cloth.width - 1 && y < cloth.height - 1) {
                 auto diagonal = get_particle(x + 1, y + 1);
                 Real diag_len = cloth.spacing * std::sqrt(2.0f);
@@ -122,7 +123,7 @@ inline void build_cloth_geometry(flecs::entity cloth_entity, GridCloth& cloth) {
                 spring_count++;
             }
 
-            // Bending springs (skip one particle)
+            // bending springs (skip one particle)
             if (x < cloth.width - 2) {
                 auto right2 = get_particle(x + 2, y);
                 world.entity()
@@ -153,7 +154,7 @@ inline void build_cloth_geometry(flecs::entity cloth_entity, GridCloth& cloth) {
 
     cloth.spring_count = spring_count;
 
-    // Apply pinning based on pin_mode
+    // apply pinning based on pin_mode
     PinMode mode = static_cast<PinMode>(cloth.pin_mode);
 
     switch (mode) {
@@ -176,8 +177,8 @@ inline void build_cloth_geometry(flecs::entity cloth_entity, GridCloth& cloth) {
 }
 
 inline void destroy_cloth_geometry(flecs::entity cloth_entity) {
-    // Children are automatically deleted when parent is deleted in flecs
-    // But if we need explicit cleanup (e.g., for re-creation), we can do it here
+    // children are automatically deleted when parent is deleted in flecs
+    // but if we need explicit cleanup (e.g., for re-creation), we can do it here
     cloth_entity.world().defer_suspend();
     cloth_entity.children([](flecs::entity child) {
         child.destruct();
@@ -196,17 +197,18 @@ inline void register_cloth_component(flecs::world& ecs) {
     // Register hooks first (typed component)
     ecs.component<GridCloth>()
         .on_set([&](flecs::entity e, GridCloth& cloth) {
-            // Destroy existing geometry if any (for re-creation on parameter change)
+            // destroy existing geometry if any (for re-creation on parameter change)
             detail::destroy_cloth_geometry(e);
-            // Build new geometry
+            // build new geometry
             detail::build_cloth_geometry(e, cloth);
+            // NOTE: we could do .shrink() or nuke all empty table here maybe
         })
         .on_remove([](flecs::entity e, GridCloth& cloth) {
-            // Explicit cleanup (though children should auto-delete)
+            // explicit cleanup (though children should auto-delete)
             detail::destroy_cloth_geometry(e);
         });
 
-    // Add reflection separately (becomes untyped_component)
+    // add reflection separately (becomes untyped_component)
     ecs.component<GridCloth>()
         .member<int>("width")
         .member<int>("height")
@@ -220,5 +222,6 @@ inline void register_cloth_component(flecs::world& ecs) {
         .member<int>("pin_mode")
         .member<int>("particle_count")
         .member<int>("spring_count");
-
+    
+    // TODO: figure out how to apply range limits on the adjustables
 }

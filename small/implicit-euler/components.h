@@ -46,10 +46,11 @@ struct Spring {
 };
 
 struct Solver {
-    Eigen::SparseMatrix<Real> A; // system matrix (3n x 3n)
-    VectorXr b; // rhs vector (3n x 1)
-    VectorXr x; // solution (3n x 1)
-    VectorXr x_prev; // prev soultion (3n x 1)
+    // TODO: decide if we want to maintain one global solver or go per-object
+    Eigen::SparseMatrix<Real> A;    // system matrix (3n x 3n)
+    VectorXr b;                     // rhs vector (3n x 1)
+    VectorXr x;                     // solution (3n x 1)
+    VectorXr x_prev;                // prev soultion (3n x 1)
 
     std::vector<Eigen::Triplet<Real>> triplets;
 

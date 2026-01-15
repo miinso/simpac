@@ -9,18 +9,18 @@
 namespace graphics {
 
 namespace {
-    // Stored window config for clear color
+    // stored window config for clear color
     Color clear_color = RAYWHITE;
 
-    // WASM shutdown safety flag - prevents use-after-free from pending RAF callbacks
+    // wasm shutdown safety flag - prevents use-after-free from pending RAF callbacks
     bool shutdown_requested = false;
 
-    // Setup the render pipeline systems
+    // setup the render pipeline systems
     void setup_render_pipeline() {
         auto* ecs = detail::ecs;
 
-        // Camera update in OnLoad (before rendering)
-        // Query for Camera with ActiveCamera tag
+        // camera update in OnLoad (before rendering)
+        // query for `Camera` with `ActiveCamera` tag
         ecs->system<Camera>("graphics::update_camera")
             .with<ActiveCamera>()
             .kind(flecs::OnLoad)
@@ -28,7 +28,7 @@ namespace {
                 update_camera_controls(cam);
             });
 
-        // Sync active camera to raylib before rendering
+        // sync active camera to raylib before rendering
         ecs->system<const Camera>("graphics::sync_camera")
             .with<ActiveCamera>()
             .kind(flecs::PostUpdate)
@@ -42,7 +42,7 @@ namespace {
             .run([](flecs::iter& it) {
                 if (!is_render_thread()) return;
 
-                // Handle canvas resize (web: JS ResizeObserver updates canvas.width/height)
+                // handle canvas resize (web: JS ResizeObserver updates canvas.width/height)
                 if (IsWindowResized()) {
                     SetWindowSize(GetScreenWidth(), GetScreenHeight());
                 }
@@ -50,7 +50,7 @@ namespace {
                 BeginDrawing();
                 ClearBackground(clear_color);
 
-                // Update lighting with camera position if enabled
+                // update lighting with camera position if enabled
                 if (is_lighting_enabled()) {
                     update_lighting_camera_pos(detail::raylib_camera.position);
                 }
@@ -64,7 +64,7 @@ namespace {
 
                 BeginMode3D(detail::raylib_camera);
 
-                // Enable shader mode if lighting is active
+                // enable shader mode if lighting is active
                 if (is_lighting_enabled()) {
                     BeginShaderMode(get_lighting_shader());
                 }
@@ -76,19 +76,19 @@ namespace {
             .run([](flecs::iter& it) {
                 if (!is_render_thread()) return;
 
-                // End shader mode if lighting was active
+                // end shader mode if lighting was active
                 if (is_lighting_enabled()) {
                     EndShaderMode();
                 }
 
-                // Draw grid if enabled
+                // draw grid if enabled
                 if (detail::draw_grid) {
                     DrawGrid(detail::grid_slices, detail::grid_spacing);
                 }
 
                 EndMode3D();
 
-                // Draw FPS if enabled
+                // draw FPS if enabled
                 if (detail::draw_fps) {
                     DrawFPS(20, 20);
                 }
@@ -104,9 +104,9 @@ namespace {
     }
 
 #if defined(__EMSCRIPTEN__)
-    // Emscripten main loop callback
+    // emscripten main loop callback
     void main_loop_callback() {
-        // Bail early if shutdown was requested (handles pending RAF after cancel)
+        // bail early if shutdown was requested (handles pending RAF after cancel)
         if (shutdown_requested) return;
 
         if (detail::ecs) {
@@ -124,10 +124,10 @@ namespace {
 void init(flecs::world& world) {
     detail::ecs = &world;
 
-    // Register camera components with reflection
+    // register camera components with reflection
     register_camera_components(world);
 
-    // Create custom rendering phases
+    // create custom rendering phases
     phase_pre_render = world.entity("PreRender")
         .add(flecs::Phase)
         .depends_on(flecs::PostUpdate);
@@ -149,17 +149,17 @@ void init(flecs::world& world) {
 
 void init_window(const WindowConfig& config) {
 #if defined(__EMSCRIPTEN__)
-    // Read actual canvas size BEFORE InitWindow (which overwrites it)
+    // read actual canvas size BEFORE InitWindow (which overwrites it)
     int canvas_w = EM_ASM_INT({ return Module.canvas.width; });
     int canvas_h = EM_ASM_INT({ return Module.canvas.height; });
     std::printf("graphics::init_window requested=%dx%d canvas=%dx%d\n",
                 config.width, config.height, canvas_w, canvas_h);
 #endif
-    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT);
     InitWindow(config.width, config.height, config.title);
 
 #if defined(__EMSCRIPTEN__)
-    // Restore actual canvas size if different from requested
+    // restore actual canvas size if different from requested
     if (canvas_w > 0 && canvas_h > 0 &&
         (canvas_w != config.width || canvas_h != config.height)) {
         SetWindowSize(canvas_w, canvas_h);
@@ -168,7 +168,7 @@ void init_window(const WindowConfig& config) {
 
     clear_color = config.clear_color;
 
-    // Create default camera entity if none exists
+    // create default camera entity if none exists
     if (detail::ecs) {
         auto active_cam_query = detail::ecs->query<Camera, ActiveCamera>();
         if (active_cam_query.count() == 0) {
@@ -178,7 +178,7 @@ void init_window(const WindowConfig& config) {
         }
     }
 
-    // Load custom font
+    // load custom font
     std::string font_path = normalized_path("resources/generic.fnt");
     detail::font = LoadFont(font_path.c_str());
     if (detail::font.texture.id > 0) {
@@ -197,10 +197,10 @@ bool window_should_close() {
 
 void close_window() {
 #if defined(__EMSCRIPTEN__)
-    // Set flag FIRST so any pending RAF callback bails early
+    // set flag FIRST so any pending RAF callback bails early
     shutdown_requested = true;
 
-    // Cleanup resources
+    // cleanup resources
     if (detail::ecs) {
         detail::ecs->progress(0);
     }
@@ -209,10 +209,10 @@ void close_window() {
     std::printf("graphics::emscripten rAF loop canceled\n");
 #endif
 
-    // Cleanup lighting if enabled
+    // cleanup lighting if enabled
     disable_lighting();
 
-    // Unload custom font
+    // unload custom font
     if (detail::font_loaded) {
         UnloadFont(detail::font);
         detail::font_loaded = false;
@@ -225,19 +225,19 @@ void run_main_loop(std::function<void()> update) {
     detail::update_func = update;
 
 #if defined(__EMSCRIPTEN__)
-    // Reset shutdown flag for fresh start
+    // reset shutdown flag for fresh start
     shutdown_requested = false;
     std::printf("graphics::invoking emscripten rAF loop\n");
     emscripten_set_main_loop(main_loop_callback, 0, 1);
 #else
     std::printf("graphics::invoking native while loop\n");
     while (!window_should_close()) {
-        // User update first (input handling before EndDrawing clears key state)
+        // user update first (input handling before EndDrawing clears key state)
         if (detail::update_func) {
             detail::update_func();
         }
 
-        // Then ECS progress (rendering systems)
+        // then ECS progress (rendering systems)
         if (detail::ecs) {
             detail::ecs->progress(GetFrameTime());
         }
@@ -255,7 +255,7 @@ flecs::entity create_camera(flecs::world& ecs, const char* name, const Camera& c
     auto entity = ecs.entity(name).set<Camera>(cam);
 
     if (make_active) {
-        // Remove ActiveCamera from any existing camera
+        // remove ActiveCamera from any existing camera
         ecs.query_builder<Camera>()
             .with<ActiveCamera>()
             .build()
@@ -269,7 +269,7 @@ flecs::entity create_camera(flecs::world& ecs, const char* name, const Camera& c
 }
 
 void set_active_camera(flecs::world& ecs, flecs::entity camera_entity) {
-    // Remove ActiveCamera from all cameras
+    // remove ActiveCamera from all cameras
     ecs.query_builder<Camera>()
         .with<ActiveCamera>()
         .build()
@@ -277,7 +277,7 @@ void set_active_camera(flecs::world& ecs, flecs::entity camera_entity) {
             e.remove<ActiveCamera>();
         });
 
-    // Add to the specified camera
+    // add to the specified camera
     if (camera_entity.has<Camera>()) {
         camera_entity.add<ActiveCamera>();
     }

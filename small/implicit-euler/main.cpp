@@ -2,7 +2,7 @@
 
 #include "components.h"
 #include "systems.h"
-#include "utils.h"
+#include "cloth.h"
 #include "flecs.h"
 #include "graphics.h"
 #include <cstdio>
@@ -22,10 +22,10 @@ int main() {
     ecs.set<flecs::Rest>({});
 #endif
 
-    // Register cloth component with hooks (must be before any cloth creation)
+    // register cloth component with hooks (must be before any cloth creation)
     register_cloth_component(ecs);
 
-    // Scene setup with on_set hook for query initialization
+    // scene setup with on_set hook for query initialization
     Vector3r gravity(0, -9.81, 0);
     ecs.component<Scene>()
         .on_set([](flecs::entity e, Scene& scene) {
@@ -76,15 +76,18 @@ int main() {
         })
         .add(flecs::Singleton);
 
-    // Initialize graphics (must be before SpringRenderer set for shader loading)
+    // initialize graphics module
+    // (must call `::init()` before any raylib or gl specifics, otherwise crash)
     graphics::init(ecs);
-    graphics::init_window(800, 600, "Implicit Euler");
+    graphics::init_window(800, 600, "Base Simulator");
     graphics::create_camera(ecs, "MainCamera", {
         {50.0f, 10.0f, 50.0f},  // position
         {0.0f, 0.5f, 0.0f},     // target
+        // TODO: we could make a slot for (optional) target entity so that
+        // camera picks up `Position` component of the target (if exists)
     }, true);
 
-    // Now set SpringRenderer to trigger on_set hook (after graphics init)
+    // now set SpringRenderer to trigger on_set hook (after graphics init)
     ecs.set<SpringRenderer>({});
     auto& gpu = ecs.get_mut<SpringRenderer>();
 
@@ -272,15 +275,15 @@ int main() {
     // auto sim_tick = ecs.timer().interval(10.0f / 1000.0f);
     auto sim_tick = ecs.get<Scene>().dt;
 
-    // Build particle grid cloth
-    // Observer handles solver resizing automatically
+    // build particle grid cloth
+    // flecs::observer handles solver resizing automatically
     ecs.system("Create Cloth")
         .kind(flecs::OnStart)
         .immediate()
         .run([&](flecs::iter& it) {
             auto world = it.world();
 
-            // Create cloth using GridCloth component
+            // create cloth using GridCloth component
             GridCloth cloth;
             cloth.width = 10;
             cloth.height = 40;
@@ -298,8 +301,8 @@ int main() {
             world.entity("Cloth").set<GridCloth>(cloth);
         });
 
-    // Collect system DOF - ensures solver is correctly sized
-    // Runs before simulation, reassigns particle indices if topology changed
+    // collect system DOF - ensures solver is correctly sized
+    // runs before simulation, reassigns particle indices if topology changed
     ecs.system("Collect System DOF")
         .kind(flecs::PreUpdate)
         .run([](flecs::iter& it) {

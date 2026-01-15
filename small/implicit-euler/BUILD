@@ -5,10 +5,12 @@ load("@rules_cc//cc:defs.bzl", "cc_binary")
 cc_binary(
     name = "main",
     srcs = [
+        "cloth.h",
         "components.h",
         "main.cpp",
         "systems.h",
-        "utils.h",
+        "systems/physics.h",
+        "systems/rendering.h",
     ],
     copts = select({
         "@platforms//os:emscripten": [
