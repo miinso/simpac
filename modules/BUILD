@@ -1,6 +1,6 @@
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 
-# Unified graphics module - use this for new projects
+# graphics module - shared many time accross the projects
 cc_library(
     name = "graphics2",
     srcs = ["graphics/graphics.cpp"],
@@ -21,24 +21,11 @@ cc_library(
     deps = [
         "@flecs",
         "@raylib-latest",
+        "//third_party/par_shapes",
     ] + select({
         "@platforms//os:emscripten": [],
         "//conditions:default": ["@bazel_tools//tools/cpp/runfiles"],
     }),
-)
-
-load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
-
-# Test binary for graphics2 module
-cc_binary(
-    name = "graphics2_test",
-    srcs = ["graphics/test_graphics.cpp"],
-    copts = select({
-        "@platforms//os:windows": ["-DPLATFORM_DESKTOP"],
-        "@platforms//os:emscripten": ["-DPLATFORM_WEB"],
-        "//conditions:default": ["-DPLATFORM_DESKTOP"],
-    }),
-    deps = [":graphics2"],
 )
 
 cc_library(
