@@ -82,7 +82,7 @@ struct Scene {
     int frame_count = 0;        // number of simulation steps executed
 
     // Cached queries (initialized via on_set hook)
-    flecs::query<Particle, ParticleIndex> particle_query;
+    flecs::query<ParticleIndex> particle_query;
     flecs::query<Spring> spring_query;
 
     // Query-based count accessors
@@ -127,29 +127,35 @@ struct GridCloth {
     int spring_count = 0;
 };
 
-// GPU Spring Renderer
+// gpu spring renderer (instanced)
 struct SpringRenderer {
-    // GPU resources
+    // instance layout constants
+    static constexpr int FLOATS_PER_INSTANCE = 7;  // pos_a(3) + pos_b(3) + rest_len(1)
+    static constexpr int VERTICES_PER_INSTANCE = 2; // 2 verts drawn per spring instance
+
+    // gpu resources
     unsigned int vao = 0;
-    unsigned int vbo = 0;
+    unsigned int instance_vbo = 0;  // per-instance attributes
     unsigned int shader_id = 0;
 
-    // Uniform locations
+    // uniform locations
     int u_viewproj_loc = -1;
     int u_strain_scale_loc = -1;
 
-    // Current buffer allocation (for lazy resize)
+    // rendering params
+    float strain_scale = 10.0f;
+
+    // current buffer allocation (for lazy resize)
     int allocated_springs = 0;
 
-    // Cached query (initialized via on_set hook)
+    // cached query (initialized via on_set hook)
     flecs::query<const Position, const ParticleIndex> position_query;
 
-    // CPU-side staging buffer (updated each frame)
-    // Layout: [pos_a.x, pos_a.y, pos_a.z, pos_b.x, pos_b.y, pos_b.z, rest_len, endpoint] per vertex
-    // 8 floats per vertex, 2 vertices per spring
+    // cpu-side staging buffer (updated each frame)
+    // layout: [pos_a.xyz, pos_b.xyz, rest_len] per instance = 7 floats per spring
     std::vector<float> staging_buffer;
 
-    // Spring connectivity (rebuilt on topology change)
+    // spring connectivity (rebuilt on topology change)
     std::vector<int> spring_particle_indices;  // [idx_a, idx_b, ...] for each spring
     std::vector<float> rest_lengths;           // Rest length for each spring
 };

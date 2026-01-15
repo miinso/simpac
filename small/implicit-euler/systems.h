@@ -266,11 +266,11 @@ inline void upload_spring_positions_to_gpu(const flecs::world& ecs, SpringRender
     int num_particles = scene.num_particles();
     int num_springs = scene.num_springs();
 
-    // Lazy buffer allocation/reallocation on topology change
+    // lazy buffer allocation/reallocation on topology change
     if (gpu.allocated_springs != num_springs) {
         gpu.allocated_springs = num_springs;
 
-        // Collect spring connectivity
+        // collect spring connectivity
         gpu.spring_particle_indices.clear();
         gpu.spring_particle_indices.reserve(num_springs * 2);
         gpu.rest_lengths.clear();
@@ -282,22 +282,35 @@ inline void upload_spring_positions_to_gpu(const flecs::world& ecs, SpringRender
             gpu.rest_lengths.push_back((float)s.rest_length);
         });
 
-        // Resize staging buffer
-        gpu.staging_buffer.resize(num_springs * 2 * 8);
+        // resize staging buffer (7 floats per instance)
+        gpu.staging_buffer.resize(num_springs * SpringRenderer::FLOATS_PER_INSTANCE);
 
-        // Recreate GPU buffers
+        // recreate gpu buffers and configure instanced attributes once
         if (gpu.vao) rlUnloadVertexArray(gpu.vao);
-        if (gpu.vbo) rlUnloadVertexBuffer(gpu.vbo);
+        if (gpu.instance_vbo) rlUnloadVertexBuffer(gpu.instance_vbo);
 
         gpu.vao = rlLoadVertexArray();
         rlEnableVertexArray(gpu.vao);
-        gpu.vbo = rlLoadVertexBuffer(nullptr, gpu.staging_buffer.size() * sizeof(float), true);
+        gpu.instance_vbo = rlLoadVertexBuffer(nullptr, gpu.staging_buffer.size() * sizeof(float), true);
+
+        // configure per-instance attributes (done once, stored in vao)
+        constexpr int stride = SpringRenderer::FLOATS_PER_INSTANCE * sizeof(float);
+        rlEnableVertexAttribute(0);
+        rlSetVertexAttribute(0, 3, RL_FLOAT, false, stride, 0);                      // pos_a
+        rlSetVertexAttributeDivisor(0, 1);  // instanced
+        rlEnableVertexAttribute(1);
+        rlSetVertexAttribute(1, 3, RL_FLOAT, false, stride, 3 * sizeof(float));      // pos_b
+        rlSetVertexAttributeDivisor(1, 1);  // instanced
+        rlEnableVertexAttribute(2);
+        rlSetVertexAttribute(2, 1, RL_FLOAT, false, stride, 6 * sizeof(float));      // rest_len
+        rlSetVertexAttributeDivisor(2, 1);  // instanced
+
         rlDisableVertexArray();
     }
 
     if (num_springs == 0) return;
 
-    // Collect positions using cached query with run + iter pattern
+    // collect positions using cached query
     std::vector<Vector3r> positions(num_particles);
     gpu.position_query.run([&](flecs::iter& it) {
         while (it.next()) {
@@ -309,8 +322,8 @@ inline void upload_spring_positions_to_gpu(const flecs::world& ecs, SpringRender
         }
     });
 
-    // Build vertex buffer (2 vertices per spring)
-    int vert_idx = 0;
+    // build instance buffer (1 instance per spring)
+    int inst_idx = 0;
     for (int i = 0; i < num_springs; ++i) {
         int idx_a = gpu.spring_particle_indices[i * 2];
         int idx_b = gpu.spring_particle_indices[i * 2 + 1];
@@ -318,28 +331,17 @@ inline void upload_spring_positions_to_gpu(const flecs::world& ecs, SpringRender
         Vector3r pb = positions[idx_b];
         float rest = gpu.rest_lengths[i];
 
-        // Vertex 0 (start)
-        gpu.staging_buffer[vert_idx++] = (float)pa.x();
-        gpu.staging_buffer[vert_idx++] = (float)pa.y();
-        gpu.staging_buffer[vert_idx++] = (float)pa.z();
-        gpu.staging_buffer[vert_idx++] = (float)pb.x();
-        gpu.staging_buffer[vert_idx++] = (float)pb.y();
-        gpu.staging_buffer[vert_idx++] = (float)pb.z();
-        gpu.staging_buffer[vert_idx++] = rest;
-        gpu.staging_buffer[vert_idx++] = 0.0f;
-
-        // Vertex 1 (end)
-        gpu.staging_buffer[vert_idx++] = (float)pa.x();
-        gpu.staging_buffer[vert_idx++] = (float)pa.y();
-        gpu.staging_buffer[vert_idx++] = (float)pa.z();
-        gpu.staging_buffer[vert_idx++] = (float)pb.x();
-        gpu.staging_buffer[vert_idx++] = (float)pb.y();
-        gpu.staging_buffer[vert_idx++] = (float)pb.z();
-        gpu.staging_buffer[vert_idx++] = rest;
-        gpu.staging_buffer[vert_idx++] = 1.0f;
+        // instance data: [pos_a.xyz, pos_b.xyz, rest_len]
+        gpu.staging_buffer[inst_idx++] = (float)pa.x();
+        gpu.staging_buffer[inst_idx++] = (float)pa.y();
+        gpu.staging_buffer[inst_idx++] = (float)pa.z();
+        gpu.staging_buffer[inst_idx++] = (float)pb.x();
+        gpu.staging_buffer[inst_idx++] = (float)pb.y();
+        gpu.staging_buffer[inst_idx++] = (float)pb.z();
+        gpu.staging_buffer[inst_idx++] = rest;
     }
 
-    rlUpdateVertexBuffer(gpu.vbo, gpu.staging_buffer.data(),
+    rlUpdateVertexBuffer(gpu.instance_vbo, gpu.staging_buffer.data(),
                          gpu.staging_buffer.size() * sizeof(float), 0);
 }
 
@@ -350,25 +352,22 @@ inline void draw_springs_gpu(const SpringRenderer& gpu) {
     Matrix viewproj = MatrixMultiply(rlGetMatrixModelview(), rlGetMatrixProjection());
     rlEnableShader(gpu.shader_id);
     rlSetUniformMatrix(gpu.u_viewproj_loc, viewproj);
-    float strain_scale = 10.0f;
-    rlSetUniform(gpu.u_strain_scale_loc, &strain_scale, SHADER_UNIFORM_FLOAT, 1);
+    rlSetUniform(gpu.u_strain_scale_loc, &gpu.strain_scale, SHADER_UNIFORM_FLOAT, 1);
 
-    // bind VAO/VBO and setup attributes
+    // bind vao (instanced attributes already configured) and vbo
     rlEnableVertexArray(gpu.vao);
-    rlEnableVertexBuffer(gpu.vbo);
+    rlEnableVertexBuffer(gpu.instance_vbo);
 
-    int stride = 8 * sizeof(float);
-    rlEnableVertexAttribute(0);
-    rlSetVertexAttribute(0, 3, RL_FLOAT, false, stride, 0);                      // pos_a
-    rlEnableVertexAttribute(1);
-    rlSetVertexAttribute(1, 3, RL_FLOAT, false, stride, 3 * sizeof(float));      // pos_b
-    rlEnableVertexAttribute(2);
-    rlSetVertexAttribute(2, 1, RL_FLOAT, false, stride, 6 * sizeof(float));      // rest_len
-    rlEnableVertexAttribute(3);
-    rlSetVertexAttribute(3, 1, RL_FLOAT, false, stride, 7 * sizeof(float));      // endpoint
+    // draw all springs with instanced rendering
+    // 2 vertices per instance (line), repeated for each spring
+    glDrawArraysInstanced(GL_LINES, 0, SpringRenderer::VERTICES_PER_INSTANCE, gpu.allocated_springs);
 
-    // draw all springs in single call
-    glDrawArrays(GL_LINES, 0, gpu.allocated_springs * 2);
+    // cleanup
+    rlDisableVertexBuffer();
+    rlDisableVertexArray();
+    rlDisableShader();
+}
+
 
     // cleanup
     rlDisableVertexAttribute(0);

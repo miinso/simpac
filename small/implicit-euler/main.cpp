@@ -62,7 +62,7 @@ int main() {
         })
         .on_remove([](flecs::entity e, SpringRenderer& gpu) {
             if (gpu.shader_id) UnloadShader({gpu.shader_id});
-            if (gpu.vbo) rlUnloadVertexBuffer(gpu.vbo);
+            if (gpu.instance_vbo) rlUnloadVertexBuffer(gpu.instance_vbo);
             if (gpu.vao) rlUnloadVertexArray(gpu.vao);
         })
         .add(flecs::Singleton);
@@ -231,9 +231,7 @@ int main() {
                 // assign sequential indices to all particles
                 int new_idx = 0;
 
-                scene.particle_query.each([&](const Particle&, ParticleIndex& idx) {
-                    // `Particle` here is an empty tag, so i need const
-                    // TODO: change query def to system<ParticleIndex>().with<Particle>() or something
+                scene.particle_query.each([&](ParticleIndex& idx) {
                     idx.value = new_idx++;
                 });
 
