@@ -6,6 +6,7 @@
 #include "flecs.h"
 #include "graphics.h"
 #include <cstdio>
+#include <limits>
 
 
 // =========================================================================
@@ -96,7 +97,7 @@ int main() {
         .on_set([](flecs::entity e, ParticleRenderer& gpu) {
             auto world = e.world();
             // cached query for per-frame position lookup
-            gpu.position_query = world.query_builder<const Position, const ParticleIndex>()
+            gpu.position_query = world.query_builder<const Position, const ParticleIndex, const ParticleState>()
                 .with<Particle>()
                 .cached()
                 .build();
@@ -150,6 +151,16 @@ int main() {
 
     // set ParticleRenderer to trigger on_set hook
     ecs.set<ParticleRenderer>({});
+
+    // holds hovered/selected entity refs
+    ecs.component<InteractionState>()
+        .add(flecs::Singleton);
+    ecs.set<InteractionState>({});
+
+    auto particle_pick_query = ecs.query_builder<const Position, ParticleState>()
+        .with<Particle>()
+        .cached()
+        .build();
 
     // =========================================================================
     // Simulation systems (we set .kind(0) to manually run them
@@ -266,6 +277,67 @@ int main() {
     ecs.system("graphics::Draw Timing Info")
         .kind(graphics::phase_post_render)
         .run(systems::draw_timing_info);
+
+    // =========================================================================
+    // Interaction systems
+    // =========================================================================
+
+    ecs.system("interaction::Pick Particles")
+        .kind(flecs::OnLoad)
+        // .before("graphics::update_camera")
+        .run([&](flecs::iter& it) {
+            auto& interaction = it.world().get_mut<InteractionState>();
+            auto& renderer = it.world().get<ParticleRenderer>();
+
+            // ray pick -> nearest particle
+            Ray ray = GetMouseRay(GetMousePosition(), graphics::get_raylib_camera_const());
+            float pick_radius = renderer.base_radius * interaction.pick_radius_scale;
+
+            float closest = std::numeric_limits<float>::max();
+            flecs::entity hovered = flecs::entity::null();
+
+            particle_pick_query.each([&](flecs::entity e, const Position& pos, ParticleState&) {
+                RayCollision hit = GetRayCollisionSphere(ray, systems::toRay3(pos.value), pick_radius);
+                if (hit.hit && hit.distance < closest) {
+                    closest = hit.distance;
+                    hovered = e;
+                }
+            });
+
+            // TODO: do gpu picking maybe?
+            // i want no linear scan every frame looping all the particles..
+
+            interaction.hovered = hovered;
+
+            if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                if (hovered.is_alive()) {
+                    interaction.selected = (interaction.selected == hovered)
+                        ? flecs::entity::null()
+                        : hovered;
+                } else {
+                    interaction.selected = flecs::entity::null();
+                }
+            }
+
+            // if hit, lock camera drag interaction
+            bool capture = IsMouseButtonDown(MOUSE_LEFT_BUTTON) && hovered.is_alive();
+            it.world().query_builder<graphics::Camera>()
+                .with<graphics::ActiveCamera>()
+                .each([&](graphics::Camera& cam) {
+                    cam.controls_enabled = !capture;
+                });
+
+            // update hover/selection flag bits
+            constexpr uint8_t kInteractionMask = static_cast<uint8_t>(
+                ParticleState::Hovered | ParticleState::Selected);
+
+            particle_pick_query.each([&](flecs::entity e, const Position&, ParticleState& state) {
+                uint8_t flags = static_cast<uint8_t>(state.flags & ~kInteractionMask);
+                if (e == hovered) flags |= ParticleState::Hovered;
+                if (interaction.selected == e) flags |= ParticleState::Selected;
+                state.flags = flags;
+            });
+        });
 
     // =========================================================================
     // LOOK HERE!!! - THE ALGORITHM in one place

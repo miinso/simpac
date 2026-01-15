@@ -6,6 +6,7 @@
 #include <vector>
 #include <deque>
 #include <string>
+#include <cstdint>
 
 using Real = float;
 using Vector3r = Eigen::Matrix<Real, 3, 1, Eigen::DontAlign>;
@@ -22,6 +23,16 @@ struct Acceleration { Vector3r value; };
 struct OldPosition { Vector3r value; };
 struct Mass { Real value; };
 struct InverseMass { Real value; };
+struct ParticleState {
+    enum Flag : uint8_t {
+        None = 0,
+        Hovered = 1 << 0,
+        Selected = 1 << 1,
+        Disabled = 1 << 2,
+        Pinned = 1 << 3,
+    };
+    uint8_t flags = None;
+};
 
 // Tags
 struct IsPinned {};
@@ -71,59 +82,61 @@ struct Solver {
     Eigen::ConjugateGradient<Eigen::SparseMatrix<Real>> cg;
 };
 
-// Scene configuration and state
+// scene configuration and state
 struct Scene {
-    // Simulation parameters
     Real dt;                    // timestep per simulation step
     Vector3r gravity;           // gravity vector
 
-    // Runtime state
     Real wall_time = 0;         // real elapsed time (wall-clock)
     Real sim_time = 0;          // accumulated simulation time
     int frame_count = 0;        // number of simulation steps executed
 
-    // Cached queries (initialized via on_set hook)
+    // cached queries (initialized via on_set hook)
     flecs::query<ParticleIndex> particle_query;
     flecs::query<Spring> spring_query;
 
-    // Query-based count accessors
+    // query-based count accessors
     int num_particles() const { return (int)particle_query.count(); }
     int num_springs() const { return (int)spring_query.count(); }
 
-    // Control flags
+    // control flags
     bool paused = false;        // simulation pause state
     Real sim_speed = 1.0;       // simulation speed multiplier
 };
 
+struct InteractionState {
+    flecs::entity hovered;
+    flecs::entity selected;
+    float pick_radius_scale = 1.2f;
+};
+
 // Pin modes for cloth
+// TODO: remove pinmode
 enum class PinMode : int {
     Corners = 0,    // pin top-left and top-right corners
     TopRow = 1,     // pin entire top row
     None = 2        // no pinning
 };
 
-// Grid-based cloth component
-// When set on an entity, creates particles and springs as children
 struct GridCloth {
-    // Geometry
     int width = 10;             // particles in x direction
     int height = 10;            // particles in z direction
     float spacing = 1.0f;       // distance between adjacent particles
 
-    // Physics parameters
     float mass = 1.0f;          // mass per particle
     float k_structural = 10000.0f;  // structural spring stiffness
     float k_shear = 10000.0f;       // shear (diagonal) spring stiffness
     float k_bending = 100.0f;       // bending spring stiffness
     float k_damping = 0.0f;         // velocity damping coefficient
 
-    // Position offset
+    // position offset
     float offset[3] = {0, 0, 0};
 
-    // Pinning
+    // pinning
+    // TODO: verbose. to be removed
     int pin_mode = 0;           // 0=corners, 1=top_row, 2=none
 
-    // Runtime info (read-only, populated by hook)
+    // runtime info (read-only, populated by hook)
     int particle_count = 0;
     int spring_count = 0;
 };
@@ -164,7 +177,7 @@ struct SpringRenderer {
 // gpu particle renderer (instanced icospheres)
 struct ParticleRenderer {
     // instance layout constants
-    static constexpr int FLOATS_PER_INSTANCE = 4;  // pos(3) + radius(1)
+    static constexpr int FLOATS_PER_INSTANCE = 5;  // pos(3) + radius(1) + state(1)
 
     // gpu resources
     unsigned int vao = 0;
@@ -189,9 +202,9 @@ struct ParticleRenderer {
     int allocated_particles = 0;
 
     // cached query (initialized via on_set hook)
-    flecs::query<const Position, const ParticleIndex> position_query;
+    flecs::query<const Position, const ParticleIndex, const ParticleState> position_query;
 
     // cpu-side staging buffer (updated each frame)
-    // layout: [pos.xyz, radius] per instance = 4 floats per particle
+    // layout: [pos.xyz, radius, state] per instance = 5 floats per particle
     std::vector<float> staging_buffer;
 };

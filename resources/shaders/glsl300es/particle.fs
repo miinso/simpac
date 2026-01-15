@@ -4,6 +4,7 @@ precision highp float;
 // input from vertex shader
 in vec3 v_normal;
 in vec3 v_world_pos;
+in float v_state;
 
 // uniforms
 uniform vec3 u_color;
@@ -21,6 +22,23 @@ void main() {
     float ambient = 0.3;
     float lighting = ambient + diffuse * 0.7;
 
-    vec3 color = u_color * lighting;
+    int flags = int(v_state + 0.5);
+    vec3 color = u_color;
+
+    // check particle state
+    if ((flags & 2) != 0) {
+        color = mix(color, vec3(1.0, 0.6, 0.2), 0.7); // selected
+    } else if ((flags & 1) != 0) {
+        color = mix(color, vec3(1.0, 0.95, 0.2), 0.6); // hovered
+    }
+    color *= lighting;
     fragColor = vec4(color, 1.0);
 }
+
+// enum Flag : uint8_t {
+//     None = 0,
+//     Hovered = 1 << 0,
+//     Selected = 1 << 1,
+//     Disabled = 1 << 2,
+//     Pinned = 1 << 3,
+// };

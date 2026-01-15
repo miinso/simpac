@@ -27,7 +27,7 @@ inline Vector3 toRay3(const Vector3r& v) {
 }
 
 // =========================================================================
-// CPU Drawing (not actually CPU per se, it's just simple debug rendering)
+// CPU Drawing (not actually CPU per se, it's just simple debug rendering unlike fancy gpu sutff)
 // =========================================================================
 
 inline void draw_spring(Spring& spring) {
@@ -280,6 +280,9 @@ inline void upload_particle_positions_to_gpu(const flecs::world& ecs, ParticleRe
         rlEnableVertexAttribute(3);
         rlSetVertexAttribute(3, 1, RL_FLOAT, false, stride, 3 * sizeof(float));  // instance radius
         rlSetVertexAttributeDivisor(3, 1);  // instanced
+        rlEnableVertexAttribute(4);
+        rlSetVertexAttribute(4, 1, RL_FLOAT, false, stride, 4 * sizeof(float));  // instance state
+        rlSetVertexAttributeDivisor(4, 1);  // instanced
 
         rlDisableVertexArray();
     }
@@ -287,11 +290,11 @@ inline void upload_particle_positions_to_gpu(const flecs::world& ecs, ParticleRe
     if (num_particles == 0) return;
 
     // collect particle positions
-    int inst_idx = 0;
     gpu.position_query.run([&](flecs::iter& it) {
         while (it.next()) {
             auto pos = it.field<const Position>(0);
             auto idx = it.field<const ParticleIndex>(1);
+            auto state = it.field<const ParticleState>(2);
             for (auto i : it) {
                 int pidx = idx[i].value;
                 if (pidx >= 0 && pidx < num_particles) {
@@ -300,6 +303,7 @@ inline void upload_particle_positions_to_gpu(const flecs::world& ecs, ParticleRe
                     gpu.staging_buffer[offset + 1] = (float)pos[i].value.y();
                     gpu.staging_buffer[offset + 2] = (float)pos[i].value.z();
                     gpu.staging_buffer[offset + 3] = gpu.base_radius;
+                    gpu.staging_buffer[offset + 4] = (float)state[i].flags;
                 }
             }
         }

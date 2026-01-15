@@ -8,6 +8,7 @@ layout(location = 1) in vec3 a_normal;    // mesh vertex normal
 // per-instance attributes
 layout(location = 2) in vec3 a_instance_pos;     // particle world position
 layout(location = 3) in float a_instance_radius; // particle radius
+layout(location = 4) in float a_instance_state;  // particle state flags
 
 // uniforms
 uniform mat4 u_viewproj;
@@ -15,6 +16,7 @@ uniform mat4 u_viewproj;
 // output to fragment shader
 out vec3 v_normal;
 out vec3 v_world_pos;
+out float v_state;
 
 void main() {
     // transform mesh vertex by instance transform
@@ -24,4 +26,5 @@ void main() {
     // pass through normal and world pos for lighting
     v_normal = a_normal;
     v_world_pos = world_pos;
+    v_state = a_instance_state;
 }

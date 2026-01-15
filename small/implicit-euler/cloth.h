@@ -46,6 +46,7 @@ inline void build_cloth_geometry(flecs::entity cloth_entity, GridCloth& cloth) {
                 .set(Acceleration{Vector3r::Zero()})
                 .set(Mass{cloth.mass})
                 .set(InverseMass{1.0f / cloth.mass})
+                .set(ParticleState{})
                 .set(ParticleIndex{global_idx})
                 .add<Particle>();
         }
