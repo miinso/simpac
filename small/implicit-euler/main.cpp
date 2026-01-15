@@ -16,6 +16,12 @@ int main() {
     printf("Hi from %s\n", __FILE__);
 
     flecs::world ecs;
+
+#ifndef __EMSCRIPTEN__
+    ecs.import<flecs::stats>();
+    ecs.set<flecs::Rest>({});
+#endif
+
     // Register cloth component with hooks (must be before any cloth creation)
     register_cloth_component(ecs);
 

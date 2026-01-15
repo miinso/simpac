@@ -12,20 +12,31 @@ cc_binary(
     ],
     copts = select({
         "@platforms//os:emscripten": [
-            "-DPLATFORM_WEB",
-            "-Os",
+            "-O2",
             # "-g0",
             # "-DNDEBUG",
         ],
+        "@platforms//os:windows": [
+            # "/O2",
+            # "/arch:AVX2",
+            # "/openmp:experimental",
+        ],
         "//conditions:default": [
-            "-DPLATFORM_DESKTOP",
+            # "-fopenmp",
             # "-march=native",
             # "-O3",
         ],
     }),
     data = ["//:resources"],
-    defines = [
-    ],
+    defines = select({
+        "@platforms//os:emscripten": [
+            "PLATFORM_WEB",
+        ],
+        "//conditions:default": [
+            "PLATFORM_DESKTOP",
+            # "EIGEN_DONT_PARALLELIZE",
+        ],
+    }),
     includes = [
     ],
     linkopts = select({
@@ -56,6 +67,8 @@ cc_binary(
             "-sEXPORTED_FUNCTIONS=['_main','_emscripten_shutdown','_emscripten_resize']",
             "--embed-file resources/shaders/glsl300es/spring.fs@resources/shaders/glsl300es/spring.fs",
             "--embed-file resources/shaders/glsl300es/spring.vs@resources/shaders/glsl300es/spring.vs",
+            "--embed-file resources/shaders/glsl300es/particle.fs@resources/shaders/glsl300es/particle.fs",
+            "--embed-file resources/shaders/glsl300es/particle.vs@resources/shaders/glsl300es/particle.vs",
             "--embed-file resources/generic.fnt@resources/generic.fnt",
             "--embed-file resources/generic.png@resources/generic.png",
         ],

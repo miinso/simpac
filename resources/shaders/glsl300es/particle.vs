@@ -1,0 +1,27 @@
+#version 300 es
+precision highp float;
+
+// per-vertex attributes (icosphere mesh)
+layout(location = 0) in vec3 a_position;  // mesh vertex position
+layout(location = 1) in vec3 a_normal;    // mesh vertex normal
+
+// per-instance attributes
+layout(location = 2) in vec3 a_instance_pos;     // particle world position
+layout(location = 3) in float a_instance_radius; // particle radius
+
+// uniforms
+uniform mat4 u_viewproj;
+
+// output to fragment shader
+out vec3 v_normal;
+out vec3 v_world_pos;
+
+void main() {
+    // transform mesh vertex by instance transform
+    vec3 world_pos = a_instance_pos + a_position * a_instance_radius;
+    gl_Position = u_viewproj * vec4(world_pos, 1.0);
+
+    // pass through normal and world pos for lighting
+    v_normal = a_normal;
+    v_world_pos = world_pos;
+}
