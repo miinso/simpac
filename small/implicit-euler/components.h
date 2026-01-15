@@ -157,5 +157,40 @@ struct SpringRenderer {
 
     // spring connectivity (rebuilt on topology change)
     std::vector<int> spring_particle_indices;  // [idx_a, idx_b, ...] for each spring
-    std::vector<float> rest_lengths;           // Rest length for each spring
+    std::vector<float> rest_lengths;           // rest length for each spring
+};
+
+// gpu particle renderer (instanced icospheres)
+struct ParticleRenderer {
+    // instance layout constants
+    static constexpr int FLOATS_PER_INSTANCE = 4;  // pos(3) + radius(1)
+
+    // gpu resources
+    unsigned int vao = 0;
+    unsigned int mesh_vbo = 0;       // icosphere vertices (static)
+    unsigned int mesh_ebo = 0;       // icosphere indices (static)
+    unsigned int instance_vbo = 0;   // per-particle data (dynamic)
+    unsigned int shader_id = 0;
+
+    // mesh data
+    int num_vertices = 0;
+    int num_indices = 0;
+
+    // uniform locations
+    int u_viewproj_loc = -1;
+    int u_color_loc = -1;
+
+    // rendering params
+    float base_radius = 0.5f;  // base sphere size
+    float color[3] = {0.2f, 0.5f, 0.9f};  // particle color
+
+    // current buffer allocation
+    int allocated_particles = 0;
+
+    // cached query (initialized via on_set hook)
+    flecs::query<const Position, const ParticleIndex> position_query;
+
+    // cpu-side staging buffer (updated each frame)
+    // layout: [pos.xyz, radius] per instance = 4 floats per particle
+    std::vector<float> staging_buffer;
 };

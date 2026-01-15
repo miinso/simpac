@@ -24,7 +24,10 @@ int main() {
     ecs.component<Scene>()
         .on_set([](flecs::entity e, Scene& scene) {
             auto world = e.world();
-            scene.particle_query = world.query_builder<Particle, ParticleIndex>().cached().build();
+            scene.particle_query = world.query_builder<ParticleIndex>()
+                .with<Particle>() // <Particle> is an empty tag, unlike <Spring>
+                .cached()
+                .build();
             scene.spring_query = world.query_builder<Spring>().cached().build();
         })
         .add(flecs::Singleton);
@@ -78,6 +81,66 @@ int main() {
     // Now set SpringRenderer to trigger on_set hook (after graphics init)
     ecs.set<SpringRenderer>({});
     auto& gpu = ecs.get_mut<SpringRenderer>();
+
+    // ParticleRenderer with on_set hook for mesh, query, and shader initialization
+    ecs.component<ParticleRenderer>()
+        .on_set([](flecs::entity e, ParticleRenderer& gpu) {
+            auto world = e.world();
+            // cached query for per-frame position lookup
+            gpu.position_query = world.query_builder<const Position, const ParticleIndex>()
+                .with<Particle>()
+                .cached()
+                .build();
+
+            // generate icosphere mesh
+            std::vector<float> vertices;
+            std::vector<unsigned int> indices;
+            systems::generate_icosphere(vertices, indices, 2); // last param for subdiv levle
+            gpu.num_vertices = vertices.size() / 6;  // 6 floats per vertex (pos+normal)
+            gpu.num_indices = indices.size();
+
+            // create vao and upload mesh (static)
+            gpu.vao = rlLoadVertexArray();
+            rlEnableVertexArray(gpu.vao);
+
+            gpu.mesh_vbo = rlLoadVertexBuffer(vertices.data(), vertices.size() * sizeof(float), false);
+
+            // create element buffer (index buffer)
+            glGenBuffers(1, &gpu.mesh_ebo);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gpu.mesh_ebo);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
+
+            // configure mesh attributes (location 0-1)
+            constexpr int stride = 6 * sizeof(float);
+            rlEnableVertexAttribute(0);
+            rlSetVertexAttribute(0, 3, RL_FLOAT, false, stride, 0);  // position
+            rlEnableVertexAttribute(1);
+            rlSetVertexAttribute(1, 3, RL_FLOAT, false, stride, 3 * sizeof(float));  // normal
+
+            rlDisableVertexArray();
+
+            // load shader
+            Shader shader = LoadShader(
+                graphics::npath("resources/shaders/glsl300es/particle.vs").c_str(),
+                graphics::npath("resources/shaders/glsl300es/particle.fs").c_str()
+            );
+            if (IsShaderValid(shader)) {
+                gpu.shader_id = shader.id;
+                gpu.u_viewproj_loc = GetShaderLocation(shader, "u_viewproj");
+                gpu.u_color_loc = GetShaderLocation(shader, "u_color");
+            }
+        })
+        .on_remove([](flecs::entity e, ParticleRenderer& gpu) {
+            if (gpu.shader_id) UnloadShader({gpu.shader_id});
+            if (gpu.instance_vbo) rlUnloadVertexBuffer(gpu.instance_vbo);
+            if (gpu.mesh_ebo) glDeleteBuffers(1, &gpu.mesh_ebo);
+            if (gpu.mesh_vbo) rlUnloadVertexBuffer(gpu.mesh_vbo);
+            if (gpu.vao) rlUnloadVertexArray(gpu.vao);
+        })
+        .add(flecs::Singleton);
+
+    // set ParticleRenderer to trigger on_set hook
+    ecs.set<ParticleRenderer>({});
 
     // =========================================================================
     // Simulation systems (we set .kind(0) to manually run them
@@ -154,7 +217,7 @@ int main() {
             systems::draw_spring(s);
         }).disable();
 
-    ecs.system<const Position, const Mass>("DrawParticles")
+    ecs.system<const Position, const Mass>("Draw Particles")
         .with<Particle>()
         .kind(graphics::phase_on_render)
         .each([](const Position& x, const Mass& m) {
@@ -175,6 +238,21 @@ int main() {
             auto& ctx = it.world().get_mut<SpringRenderer>();
             systems::draw_springs_gpu(ctx);
         }).disable(0);
+
+    // upload particle positions each frame before rendering
+    ecs.system("Upload Particle Positions")
+        .kind(graphics::phase_pre_render)
+        .run([](flecs::iter& it) {
+            auto& ctx = it.world().get_mut<ParticleRenderer>();
+            systems::upload_particle_positions_to_gpu(it.world(), ctx);
+        });
+
+    ecs.system("Draw Particles GPU")
+        .kind(graphics::phase_on_render)
+        .run([](flecs::iter& it) {
+            auto& ctx = it.world().get_mut<ParticleRenderer>();
+            systems::draw_particles_gpu(ctx);
+        });
 
     ecs.system("Draw Timing Info")
         .kind(graphics::phase_post_render)
@@ -245,7 +323,7 @@ int main() {
                 printf("[Solver] Resized: %d particles, %d DOF\n", n, dof);
             }
 
-            // TODO: should reset spring renderer bc ordering might not be preserved
+            // TODO: should reset spring/particle renderer bc ordering might not be preserved
 
             solver.b.setZero();
             solver.triplets.clear();

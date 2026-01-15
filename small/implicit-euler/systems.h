@@ -14,6 +14,7 @@
 #endif
 
 #include <cmath>
+#include "par_shapes.h"
 
 namespace systems {
 
@@ -256,6 +257,47 @@ inline void draw_timing_info(flecs::iter& it) {
 }
 
 // =========================================================================
+// GPU Rendering Utilities
+// =========================================================================
+
+// generate icosphere mesh using par_shapes
+inline void generate_icosphere(std::vector<float>& vertices, std::vector<unsigned int>& indices, int subdivisions = 1) {
+    par_shapes_mesh* mesh = par_shapes_create_subdivided_sphere(subdivisions);
+
+    // pack into output format: [x, y, z, nx, ny, nz] per vertex
+    vertices.clear();
+    vertices.reserve(mesh->npoints * 6);
+
+    for (int i = 0; i < mesh->npoints; ++i) {
+        // position
+        vertices.push_back(mesh->points[i * 3 + 0]);
+        vertices.push_back(mesh->points[i * 3 + 1]);
+        vertices.push_back(mesh->points[i * 3 + 2]);
+
+        // normal
+        if (mesh->normals) {
+            vertices.push_back(mesh->normals[i * 3 + 0]);
+            vertices.push_back(mesh->normals[i * 3 + 1]);
+            vertices.push_back(mesh->normals[i * 3 + 2]);
+        } else {
+            // for sphere, normal = normalized position
+            vertices.push_back(mesh->points[i * 3 + 0]);
+            vertices.push_back(mesh->points[i * 3 + 1]);
+            vertices.push_back(mesh->points[i * 3 + 2]);
+        }
+    }
+
+    // copy indices
+    indices.clear();
+    indices.reserve(mesh->ntriangles * 3);
+    for (int i = 0; i < mesh->ntriangles * 3; ++i) {
+        indices.push_back(mesh->triangles[i]);
+    }
+
+    par_shapes_free_mesh(mesh);
+}
+
+// =========================================================================
 // GPU Spring Rendering
 // =========================================================================
 
@@ -368,12 +410,87 @@ inline void draw_springs_gpu(const SpringRenderer& gpu) {
     rlDisableShader();
 }
 
+// =========================================================================
+// GPU Particle Rendering
+// =========================================================================
+
+inline void upload_particle_positions_to_gpu(const flecs::world& ecs, ParticleRenderer& gpu) {
+    if (gpu.shader_id == 0) return;
+
+    auto& scene = ecs.get<Scene>();
+    int num_particles = scene.num_particles();
+
+    // lazy buffer allocation/reallocation on topology change
+    if (gpu.allocated_particles != num_particles) {
+        gpu.allocated_particles = num_particles;
+
+        // resize staging buffer (4 floats per instance)
+        gpu.staging_buffer.resize(num_particles * ParticleRenderer::FLOATS_PER_INSTANCE);
+
+        // recreate instance buffer only (mesh is static)
+        if (gpu.instance_vbo) rlUnloadVertexBuffer(gpu.instance_vbo);
+
+        rlEnableVertexArray(gpu.vao);
+        gpu.instance_vbo = rlLoadVertexBuffer(nullptr, gpu.staging_buffer.size() * sizeof(float), true);
+
+        // configure per-instance attributes (location 2+)
+        constexpr int stride = ParticleRenderer::FLOATS_PER_INSTANCE * sizeof(float);
+        rlEnableVertexAttribute(2);
+        rlSetVertexAttribute(2, 3, RL_FLOAT, false, stride, 0);  // instance position
+        rlSetVertexAttributeDivisor(2, 1);  // instanced
+        rlEnableVertexAttribute(3);
+        rlSetVertexAttribute(3, 1, RL_FLOAT, false, stride, 3 * sizeof(float));  // instance radius
+        rlSetVertexAttributeDivisor(3, 1);  // instanced
+
+        rlDisableVertexArray();
+    }
+
+    if (num_particles == 0) return;
+
+    // collect particle positions
+    int inst_idx = 0;
+    gpu.position_query.run([&](flecs::iter& it) {
+        while (it.next()) {
+            auto pos = it.field<const Position>(0);
+            auto idx = it.field<const ParticleIndex>(1);
+            for (auto i : it) {
+                int pidx = idx[i].value;
+                if (pidx >= 0 && pidx < num_particles) {
+                    int offset = pidx * ParticleRenderer::FLOATS_PER_INSTANCE;
+                    gpu.staging_buffer[offset + 0] = (float)pos[i].value.x();
+                    gpu.staging_buffer[offset + 1] = (float)pos[i].value.y();
+                    gpu.staging_buffer[offset + 2] = (float)pos[i].value.z();
+                    gpu.staging_buffer[offset + 3] = gpu.base_radius;
+                }
+            }
+        }
+    });
+
+    rlUpdateVertexBuffer(gpu.instance_vbo, gpu.staging_buffer.data(),
+                         gpu.staging_buffer.size() * sizeof(float), 0);
+}
+
+inline void draw_particles_gpu(const ParticleRenderer& gpu) {
+    if (gpu.shader_id == 0 || gpu.num_indices == 0) return;
+
+    // setup shader and uniforms
+    Matrix viewproj = MatrixMultiply(rlGetMatrixModelview(), rlGetMatrixProjection());
+    rlEnableShader(gpu.shader_id);
+    rlSetUniformMatrix(gpu.u_viewproj_loc, viewproj);
+    rlSetUniform(gpu.u_color_loc, gpu.color, SHADER_UNIFORM_VEC3, 1);
+
+    // bind vao (mesh + instanced attributes configured) and buffers
+    rlEnableVertexArray(gpu.vao);
+    rlEnableVertexBuffer(gpu.mesh_vbo);
+
+    // bind element buffer for indexed drawing
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gpu.mesh_ebo);
+
+    // draw instanced icospheres
+    glDrawElementsInstanced(GL_TRIANGLES, gpu.num_indices, GL_UNSIGNED_INT, 0, gpu.allocated_particles);
 
     // cleanup
-    rlDisableVertexAttribute(0);
-    rlDisableVertexAttribute(1);
-    rlDisableVertexAttribute(2);
-    rlDisableVertexAttribute(3);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     rlDisableVertexBuffer();
     rlDisableVertexArray();
     rlDisableShader();
