@@ -1,4 +1,6 @@
+load("@emsdk//emscripten_toolchain:wasm_rules.bzl", "wasm_cc_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_test")
 
 # graphics module - shared many time accross the projects
 cc_library(
@@ -37,6 +39,76 @@ cc_library(
         "@platforms//os:emscripten": [],
         "//conditions:default": ["@bazel_tools//tools/cpp/runfiles"],
     }),
+)
+
+cc_test(
+    name = "graphics_test",
+    srcs = ["graphics/graphics_test.cpp"],
+    deps = [
+        ":graphics2",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_binary(
+    name = "graphics_test_wasm_cc",
+    srcs = ["graphics/graphics_test.cpp"],
+    copts = select({
+        "@platforms//os:emscripten": [
+            "-O2",
+            "-DPLATFORM_WEB"
+        ],
+        "//conditions:default": [],
+    }),
+    linkopts = select({
+        "@platforms//os:emscripten": [
+            "-sENVIRONMENT=node",
+            "-sEXIT_RUNTIME=0",
+            "-sALLOW_MEMORY_GROWTH=1",
+            "-sUSE_PTHREADS=0",
+            "-sSINGLE_FILE",
+            "-sEXPORTED_RUNTIME_METHODS=['ccall','cwrap']",
+            "-sEXPORTED_FUNCTIONS=['_main','_emscripten_shutdown','_emscripten_resize','_flecs_explorer_request']",
+            "-sSTACK_SIZE=64mb",
+            "-sINITIAL_MEMORY=512mb",
+            "-sMODULARIZE=1",
+        ],
+        "//conditions:default": [],
+    }),
+    features = select({
+        "@platforms//os:emscripten": ["-use_pthreads"],
+        "//conditions:default": [],
+    }),
+    tags = ["manual"],
+    deps = [
+        ":graphics2",
+        "@googletest//:gtest_main",
+    ],
+)
+
+wasm_cc_binary(
+    name = "graphics_test_wasm",
+    cc_target = ":graphics_test_wasm_cc",
+    outputs = [
+        "graphics_test.js",
+        "graphics_test.wasm",
+    ],
+    tags = ["wasm"],
+    threads = "off",
+)
+
+py_test(
+    name = "graphics_test_wasm_node",
+    srcs = ["graphics/graphics_test_node.py"],
+    args = ["$(rootpaths :graphics_test_wasm)"],
+    data = [
+        ":graphics_test_wasm",
+    ],
+    main = "graphics/graphics_test_node.py",
+    tags = ["wasm"],
+    deps = [
+        "@bazel_tools//tools/python/runfiles",
+    ],
 )
 
 cc_library(
