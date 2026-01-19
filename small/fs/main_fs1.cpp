@@ -296,7 +296,13 @@ int main() {
         DrawText(TextFormat("elapsed: %f", global_time), 10, 90, 20, GREEN);
     });
 
-    graphics::run_main_loop([]() { global_time += delta_time; });
+    ecs.system("TickTime")
+        .kind(flecs::PreUpdate)
+        .run([](flecs::iter&) {
+            global_time += delta_time;
+        });
+
+    graphics::run_loop();
 
     // De-Initialization
     //--------------------------------------------------------------------------------------

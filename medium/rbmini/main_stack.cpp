@@ -424,7 +424,13 @@ int main() {
         rl::DrawLine3D({x.x(), x.y(), x.z()}, {cp.x(), cp.y(), cp.z()}, rl::GRAY);
     });
 
-    graphics::run_main_loop([]() { global_time += delta_time; });
+    ecs.system("TickTime")
+        .kind(flecs::PreUpdate)
+        .run([](flecs::iter&) {
+            global_time += delta_time;
+        });
+
+    graphics::run_loop();
 
     std::cout << "Simulation ended." << std::endl;
     return 0;

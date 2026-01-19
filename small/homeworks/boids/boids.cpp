@@ -298,7 +298,7 @@ int main() {
         });
 
     // Main loop - parent system runs in pipeline via progress()
-    graphics::run_main_loop([]{});
+    graphics::run_loop();
 
     std::cout << "Simulation ended." << std::endl;
     return 0;

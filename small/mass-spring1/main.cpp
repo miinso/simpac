@@ -188,7 +188,7 @@ int main() {
     // Main loop
     // =========================================================================
 
-    graphics::run_main_loop([]{});
+    graphics::run_loop();
 
     printf("Simulation ended.\n");
     return 0;

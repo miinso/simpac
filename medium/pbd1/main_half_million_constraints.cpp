@@ -119,7 +119,7 @@ int main() {
         DrawTextEx(font, buffer, {20, 100}, 12, 0, DARKGREEN);
     });
 
-    graphics::run_main_loop();
+    graphics::run_loop();
 
     std::cout << "Simulation ended." << std::endl;
     return 0;

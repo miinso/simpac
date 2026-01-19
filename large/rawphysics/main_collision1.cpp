@@ -276,7 +276,13 @@ int main()
 		// it.fini();
 	});
 
-	graphics::run_main_loop([]() { global_time += delta_time; });
+	ecs.system("TickTime")
+		.kind(flecs::PreUpdate)
+		.run([](flecs::iter&) {
+			global_time += delta_time;
+		});
+
+	graphics::run_loop();
 
 	printf("Simulation has ended.\n");
 	return 0;

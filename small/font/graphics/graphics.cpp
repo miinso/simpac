@@ -18,7 +18,6 @@
 namespace graphics {
     // global states
     flecs::world* ecs = nullptr;
-    std::function<void()> update_func;
 
     flecs::entity PreRender;
     flecs::entity OnRender;
@@ -75,10 +74,6 @@ namespace graphics {
         if (ecs) {
             ecs->progress();
         }
-
-        if (update_func) {
-            update_func();
-        }
     }
 #endif
 
@@ -119,9 +114,7 @@ namespace graphics {
         CloseWindow();
     }
 
-    void run_main_loop(std::function<void()> update) {
-        update_func = update;
-
+    void run_loop() {
 #if defined(__EMSCRIPTEN__)
         printf("graphics::invoking emscripten rAF loop\n");
         emscripten_set_main_loop(main_loop_rAF_callback, 0, 1);
@@ -131,10 +124,6 @@ namespace graphics {
         while (!window_should_close()) {
             if (ecs) {
                 ecs->progress(0.01);
-            }
-
-            if (update_func) {
-                update_func();
             }
         }
         printf("graphics::destroying native while loop\n");

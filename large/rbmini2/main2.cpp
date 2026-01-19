@@ -60,7 +60,7 @@ int main() {
         renderer.draw_wireframe();
     });
 
-    graphics::run_main_loop([]() {});
+    graphics::run_loop();
 
     std::cout << "Simulation ended." << std::endl;
     return 0;

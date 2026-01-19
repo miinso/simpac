@@ -298,7 +298,13 @@ int main() {
     // ecs.import <flecs::stats>(); % this causes problems on web build
     // ecs.set<flecs::Rest>({});
 
-    graphics::run_main_loop([]() { global_time += delta_time; });
+    ecs.system("TickTime")
+        .kind(flecs::PreUpdate)
+        .run([](flecs::iter&) {
+            global_time += delta_time;
+        });
+
+    graphics::run_loop();
 
     printf("Simulation ended.\n");
     return 0;

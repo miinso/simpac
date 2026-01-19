@@ -139,7 +139,7 @@ int main() {
         .kind(flecs::OnUpdate)
         .run([&](flecs::iter& it) {
             // Update camera shader uniform
-            auto camera = graphics::detail::camera;
+            auto camera = graphics::get_raylib_camera_const();
             float cameraPos[3] = {camera.position.x, camera.position.y, camera.position.z};
             SetShaderValue(shader, shader.locs[SHADER_LOC_VECTOR_VIEW], cameraPos, SHADER_UNIFORM_VEC3);
 
@@ -221,7 +221,7 @@ int main() {
     // =========================================================================
     // Main loop
     // =========================================================================
-    graphics::run_main_loop([]{});
+    graphics::run_loop();
 
     // Cleanup
     floor.materials[0].shader = {0};

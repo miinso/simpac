@@ -8,7 +8,6 @@
 #include <cstdio>
 #include <limits>
 
-
 // =========================================================================
 // Main
 // =========================================================================
@@ -17,11 +16,6 @@ int main() {
     printf("Hi from %s\n", __FILE__);
 
     flecs::world ecs;
-
-#ifndef __EMSCRIPTEN__
-    ecs.import<flecs::stats>();
-    ecs.set<flecs::Rest>({});
-#endif
 
     // register cloth component with hooks (must be before any cloth creation)
     register_cloth_component(ecs);
@@ -444,8 +438,11 @@ int main() {
     // Main loop
     // =========================================================================
 
-    graphics::run_main_loop([]{});
+    ecs.app()
+        .enable_rest()
+        .enable_stats()
+        .run();
 
-    printf("Simulation ended.\n");
+    printf("Simulation has ended?\n");
     return 0;
 }
