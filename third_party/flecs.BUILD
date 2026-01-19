@@ -30,11 +30,12 @@ cc_library(
     includes = ["distr"],
     linkopts = select({
         "@platforms//os:windows": [
-            "/DEFAULTLIB:Ws2_32.lib",
+            "/DEFAULTLIB:ws2_32.lib",
+            "/DEFAULTLIB:dbghelp.lib", # see: docs/BuildingFlecs.md
         ],
         "@platforms//os:emscripten": [
             # "-sALLOW_MEMORY_GROWTH=1",
-            "-sEXPORTED_RUNTIME_METHODS=cwrap",
+            # "-sEXPORTED_RUNTIME_METHODS=cwrap",
             # "-sUSE_PTHREADS=1",
             # "-pthread",
         ],

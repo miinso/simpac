@@ -130,7 +130,7 @@ cc_library(
         ],
         "@platforms//os:emscripten": [
             "-sUSE_GLFW=3",
-            "-sEXPORTED_RUNTIME_METHODS=ccall",
+            # "-sEXPORTED_RUNTIME_METHODS=ccall",
             # if you're going for WebGL2
             "-sUSE_WEBGL2=1",
             "-sMIN_WEBGL_VERSION=2",
