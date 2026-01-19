@@ -1,27 +1,57 @@
 #include "graphics.h"
 
 #include <cstdio>
-
-#if defined(__EMSCRIPTEN__)
-#    include <emscripten/emscripten.h>
-#endif
+#include <functional>
 
 namespace graphics {
 
 namespace {
     // stored window config for clear color
     Color clear_color = RAYWHITE;
+    ecs_world_t* runtime_world = nullptr;
+    std::function<void()> progress_func;
 
-    // wasm shutdown safety flag - prevents use-after-free from pending RAF callbacks
-    bool shutdown_requested = false;
+    struct AppLoopState {
+        ecs_world_t* world = nullptr;
+        ecs_app_desc_t desc = {};
+
+        void reset_runtime() {
+            world = nullptr;
+            desc = {};
+        }
+    };
+
+    AppLoopState app_loop{};
+
+    // app loop hook for app().run
+    void app_frame() {
+        if (!app_loop.world) {
+            return;
+        }
+        ecs_app_run_frame(app_loop.world, &app_loop.desc);
+    }
+
+    // app run hook: copy desc + run_loop
+    int app_run_action(ecs_world_t* world, ecs_app_desc_t* desc) {
+        app_loop.world = world;
+        runtime_world = world;
+        // keep stable copy; desc may be stack alloc
+        app_loop.desc = *desc;
+        progress_func = app_frame;
+        run_loop();
+        app_loop.reset_runtime();
+        return 0;
+    }
+
+    void install_app_loop() {
+        ecs_app_set_run_action(app_run_action);
+    }
 
     // setup the render pipeline systems
-    void setup_render_pipeline() {
-        auto* ecs = detail::ecs;
-
+    void setup_render_pipeline(flecs::world& ecs) {
         // camera update in OnLoad (before rendering)
         // query for `Camera` with `ActiveCamera` tag
-        ecs->system<Camera>("graphics::update_camera")
+        ecs.system<Camera>("graphics::update_camera")
             .with<ActiveCamera>()
             .kind(flecs::OnLoad)
             .each([](Camera& cam) {
@@ -29,7 +59,7 @@ namespace {
             });
 
         // sync active camera to raylib before rendering
-        ecs->system<const Camera>("graphics::sync_camera")
+        ecs.system<const Camera>("graphics::sync_camera")
             .with<ActiveCamera>()
             .kind(flecs::PostUpdate)
             .each([](const Camera& cam) {
@@ -37,7 +67,7 @@ namespace {
             });
 
         // PreRender: begin drawing, clear, update lighting
-        ecs->system("graphics::begin")
+        ecs.system("graphics::begin")
             .kind(phase_pre_render)
             .run([](flecs::iter& it) {
                 if (!is_render_thread()) return;
@@ -57,7 +87,7 @@ namespace {
             });
 
         // OnRender: begin 3D mode
-        ecs->system("graphics::render3d")
+        ecs.system("graphics::render3d")
             .kind(phase_on_render)
             .run([](flecs::iter& it) {
                 if (!is_render_thread()) return;
@@ -71,7 +101,7 @@ namespace {
             });
 
         // PostRender: end 3D mode, draw overlays
-        ecs->system("graphics::render2d")
+        ecs.system("graphics::render2d")
             .kind(phase_post_render)
             .run([](flecs::iter& it) {
                 if (!is_render_thread()) return;
@@ -95,7 +125,7 @@ namespace {
             });
 
         // OnPresent: end drawing
-        ecs->system("graphics::end")
+        ecs.system("graphics::end")
             .kind(phase_on_present)
             .run([](flecs::iter& it) {
                 if (!is_render_thread()) return;
@@ -103,26 +133,40 @@ namespace {
             });
     }
 
-#if defined(__EMSCRIPTEN__)
-    // emscripten main loop callback
-    void main_loop_callback() {
-        // bail early if shutdown was requested (handles pending RAF after cancel)
-        if (shutdown_requested) return;
-
-        if (detail::ecs) {
-            detail::ecs->progress();
-        }
-
-        if (detail::update_func) {
-            detail::update_func();
-        }
-    }
-#endif
-
 } // anonymous namespace
 
+namespace detail {
+    void finalize_world() {
+        ecs_world_t* world = runtime_world;
+        if (!world) {
+            return;
+        }
+        runtime_world = nullptr;
+        progress_func = nullptr;
+        if (!flecs_poly_release(world)) {
+            if (ecs_stage_get_id(world) == -1) {
+                ecs_stage_free(world);
+            } else {
+                // mirror flecs::world::release() to avoid recursive fini
+                flecs_poly_claim(world);
+                ecs_fini(world);
+            }
+        }
+    }
+
+    void run_frame(ecs_ftime_t dt) {
+        if (progress_func) {
+            progress_func();
+        } else if (runtime_world) {
+            ecs_progress(runtime_world, dt);
+        }
+    }
+}
+
 void init(flecs::world& world) {
-    detail::ecs = &world;
+    runtime_world = world.c_ptr();
+    progress_func = nullptr;
+    install_app_loop();
 
     // register camera components with reflection
     register_camera_components(world);
@@ -144,35 +188,26 @@ void init(flecs::world& world) {
         .add(flecs::Phase)
         .depends_on(phase_post_render);
 
-    setup_render_pipeline();
+    setup_render_pipeline(world);
 }
 
 void init_window(const WindowConfig& config) {
-#if defined(__EMSCRIPTEN__)
-    // read actual canvas size BEFORE InitWindow (which overwrites it)
-    int canvas_w = EM_ASM_INT({ return Module.canvas.width; });
-    int canvas_h = EM_ASM_INT({ return Module.canvas.height; });
-    std::printf("graphics::init_window requested=%dx%d canvas=%dx%d\n",
-                config.width, config.height, canvas_w, canvas_h);
-#endif
+    detail::CanvasSize canvas_size;
+    detail::platform_before_init_window(config, canvas_size);
+
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT);
     InitWindow(config.width, config.height, config.title);
 
-#if defined(__EMSCRIPTEN__)
-    // restore actual canvas size if different from requested
-    if (canvas_w > 0 && canvas_h > 0 &&
-        (canvas_w != config.width || canvas_h != config.height)) {
-        SetWindowSize(canvas_w, canvas_h);
-    }
-#endif
+    detail::platform_after_init_window(config, canvas_size);
 
     clear_color = config.clear_color;
 
     // create default camera entity if none exists
-    if (detail::ecs) {
-        auto active_cam_query = detail::ecs->query<Camera, ActiveCamera>();
+    if (runtime_world) {
+        flecs::world ecs(runtime_world);
+        auto active_cam_query = ecs.query<Camera, ActiveCamera>();
         if (active_cam_query.count() == 0) {
-            detail::ecs->entity("DefaultCamera")
+            ecs.entity("DefaultCamera")
                 .set<Camera>({})
                 .add<ActiveCamera>();
         }
@@ -186,9 +221,7 @@ void init_window(const WindowConfig& config) {
         // SetTextureFilter(detail::font.texture, TEXTURE_FILTER_POINT);
     }
 
-#if !defined(__EMSCRIPTEN__)
-    SetTargetFPS(config.target_fps);
-#endif
+    detail::platform_set_target_fps(config);
 }
 
 bool window_should_close() {
@@ -196,55 +229,37 @@ bool window_should_close() {
 }
 
 void close_window() {
-#if defined(__EMSCRIPTEN__)
-    // set flag FIRST so any pending RAF callback bails early
-    shutdown_requested = true;
+    const bool window_ready = IsWindowReady();
+    if (window_ready) {
+        detail::platform_pre_close_window();
 
-    // cleanup resources
-    if (detail::ecs) {
-        detail::ecs->progress(0);
+        // cleanup lighting if enabled
+        disable_lighting();
+
+        // unload custom font
+        if (detail::font_loaded) {
+            UnloadFont(detail::font);
+            detail::font_loaded = false;
+        }
+
+        CloseWindow();
     }
 
-    emscripten_cancel_main_loop();
-    std::printf("graphics::emscripten rAF loop canceled\n");
-#endif
+    // clear global phase entities (they hold flecs refs)
+    phase_pre_render = flecs::entity();
+    phase_on_render = flecs::entity();
+    phase_post_render = flecs::entity();
+    phase_on_present = flecs::entity();
 
-    // cleanup lighting if enabled
-    disable_lighting();
-
-    // unload custom font
-    if (detail::font_loaded) {
-        UnloadFont(detail::font);
-        detail::font_loaded = false;
-    }
-
-    CloseWindow();
+    // clear hooks (may capture refs)
+    progress_func = nullptr;
+    app_loop.reset_runtime();
+    // world lifetime is owned by the caller; clear cached pointer only
+    runtime_world = nullptr;
 }
 
-void run_main_loop(std::function<void()> update) {
-    detail::update_func = update;
-
-#if defined(__EMSCRIPTEN__)
-    // reset shutdown flag for fresh start
-    shutdown_requested = false;
-    std::printf("graphics::invoking emscripten rAF loop\n");
-    emscripten_set_main_loop(main_loop_callback, 0, 1);
-#else
-    std::printf("graphics::invoking native while loop\n");
-    while (!window_should_close()) {
-        // user update first (input handling before EndDrawing clears key state)
-        if (detail::update_func) {
-            detail::update_func();
-        }
-
-        // then ECS progress (rendering systems)
-        if (detail::ecs) {
-            detail::ecs->progress(GetFrameTime());
-        }
-    }
-    std::printf("graphics::destroying native while loop\n");
-    close_window();
-#endif
+void run_loop() {
+    detail::platform_run_loop();
 }
 
 // ============================================================================
@@ -284,16 +299,3 @@ void set_active_camera(flecs::world& ecs, flecs::entity camera_entity) {
 }
 
 } // namespace graphics
-
-#if defined(__EMSCRIPTEN__)
-extern "C" {
-    EMSCRIPTEN_KEEPALIVE void emscripten_shutdown() {
-        graphics::close_window();
-    }
-
-    EMSCRIPTEN_KEEPALIVE void emscripten_resize(int width, int height) {
-        std::printf("graphics::emscripten_resize %dx%d\n", width, height);
-        SetWindowSize(width, height);
-    }
-}
-#endif

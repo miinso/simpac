@@ -3,25 +3,36 @@ load("@rules_cc//cc:cc_library.bzl", "cc_library")
 # graphics module - shared many time accross the projects
 cc_library(
     name = "graphics2",
-    srcs = ["graphics/graphics.cpp"],
+    srcs = ["graphics/graphics.cpp"] + select({
+        "@platforms//os:emscripten": ["graphics/graphics_platform_wasm.cpp"],
+        "//conditions:default": ["graphics/graphics_platform_native.cpp"],
+    }),
     hdrs = [
-        "graphics/graphics.h",
         "graphics/camera.h",
+        "graphics/graphics.h",
         "graphics/lighting.h",
         "graphics/pipelines.h",
         "graphics/resources.h",
     ],
     copts = select({
-        "@platforms//os:windows": ["-DPLATFORM_DESKTOP"],
-        "@platforms//os:emscripten": ["-DPLATFORM_WEB"],
-        "//conditions:default": ["-DPLATFORM_DESKTOP"],
+        "@platforms//os:windows": [],  # win
+        "@platforms//os:emscripten": [],  # browser
+        "//conditions:default": [],  # mac, linux
+    }),
+    defines = select({
+        "@platforms//os:emscripten": [
+            "PLATFORM_WEB",
+        ],
+        "//conditions:default": [
+            "PLATFORM_DESKTOP",
+        ],
     }),
     strip_include_prefix = "graphics",
     visibility = ["//visibility:public"],
     deps = [
+        "//third_party/par_shapes",
         "@flecs",
         "@raylib-latest",
-        "//third_party/par_shapes",
     ] + select({
         "@platforms//os:emscripten": [],
         "//conditions:default": ["@bazel_tools//tools/cpp/runfiles"],
@@ -92,4 +103,3 @@ cc_library(
         # "@raylib-latest",
     ],
 )
-
