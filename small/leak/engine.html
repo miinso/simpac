@@ -1,0 +1,193 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Leak Engine Test</title>
+    <style>
+      :root {
+        color-scheme: light;
+      }
+      body {
+        margin: 0;
+        font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+        background: #f2efe8;
+        color: #1f1f1f;
+      }
+      .wrap {
+        max-width: 900px;
+        margin: 24px auto;
+        padding: 0 16px 24px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 26px;
+      }
+      p {
+        margin: 4px 0 16px;
+        color: #4b4b4b;
+      }
+      .panel {
+        background: #ffffff;
+        border: 1px solid #ded8cc;
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      button {
+        border: 1px solid #b59f7b;
+        background: #f7e2b2;
+        padding: 8px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      button.secondary {
+        background: #f0f0f0;
+      }
+      #stats {
+        font-family: "Courier New", monospace;
+        font-size: 13px;
+        background: #f6f1e6;
+        padding: 8px;
+        border-radius: 8px;
+        border: 1px solid #e2d8c3;
+        white-space: pre-line;
+      }
+      #log {
+        margin-top: 12px;
+        font-family: "Courier New", monospace;
+        font-size: 12px;
+        background: #111;
+        color: #e8e8e8;
+        padding: 8px;
+        border-radius: 8px;
+        height: 140px;
+        overflow: auto;
+      }
+      #canvas {
+        width: 100%;
+        height: 60vh;
+        display: block;
+        background: #0f1115;
+        border-radius: 10px;
+        border: 1px solid #1d1f24;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>Leak Engine Test</h1>
+      <p>Minimal raylib engine build (copied from <code>small/template</code>).</p>
+
+      <div class="panel">
+        <div class="row">
+          <button id="create">Create module</button>
+          <button id="destroy" class="secondary">Destroy module</button>
+        </div>
+
+        <div id="stats">waiting for module...</div>
+        <canvas id="canvas"></canvas>
+        <pre id="log"></pre>
+      </div>
+    </div>
+
+    <script src="engine.js"></script>
+    <script>
+      const logEl = document.getElementById('log');
+      const statsEl = document.getElementById('stats');
+      const canvas = document.getElementById('canvas');
+      const base = new URL('.', window.location.href).toString();
+
+      let moduleInstance = null;
+
+      function log(message) {
+        const timestamp = new Date().toISOString().slice(11, 19);
+        logEl.textContent += `[${timestamp}] ${message}\n`;
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+
+      function formatBytes(bytes) {
+        if (!bytes) return '0 B';
+        const units = ['B', 'KB', 'MB', 'GB'];
+        let value = bytes;
+        let idx = 0;
+        while (value >= 1024 && idx < units.length - 1) {
+          value /= 1024;
+          idx += 1;
+        }
+        const precision = value >= 10 || idx === 0 ? 0 : 1;
+        return `${value.toFixed(precision)} ${units[idx]}`;
+      }
+
+      function getWasmBytes() {
+        if (!moduleInstance) return 0;
+        const wasmMemory = moduleInstance.wasmMemory?.buffer || moduleInstance.HEAP8?.buffer;
+        return wasmMemory ? wasmMemory.byteLength : 0;
+      }
+
+      function updateStats() {
+        const wasmBytes = getWasmBytes();
+        const jsHeap = performance.memory?.usedJSHeapSize ?? null;
+        const lines = [
+          `module: ${moduleInstance ? 'ready' : 'none'}`,
+          `wasm memory: ${formatBytes(wasmBytes)}`,
+          `js heap: ${jsHeap ? formatBytes(jsHeap) : 'n/a'}`
+        ];
+        statsEl.textContent = lines.join('\n');
+      }
+
+      async function createModuleInstance() {
+        if (moduleInstance) {
+          log('module already exists');
+          return;
+        }
+        if (typeof createModule !== 'function') {
+          log('createModule not found (check engine.js)');
+          return;
+        }
+        log('loading module...');
+        moduleInstance = await createModule({
+          canvas,
+          locateFile: (path) => base + path,
+          print: (text) => log(`wasm: ${text}`),
+          printErr: (text) => log(`wasm error: ${text}`)
+        });
+        window.Module = moduleInstance;
+        log('module ready');
+        updateStats();
+      }
+
+      function destroyModuleInstance() {
+        if (!moduleInstance) {
+          log('no module to destroy');
+          return;
+        }
+        try {
+          moduleInstance._emscripten_shutdown?.();
+        } catch (err) {
+          log(`shutdown error: ${err}`);
+        }
+        moduleInstance = null;
+        window.Module = null;
+        log('module released');
+        updateStats();
+      }
+
+      document.getElementById('create').addEventListener('click', () => {
+        createModuleInstance();
+      });
+      document.getElementById('destroy').addEventListener('click', () => {
+        destroyModuleInstance();
+      });
+
+      setInterval(updateStats, 700);
+      updateStats();
+    </script>
+  </body>
+</html>

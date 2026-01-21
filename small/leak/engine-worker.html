@@ -1,0 +1,299 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Leak Engine Worker Test</title>
+    <style>
+      :root {
+        color-scheme: light;
+      }
+      body {
+        margin: 0;
+        font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+        background: #f2efe8;
+        color: #1f1f1f;
+      }
+      .wrap {
+        max-width: 900px;
+        margin: 24px auto;
+        padding: 0 16px 24px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 26px;
+      }
+      p {
+        margin: 4px 0 16px;
+        color: #4b4b4b;
+      }
+      .panel {
+        background: #ffffff;
+        border: 1px solid #ded8cc;
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      button {
+        border: 1px solid #b59f7b;
+        background: #f7e2b2;
+        padding: 8px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      button.secondary {
+        background: #f0f0f0;
+      }
+      label {
+        display: block;
+        margin: 8px 0;
+        font-size: 14px;
+      }
+      input[type="number"] {
+        width: 160px;
+        padding: 6px;
+        border-radius: 6px;
+        border: 1px solid #c7c1b5;
+        margin-left: 8px;
+      }
+      #stats {
+        font-family: "Courier New", monospace;
+        font-size: 13px;
+        background: #f6f1e6;
+        padding: 8px;
+        border-radius: 8px;
+        border: 1px solid #e2d8c3;
+        white-space: pre-line;
+      }
+      #log {
+        margin-top: 12px;
+        font-family: "Courier New", monospace;
+        font-size: 12px;
+        background: #111;
+        color: #e8e8e8;
+        padding: 8px;
+        border-radius: 8px;
+        height: 140px;
+        overflow: auto;
+      }
+      #canvas,
+      .canvas {
+        width: 100%;
+        height: 60vh;
+        display: block;
+        background: #0f1115;
+        border-radius: 10px;
+        border: 1px solid #1d1f24;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>Leak Engine Worker Test</h1>
+      <p>Reusable worker bridge using <code>simpac_worker_bridge.js</code>.</p>
+
+      <div class="panel">
+        <div class="row">
+          <button id="create">Create worker</button>
+          <button id="destroy" class="secondary">Shutdown module</button>
+          <button id="terminate" class="secondary">Terminate worker</button>
+          <button id="hold">Hold bytes</button>
+          <button id="clear" class="secondary">Clear holds</button>
+        </div>
+
+        <label>
+          Bytes per hold
+          <input id="bytes" type="number" min="1" step="1024" value="1048576" />
+        </label>
+
+        <div id="stats">waiting for module...</div>
+        <canvas id="canvas"></canvas>
+        <pre id="log"></pre>
+      </div>
+    </div>
+
+    <script type="module">
+      import { SimpacWorker } from './simpac_worker_bridge.js';
+
+      const logEl = document.getElementById('log');
+      const statsEl = document.getElementById('stats');
+      const bytesInput = document.getElementById('bytes');
+      const scriptUrl = new URL('engine.js', window.location.href).toString();
+      const wasmUrl = null; // Single-file build; set .wasm URL for split builds.
+
+      let workerInstance = null;
+      let canvasEl = document.getElementById('canvas');
+      let canvasTransferred = false;
+      let lastStats = { module: false, wasmBytes: 0, heldBytes: 0, heldBlocks: 0 };
+
+      function log(message) {
+        const timestamp = new Date().toISOString().slice(11, 19);
+        logEl.textContent += `[${timestamp}] ${message}\n`;
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+
+      function formatBytes(bytes) {
+        if (!bytes) return '0 B';
+        const units = ['B', 'KB', 'MB', 'GB'];
+        let value = bytes;
+        let idx = 0;
+        while (value >= 1024 && idx < units.length - 1) {
+          value /= 1024;
+          idx += 1;
+        }
+        const precision = value >= 10 || idx === 0 ? 0 : 1;
+        return `${value.toFixed(precision)} ${units[idx]}`;
+      }
+
+      function updateStats() {
+        const jsHeap = performance.memory?.usedJSHeapSize ?? null;
+        const lines = [
+          `module: ${lastStats.module ? 'ready' : 'none'}`,
+          `worker: ${workerInstance ? 'running' : 'none'}`,
+          `wasm memory: ${formatBytes(lastStats.wasmBytes || 0)}`,
+          `held bytes: ${formatBytes(lastStats.heldBytes || 0)} (${lastStats.heldBlocks || 0} blocks)`,
+          `js heap: ${jsHeap ? formatBytes(jsHeap) : 'n/a'}`
+        ];
+        statsEl.textContent = lines.join('\n');
+      }
+
+      function ensureCanvas() {
+        if (!canvasEl || canvasTransferred) {
+          const next = document.createElement('canvas');
+          next.id = 'canvas';
+          next.className = 'canvas';
+          canvasEl.replaceWith(next);
+          canvasEl = next;
+          canvasTransferred = false;
+        }
+        return canvasEl;
+      }
+
+      function createWorker() {
+        if (workerInstance) {
+          log('worker already running');
+          return;
+        }
+        if (!('transferControlToOffscreen' in HTMLCanvasElement.prototype)) {
+          log('OffscreenCanvas not supported in this browser');
+          return;
+        }
+
+        const canvas = ensureCanvas();
+        workerInstance = new SimpacWorker(canvas, wasmUrl, scriptUrl, {
+          exports: [
+            '_leak_hold',
+            '_leak_clear',
+            '_leak_held_bytes',
+            '_leak_block_count'
+          ],
+          onReady: () => {
+            log('worker: module ready');
+            workerInstance.requestStats();
+          },
+          onStats: (stats) => {
+            lastStats = {
+              module: stats.module,
+              wasmBytes: stats.wasmBytes || 0,
+              heldBytes: stats.heldBytes || 0,
+              heldBlocks: stats.heldBlocks || 0
+            };
+            updateStats();
+          },
+          onLog: (text) => log(`wasm: ${text}`),
+          onError: (message, detail) => {
+            const extra = detail ? ` ${detail}` : '';
+            log(`worker error: ${message}${extra}`);
+          },
+          onShutdown: () => log('worker: module shutdown')
+        });
+
+        workerInstance.start();
+        canvasTransferred = true;
+        log('worker created');
+        updateStats();
+      }
+
+      function shutdownModule() {
+        if (!workerInstance) {
+          log('worker not running');
+          return;
+        }
+        workerInstance.shutdown();
+      }
+
+      function terminateWorker() {
+        if (!workerInstance) {
+          log('worker not running');
+          return;
+        }
+        workerInstance.terminate();
+        workerInstance = null;
+        lastStats = { module: false, wasmBytes: 0, heldBytes: 0, heldBlocks: 0 };
+        log('worker terminated');
+        updateStats();
+      }
+
+      function holdBytes() {
+        if (!workerInstance || !workerInstance.ready) {
+          log('worker not ready');
+          return;
+        }
+        const bytes = Number.parseInt(bytesInput.value, 10) || 0;
+        workerInstance.call('_leak_hold', bytes)
+          .then(() => {
+            workerInstance.requestStats();
+            log(`hold ${bytes} bytes`);
+          })
+          .catch((err) => {
+            log(`hold error: ${err.message}`);
+          });
+      }
+
+      function clearHolds() {
+        if (!workerInstance || !workerInstance.ready) {
+          log('worker not ready');
+          return;
+        }
+        workerInstance.call('_leak_clear')
+          .then(() => {
+            workerInstance.requestStats();
+            log('cleared holds');
+          })
+          .catch((err) => {
+            log(`clear error: ${err.message}`);
+          });
+      }
+
+      document.getElementById('create').addEventListener('click', () => {
+        createWorker();
+      });
+      document.getElementById('destroy').addEventListener('click', () => {
+        shutdownModule();
+      });
+      document.getElementById('terminate').addEventListener('click', () => {
+        terminateWorker();
+      });
+      document.getElementById('hold').addEventListener('click', () => {
+        holdBytes();
+      });
+      document.getElementById('clear').addEventListener('click', () => {
+        clearHolds();
+      });
+
+      setInterval(() => {
+        if (workerInstance) {
+          workerInstance.requestStats();
+        }
+        updateStats();
+      }, 700);
+      updateStats();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,559 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>WASM Leak Playground - Firefox</title>
+    <style>
+      :root {
+        color-scheme: light;
+      }
+      body {
+        margin: 0;
+        font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+        background: #f7f3ea;
+        color: #1f1f1f;
+      }
+      .wrap {
+        max-width: 980px;
+        margin: 28px auto;
+        padding: 0 16px 24px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 26px;
+      }
+      p {
+        margin: 0 0 16px;
+        color: #4b4b4b;
+      }
+      .grid {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      }
+      .panel {
+        background: #ffffff;
+        border: 1px solid #ded8cc;
+        border-radius: 12px;
+        padding: 14px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+      }
+      .panel h2 {
+        margin: 0 0 8px;
+        font-size: 18px;
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 10px;
+      }
+      button {
+        border: 1px solid #b59f7b;
+        background: #f7e2b2;
+        padding: 7px 10px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      button.secondary {
+        background: #f0f0f0;
+      }
+      label {
+        display: block;
+        margin: 8px 0;
+        font-size: 13px;
+      }
+      input[type="number"] {
+        width: 140px;
+        padding: 6px;
+        border-radius: 6px;
+        border: 1px solid #c7c1b5;
+        margin-left: 8px;
+      }
+      .stats {
+        font-family: "Courier New", monospace;
+        font-size: 12px;
+        background: #f6f1e6;
+        padding: 8px;
+        border-radius: 8px;
+        border: 1px solid #e2d8c3;
+        min-height: 70px;
+        white-space: pre-line;
+      }
+      #log {
+        margin-top: 14px;
+        font-family: "Courier New", monospace;
+        font-size: 12px;
+        background: #111;
+        color: #e8e8e8;
+        padding: 8px;
+        border-radius: 8px;
+        height: 140px;
+        overflow: auto;
+      }
+      iframe {
+        width: 1px;
+        height: 1px;
+        border: 0;
+        position: absolute;
+        left: -9999px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>WASM Leak Playground (Firefox modes)</h1>
+      <p>Test cleanup using main thread, worker, and iframe isolation.</p>
+
+      <label>
+        Bytes per hold
+        <input id="bytes" type="number" min="1" step="1024" value="1048576" />
+      </label>
+
+      <div class="grid">
+        <section class="panel">
+          <h2>Main thread module</h2>
+          <div class="row">
+            <button id="main-create">Create</button>
+            <button id="main-destroy" class="secondary">Destroy</button>
+            <button id="main-hold">Hold</button>
+            <button id="main-clear" class="secondary">Clear</button>
+          </div>
+          <div id="main-stats" class="stats">waiting...</div>
+        </section>
+
+        <section class="panel">
+          <h2>Worker isolated module</h2>
+          <div class="row">
+            <button id="worker-create">Create</button>
+            <button id="worker-destroy" class="secondary">Destroy</button>
+            <button id="worker-hold">Hold</button>
+            <button id="worker-clear" class="secondary">Clear</button>
+          </div>
+          <div id="worker-stats" class="stats">waiting...</div>
+        </section>
+
+        <section class="panel">
+          <h2>Iframe isolated module</h2>
+          <div class="row">
+            <button id="iframe-create">Create</button>
+            <button id="iframe-destroy" class="secondary">Destroy</button>
+            <button id="iframe-hold">Hold</button>
+            <button id="iframe-clear" class="secondary">Clear</button>
+          </div>
+          <div id="iframe-stats" class="stats">waiting...</div>
+        </section>
+      </div>
+
+      <pre id="log"></pre>
+    </div>
+
+    <script src="leak.js"></script>
+    <script>
+      const logEl = document.getElementById('log');
+      const bytesInput = document.getElementById('bytes');
+      const wasmScript = new URL('leak.js', window.location.href).toString();
+
+      const state = {
+        mainModule: null,
+        worker: null,
+        workerReady: false,
+        iframe: null,
+        iframeReady: false
+      };
+
+      function log(message) {
+        const timestamp = new Date().toISOString().slice(11, 19);
+        logEl.textContent += `[${timestamp}] ${message}\n`;
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+
+      function formatBytes(bytes) {
+        if (!bytes) return '0 B';
+        const units = ['B', 'KB', 'MB', 'GB'];
+        let value = bytes;
+        let idx = 0;
+        while (value >= 1024 && idx < units.length - 1) {
+          value /= 1024;
+          idx += 1;
+        }
+        const precision = value >= 10 || idx === 0 ? 0 : 1;
+        return `${value.toFixed(precision)} ${units[idx]}`;
+      }
+
+      function updateStats(target, payload) {
+        const el = document.getElementById(target);
+        if (!el) return;
+        const lines = [
+          `module: ${payload.module ? 'ready' : 'none'}`,
+          `wasm memory: ${formatBytes(payload.wasmBytes || 0)}`,
+          `held bytes: ${formatBytes(payload.heldBytes || 0)} (${payload.heldBlocks || 0} blocks)`,
+          `js heap: ${payload.jsHeap ? formatBytes(payload.jsHeap) : 'n/a'}`
+        ];
+        el.textContent = lines.join('\n');
+      }
+
+      function getMainStats() {
+        const mod = state.mainModule;
+        const wasmMemory = mod?.wasmMemory?.buffer || mod?.HEAP8?.buffer;
+        return {
+          module: !!mod,
+          wasmBytes: wasmMemory ? wasmMemory.byteLength : 0,
+          heldBytes: mod?._leak_held_bytes ? mod._leak_held_bytes() : 0,
+          heldBlocks: mod?._leak_block_count ? mod._leak_block_count() : 0,
+          jsHeap: performance.memory?.usedJSHeapSize ?? null
+        };
+      }
+
+      async function createMain() {
+        if (state.mainModule) {
+          log('main: module already exists');
+          return;
+        }
+        if (typeof createModule !== 'function') {
+          log('main: createModule not found');
+          return;
+        }
+        log('main: loading module...');
+        state.mainModule = await createModule({
+          print: (text) => log(`main wasm: ${text}`),
+          printErr: (text) => log(`main wasm error: ${text}`)
+        });
+        window.Module = state.mainModule;
+        log('main: module ready');
+        updateStats('main-stats', getMainStats());
+      }
+
+      function destroyMain() {
+        if (!state.mainModule) {
+          log('main: no module to destroy');
+          return;
+        }
+        try {
+          state.mainModule._emscripten_shutdown?.();
+        } catch (err) {
+          log(`main shutdown error: ${err}`);
+        }
+        state.mainModule = null;
+        window.Module = null;
+        log('main: module released');
+        updateStats('main-stats', getMainStats());
+      }
+
+      function holdMain() {
+        if (!state.mainModule) {
+          log('main: no module loaded');
+          return;
+        }
+        const bytes = Number.parseInt(bytesInput.value, 10) || 0;
+        state.mainModule._leak_hold(bytes);
+        updateStats('main-stats', getMainStats());
+      }
+
+      function clearMain() {
+        if (!state.mainModule) {
+          log('main: no module loaded');
+          return;
+        }
+        state.mainModule._leak_clear();
+        updateStats('main-stats', getMainStats());
+      }
+
+      function buildWorkerScript() {
+        return `
+          let moduleInstance = null;
+          async function loadScript(scriptUrl) {
+            try {
+              const response = await fetch(scriptUrl, { cache: 'no-store' });
+              const text = await response.text();
+              const blob = new Blob([text], { type: 'text/javascript' });
+              const blobUrl = URL.createObjectURL(blob);
+              importScripts(blobUrl);
+              URL.revokeObjectURL(blobUrl);
+              return;
+            } catch (err) {
+              postMessage({ type: 'error', payload: { message: 'fetch failed', detail: String(err) } });
+            }
+            importScripts(scriptUrl);
+          }
+          function getWasmBytes() {
+            const wasmMemory = moduleInstance?.wasmMemory?.buffer || moduleInstance?.HEAP8?.buffer;
+            return wasmMemory ? wasmMemory.byteLength : 0;
+          }
+          function postStats() {
+            if (!moduleInstance) {
+              postMessage({ type: 'stats', payload: { module: false } });
+              return;
+            }
+            postMessage({
+              type: 'stats',
+              payload: {
+                module: true,
+                wasmBytes: getWasmBytes(),
+                heldBytes: moduleInstance._leak_held_bytes(),
+                heldBlocks: moduleInstance._leak_block_count()
+              }
+            });
+          }
+          async function init(scriptUrl) {
+            await loadScript(scriptUrl);
+            const wasmUrl = new URL('leak.wasm', scriptUrl).toString();
+            let wasmBinary = null;
+            try {
+              const response = await fetch(wasmUrl, { cache: 'no-store' });
+              wasmBinary = await response.arrayBuffer();
+            } catch (err) {
+              postMessage({ type: 'error', payload: { message: 'wasm fetch failed', detail: String(err) } });
+            }
+            try {
+              moduleInstance = await createModule({
+                locateFile: (path) => new URL(path, scriptUrl).toString(),
+                wasmBinary
+              });
+            } catch (err) {
+              postMessage({ type: 'error', payload: { message: 'createModule failed', detail: String(err) } });
+              return;
+            }
+            postMessage({ type: 'ready' });
+            postStats();
+          }
+          onmessage = async (event) => {
+            const { type, payload } = event.data || {};
+            if (type === 'init') {
+              await init(payload.scriptUrl);
+              return;
+            }
+            if (!moduleInstance) {
+              return;
+            }
+            if (type === 'hold') {
+              moduleInstance._leak_hold(payload.bytes || 0);
+              postStats();
+            } else if (type === 'clear') {
+              moduleInstance._leak_clear();
+              postStats();
+            } else if (type === 'stats') {
+              postStats();
+            } else if (type === 'shutdown') {
+              try {
+                moduleInstance._emscripten_shutdown?.();
+              } catch (err) {}
+              moduleInstance = null;
+              postMessage({ type: 'shutdown' });
+            }
+          };
+        `;
+      }
+
+      function createWorker() {
+        if (state.worker) {
+          log('worker: already running');
+          return;
+        }
+        const blob = new Blob([buildWorkerScript()], { type: 'text/javascript' });
+        const workerUrl = URL.createObjectURL(blob);
+        state.worker = new Worker(workerUrl);
+        URL.revokeObjectURL(workerUrl);
+        state.worker.onmessage = (event) => {
+          const { type, payload } = event.data || {};
+          if (type === 'ready') {
+            state.workerReady = true;
+            log('worker: module ready');
+          } else if (type === 'stats') {
+            updateStats('worker-stats', {
+              module: payload.module,
+              wasmBytes: payload.wasmBytes || 0,
+              heldBytes: payload.heldBytes || 0,
+              heldBlocks: payload.heldBlocks || 0,
+              jsHeap: null
+            });
+          } else if (type === 'error') {
+            log(`worker error: ${payload?.message || 'unknown'} ${payload?.detail || ''}`.trim());
+          } else if (type === 'shutdown') {
+            log('worker: shutdown complete');
+          }
+        };
+        state.worker.postMessage({ type: 'init', payload: { scriptUrl: wasmScript } });
+        log('worker: created');
+      }
+
+      function destroyWorker() {
+        if (!state.worker) {
+          log('worker: no worker to destroy');
+          return;
+        }
+        state.worker.postMessage({ type: 'shutdown' });
+        state.worker.terminate();
+        state.worker = null;
+        state.workerReady = false;
+        updateStats('worker-stats', { module: false });
+        log('worker: terminated');
+      }
+
+      function holdWorker() {
+        if (!state.workerReady || !state.worker) {
+          log('worker: not ready');
+          return;
+        }
+        const bytes = Number.parseInt(bytesInput.value, 10) || 0;
+        state.worker.postMessage({ type: 'hold', payload: { bytes } });
+      }
+
+      function clearWorker() {
+        if (!state.workerReady || !state.worker) {
+          log('worker: not ready');
+          return;
+        }
+        state.worker.postMessage({ type: 'clear' });
+      }
+
+      function buildIframeSrcDoc(scriptUrl) {
+        return `<!doctype html>
+<html>
+  <head><meta charset="utf-8"></head>
+  <body>
+    <script src="${scriptUrl}"><\/script>
+    <script>
+      let moduleInstance = null;
+      function getWasmBytes() {
+        const wasmMemory = moduleInstance?.wasmMemory?.buffer || moduleInstance?.HEAP8?.buffer;
+        return wasmMemory ? wasmMemory.byteLength : 0;
+      }
+      function postStats() {
+        if (!moduleInstance) {
+          parent.postMessage({ type: 'stats', payload: { module: false } }, '*');
+          return;
+        }
+        parent.postMessage({
+          type: 'stats',
+          payload: {
+            module: true,
+            wasmBytes: getWasmBytes(),
+            heldBytes: moduleInstance._leak_held_bytes(),
+            heldBlocks: moduleInstance._leak_block_count()
+          }
+        }, '*');
+      }
+      async function init() {
+        moduleInstance = await createModule();
+        parent.postMessage({ type: 'ready' }, '*');
+        postStats();
+      }
+      window.addEventListener('message', (event) => {
+        const { type, payload } = event.data || {};
+        if (!moduleInstance) return;
+        if (type === 'hold') {
+          moduleInstance._leak_hold(payload.bytes || 0);
+          postStats();
+        } else if (type === 'clear') {
+          moduleInstance._leak_clear();
+          postStats();
+        } else if (type === 'stats') {
+          postStats();
+        } else if (type === 'shutdown') {
+          try { moduleInstance._emscripten_shutdown?.(); } catch (err) {}
+          moduleInstance = null;
+          parent.postMessage({ type: 'shutdown' }, '*');
+        }
+      });
+      init();
+    <\/script>
+  </body>
+</html>`;
+      }
+
+      function createIframe() {
+        if (state.iframe) {
+          log('iframe: already exists');
+          return;
+        }
+        const iframe = document.createElement('iframe');
+        iframe.srcdoc = buildIframeSrcDoc(wasmScript);
+        document.body.appendChild(iframe);
+        state.iframe = iframe;
+        state.iframeReady = false;
+        log('iframe: created');
+      }
+
+      function destroyIframe() {
+        if (!state.iframe) {
+          log('iframe: no iframe to destroy');
+          return;
+        }
+        try {
+          state.iframe.contentWindow.postMessage({ type: 'shutdown' }, '*');
+          state.iframe.contentWindow.location.replace('about:blank');
+        } catch (err) {}
+        state.iframe.remove();
+        state.iframe = null;
+        state.iframeReady = false;
+        updateStats('iframe-stats', { module: false });
+        log('iframe: removed');
+      }
+
+      function holdIframe() {
+        if (!state.iframeReady || !state.iframe) {
+          log('iframe: not ready');
+          return;
+        }
+        const bytes = Number.parseInt(bytesInput.value, 10) || 0;
+        state.iframe.contentWindow.postMessage({ type: 'hold', payload: { bytes } }, '*');
+      }
+
+      function clearIframe() {
+        if (!state.iframeReady || !state.iframe) {
+          log('iframe: not ready');
+          return;
+        }
+        state.iframe.contentWindow.postMessage({ type: 'clear' }, '*');
+      }
+
+      window.addEventListener('message', (event) => {
+        if (!state.iframe) return;
+        const { type, payload } = event.data || {};
+        if (type === 'ready') {
+          state.iframeReady = true;
+          log('iframe: module ready');
+        } else if (type === 'stats') {
+          updateStats('iframe-stats', {
+            module: payload.module,
+            wasmBytes: payload.wasmBytes || 0,
+            heldBytes: payload.heldBytes || 0,
+            heldBlocks: payload.heldBlocks || 0,
+            jsHeap: null
+          });
+        } else if (type === 'error') {
+          log(`iframe error: ${payload?.message || 'unknown'}`);
+        } else if (type === 'shutdown') {
+          log('iframe: shutdown complete');
+        }
+      });
+
+      document.getElementById('main-create').addEventListener('click', createMain);
+      document.getElementById('main-destroy').addEventListener('click', destroyMain);
+      document.getElementById('main-hold').addEventListener('click', holdMain);
+      document.getElementById('main-clear').addEventListener('click', clearMain);
+
+      document.getElementById('worker-create').addEventListener('click', createWorker);
+      document.getElementById('worker-destroy').addEventListener('click', destroyWorker);
+      document.getElementById('worker-hold').addEventListener('click', holdWorker);
+      document.getElementById('worker-clear').addEventListener('click', clearWorker);
+
+      document.getElementById('iframe-create').addEventListener('click', createIframe);
+      document.getElementById('iframe-destroy').addEventListener('click', destroyIframe);
+      document.getElementById('iframe-hold').addEventListener('click', holdIframe);
+      document.getElementById('iframe-clear').addEventListener('click', clearIframe);
+
+      setInterval(() => {
+        updateStats('main-stats', getMainStats());
+        if (state.workerReady && state.worker) {
+          state.worker.postMessage({ type: 'stats' });
+        }
+        if (state.iframeReady && state.iframe) {
+          state.iframe.contentWindow.postMessage({ type: 'stats' }, '*');
+        }
+      }, 700);
+    </script>
+  </body>
+</html>

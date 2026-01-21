@@ -1,0 +1,350 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>WASM Leak Playground - Proxy Worker</title>
+    <style>
+      :root {
+        color-scheme: light;
+      }
+      body {
+        margin: 0;
+        font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+        background: #f2efe8;
+        color: #1f1f1f;
+      }
+      .wrap {
+        max-width: 780px;
+        margin: 32px auto;
+        padding: 0 16px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 26px;
+      }
+      p {
+        margin: 4px 0 16px;
+        color: #4b4b4b;
+      }
+      .panel {
+        background: #ffffff;
+        border: 1px solid #ded8cc;
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      button {
+        border: 1px solid #b59f7b;
+        background: #f7e2b2;
+        padding: 8px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      button.secondary {
+        background: #f0f0f0;
+      }
+      label {
+        display: block;
+        margin: 8px 0;
+        font-size: 14px;
+      }
+      input[type="number"] {
+        width: 160px;
+        padding: 6px;
+        border-radius: 6px;
+        border: 1px solid #c7c1b5;
+        margin-left: 8px;
+      }
+      #stats {
+        font-family: "Courier New", monospace;
+        font-size: 13px;
+        background: #f6f1e6;
+        padding: 8px;
+        border-radius: 8px;
+        border: 1px solid #e2d8c3;
+      }
+      #log {
+        margin-top: 12px;
+        font-family: "Courier New", monospace;
+        font-size: 12px;
+        background: #111;
+        color: #e8e8e8;
+        padding: 8px;
+        border-radius: 8px;
+        height: 140px;
+        overflow: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>WASM Leak Playground (Manual Worker)</h1>
+      <p>Manual worker setup using <code>createModule</code> inside a Worker.</p>
+
+      <div class="panel">
+        <div class="row">
+          <button id="create">Create worker</button>
+          <button id="destroy" class="secondary">Shutdown module</button>
+          <button id="terminate" class="secondary">Terminate worker</button>
+          <button id="hold">Hold bytes</button>
+          <button id="clear" class="secondary">Clear holds</button>
+        </div>
+
+        <label>
+          Bytes per hold
+          <input id="bytes" type="number" min="1" step="1024" value="1048576" />
+        </label>
+
+        <div id="stats">waiting for module...</div>
+        <pre id="log"></pre>
+      </div>
+    </div>
+
+    <script>
+      const logEl = document.getElementById('log');
+      const statsEl = document.getElementById('stats');
+      const bytesInput = document.getElementById('bytes');
+      const base = new URL('.', window.location.href).toString();
+      const scriptUrl = new URL('leak.js', window.location.href).toString();
+      const wasmUrl = new URL('leak.wasm', window.location.href).toString();
+
+      let worker = null;
+      let workerReady = false;
+      let lastStats = { module: false, wasmBytes: 0, heldBytes: 0, heldBlocks: 0 };
+
+      function log(message) {
+        const timestamp = new Date().toISOString().slice(11, 19);
+        logEl.textContent += `[${timestamp}] ${message}\n`;
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+
+      function formatBytes(bytes) {
+        if (!bytes) return '0 B';
+        const units = ['B', 'KB', 'MB', 'GB'];
+        let value = bytes;
+        let idx = 0;
+        while (value >= 1024 && idx < units.length - 1) {
+          value /= 1024;
+          idx += 1;
+        }
+        const precision = value >= 10 || idx === 0 ? 0 : 1;
+        return `${value.toFixed(precision)} ${units[idx]}`;
+      }
+
+      function updateStats() {
+        const jsHeap = performance.memory?.usedJSHeapSize ?? null;
+        const lines = [
+          `module: ${lastStats.module ? 'ready' : 'none'}`,
+          `worker: ${worker ? 'running' : 'none'}`,
+          `wasm memory: ${formatBytes(lastStats.wasmBytes || 0)}`,
+          `held bytes: ${formatBytes(lastStats.heldBytes || 0)} (${lastStats.heldBlocks || 0} blocks)`,
+          `js heap: ${jsHeap ? formatBytes(jsHeap) : 'n/a'}`
+        ];
+        statsEl.textContent = lines.join('\n');
+      }
+
+      function buildWorkerScript() {
+        return `
+          let moduleInstance = null;
+          let scriptLoaded = false;
+
+          async function loadScript(url) {
+            const response = await fetch(url, { cache: 'no-store' });
+            const text = await response.text();
+            const blob = new Blob([text], { type: 'text/javascript' });
+            const blobUrl = URL.createObjectURL(blob);
+            importScripts(blobUrl);
+            URL.revokeObjectURL(blobUrl);
+          }
+
+          async function init(scriptUrl, wasmUrl) {
+            if (!scriptLoaded) {
+              await loadScript(scriptUrl);
+              scriptLoaded = true;
+            }
+            if (typeof createModule !== 'function') {
+              postMessage({ type: 'error', payload: { message: 'createModule missing' } });
+              return;
+            }
+            let wasmBinary = null;
+            try {
+              const response = await fetch(wasmUrl, { cache: 'no-store' });
+              wasmBinary = await response.arrayBuffer();
+            } catch (err) {
+              postMessage({ type: 'error', payload: { message: 'wasm fetch failed', detail: String(err) } });
+            }
+            try {
+              moduleInstance = await createModule({
+                locateFile: (path) => {
+                  if (path.endsWith('.wasm')) return wasmUrl;
+                  return new URL(path, scriptUrl).toString();
+                },
+                wasmBinary,
+                print: (text) => postMessage({ type: 'log', payload: { text } }),
+                printErr: (text) => postMessage({ type: 'error', payload: { message: text } })
+              });
+              postMessage({ type: 'ready' });
+              postStats();
+            } catch (err) {
+              postMessage({ type: 'error', payload: { message: 'createModule failed', detail: String(err) } });
+            }
+          }
+
+          function postStats() {
+            if (!moduleInstance) {
+              postMessage({ type: 'stats', payload: { module: false } });
+              return;
+            }
+            const wasmMemory = moduleInstance.wasmMemory?.buffer || moduleInstance.HEAP8?.buffer;
+            postMessage({
+              type: 'stats',
+              payload: {
+                module: true,
+                wasmBytes: wasmMemory ? wasmMemory.byteLength : 0,
+                heldBytes: moduleInstance._leak_held_bytes(),
+                heldBlocks: moduleInstance._leak_block_count()
+              }
+            });
+          }
+
+          onmessage = (event) => {
+            const { type, payload } = event.data || {};
+            if (type === 'init') {
+              init(payload.scriptUrl, payload.wasmUrl);
+              return;
+            }
+            if (!moduleInstance) {
+              postMessage({ type: 'error', payload: { message: 'module not ready' } });
+              return;
+            }
+            if (type === 'hold') {
+              moduleInstance._leak_hold(payload.bytes || 0);
+              postStats();
+            } else if (type === 'clear') {
+              moduleInstance._leak_clear();
+              postStats();
+            } else if (type === 'stats') {
+              postStats();
+            } else if (type === 'shutdown') {
+              try {
+                moduleInstance._emscripten_shutdown?.();
+              } catch (err) {}
+              moduleInstance = null;
+              postMessage({ type: 'shutdown' });
+            }
+          };
+        `;
+      }
+
+      function createWorker() {
+        if (worker) {
+          log('worker already running');
+          return;
+        }
+        const blob = new Blob([buildWorkerScript()], { type: 'text/javascript' });
+        const blobUrl = URL.createObjectURL(blob);
+        worker = new Worker(blobUrl);
+        URL.revokeObjectURL(blobUrl);
+        workerReady = false;
+        lastStats = { module: false, wasmBytes: 0, heldBytes: 0, heldBlocks: 0 };
+        worker.onmessage = (event) => {
+          const { type, payload } = event.data || {};
+          if (type === 'ready') {
+            workerReady = true;
+            log('worker: module ready');
+          } else if (type === 'stats') {
+            lastStats = {
+              module: payload.module,
+              wasmBytes: payload.wasmBytes || 0,
+              heldBytes: payload.heldBytes || 0,
+              heldBlocks: payload.heldBlocks || 0
+            };
+          } else if (type === 'log') {
+            log(`wasm: ${payload.text}`);
+          } else if (type === 'error') {
+            const detail = payload.detail ? ` ${payload.detail}` : '';
+            log(`worker error: ${payload.message}${detail}`);
+          } else if (type === 'shutdown') {
+            workerReady = false;
+            log('worker: module shutdown');
+          }
+          updateStats();
+        };
+        worker.postMessage({ type: 'init', payload: { scriptUrl, wasmUrl } });
+        log('worker created');
+        updateStats();
+      }
+
+      function shutdownModule() {
+        if (!worker) {
+          log('worker not running');
+          return;
+        }
+        worker.postMessage({ type: 'shutdown' });
+      }
+
+      function terminateWorker() {
+        if (!worker) {
+          log('worker not running');
+          return;
+        }
+        worker.terminate();
+        worker = null;
+        workerReady = false;
+        lastStats = { module: false, wasmBytes: 0, heldBytes: 0, heldBlocks: 0 };
+        log('worker terminated');
+        updateStats();
+      }
+
+      function holdBytes() {
+        if (!worker || !workerReady) {
+          log('worker not ready');
+          return;
+        }
+        const bytes = Number.parseInt(bytesInput.value, 10) || 0;
+        worker.postMessage({ type: 'hold', payload: { bytes } });
+        log(`hold ${bytes} bytes`);
+      }
+
+      function clearHolds() {
+        if (!worker || !workerReady) {
+          log('worker not ready');
+          return;
+        }
+        worker.postMessage({ type: 'clear' });
+        log('cleared holds');
+      }
+
+      document.getElementById('create').addEventListener('click', () => {
+        createWorker();
+      });
+      document.getElementById('destroy').addEventListener('click', () => {
+        shutdownModule();
+      });
+      document.getElementById('terminate').addEventListener('click', () => {
+        terminateWorker();
+      });
+      document.getElementById('hold').addEventListener('click', () => {
+        holdBytes();
+      });
+      document.getElementById('clear').addEventListener('click', () => {
+        clearHolds();
+      });
+
+      setInterval(() => {
+        if (worker && workerReady) {
+          worker.postMessage({ type: 'stats' });
+        }
+        updateStats();
+      }, 700);
+      updateStats();
+    </script>
+  </body>
+</html>

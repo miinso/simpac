@@ -49,7 +49,7 @@ local_path_override(
 #     module_name = "emsdk",
 #     remote = "https://github.com/emscripten-core/emsdk.git",
 #     strip_prefix = "bazel",
-#     tag = "4.0.10",
+#     tag = "4.0.23",
 # )
 
 # emscripten_cache = use_extension(
