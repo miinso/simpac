@@ -20,7 +20,7 @@ inline void collect_momentum(const Mass& mass, const Velocity& vel,
 }
 
 inline void collect_external_force(const Mass& mass, const ParticleIndex& idx,
-                                    const Vector3r& gravity, Real dt, Solver& solver) {
+                                    const Eigen::Vector3r& gravity, Real dt, Solver& solver) {
     // RHS contribution: time-discretized external force term (h * f_ext)
     auto f_gravity = mass.value * gravity;
     solver.b.segment<3>(idx.value * 3) += dt * f_gravity;
@@ -50,8 +50,8 @@ inline void collect_spring_gradient(Spring& spring, Real dt, Solver& solver) {
     auto diff_v = v_a - v_b;
     auto relative_velocity = (diff_v / spring.rest_length).dot(dir);
 
-    Vector3r grad_a = (spring.k_s * strain + spring.k_d * relative_velocity) * dir; // grad_a = -force_a
-    Vector3r grad_b = -grad_a;
+    Eigen::Vector3r grad_a = (spring.k_s * strain + spring.k_d * relative_velocity) * dir; // grad_a = -force_a
+    Eigen::Vector3r grad_b = -grad_a;
 
     // RHS contribution: h * -grad(E) (elastic forces)
     // Only add contributions for non-pinned particles
@@ -116,9 +116,9 @@ inline void collect_spring_hessian(Spring& spring, Real dt, Solver& solver) {
     Real L0 = spring.rest_length;
     Real ratio = L0 / l;
 
-    Matrix3r I = Matrix3r::Identity();
-    Matrix3r ddT = dir * dir.transpose();
-    Matrix3r H_block = k * ((1.0 - ratio) * I + ratio * ddT);
+    Eigen::Matrix3r I = Eigen::Matrix3r::Identity();
+    Eigen::Matrix3r ddT = dir * dir.transpose();
+    Eigen::Matrix3r H_block = k * ((1.0 - ratio) * I + ratio * ddT);
 
     Real h2 = dt * dt;
 

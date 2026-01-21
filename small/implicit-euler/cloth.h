@@ -25,14 +25,14 @@ inline void build_cloth_geometry(flecs::entity cloth_entity, GridCloth& cloth) {
     std::vector<flecs::entity> particles;
     particles.resize(cloth.width * cloth.height);
 
-    Vector3r offset(cloth.offset[0], cloth.offset[1], cloth.offset[2]);
+    Eigen::Vector3r offset(cloth.offset[0], cloth.offset[1], cloth.offset[2]);
 
     for (int y = 0; y < cloth.height; y++) {
         for (int x = 0; x < cloth.width; x++) {
             int local_idx = y * cloth.width + x;
             int global_idx = particle_base_idx + local_idx;
 
-            Vector3r pos = offset + Vector3r(
+            Eigen::Vector3r pos = offset + Eigen::Vector3r(
                 x * cloth.spacing,
                 0.0f,
                 -y * cloth.spacing
@@ -42,8 +42,8 @@ inline void build_cloth_geometry(flecs::entity cloth_entity, GridCloth& cloth) {
                 .child_of(cloth_entity)  // make it a child
                 .set(Position{pos})
                 .set(OldPosition{pos})
-                .set(Velocity{Vector3r::Zero()})
-                .set(Acceleration{Vector3r::Zero()})
+                .set(Velocity{Eigen::Vector3r::Zero()})
+                .set(Acceleration{Eigen::Vector3r::Zero()})
                 .set(Mass{cloth.mass})
                 .set(InverseMass{1.0f / cloth.mass})
                 .set(ParticleState{})

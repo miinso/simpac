@@ -22,7 +22,7 @@ namespace systems {
 // Helpers
 // =========================================================================
 
-inline Vector3 toRay3(const Vector3r& v) {
+inline Vector3 toRay3(const Eigen::Vector3r& v) {
     return {(float)v.x(), (float)v.y(), (float)v.z()};
 }
 
@@ -192,7 +192,7 @@ inline void upload_spring_positions_to_gpu(const flecs::world& ecs, SpringRender
     if (num_springs == 0) return;
 
     // collect positions using cached query
-    std::vector<Vector3r> positions(num_particles);
+    std::vector<Eigen::Vector3r> positions(num_particles);
     gpu.position_query.run([&](flecs::iter& it) {
         while (it.next()) {
             auto pos = it.field<const Position>(0);
@@ -208,8 +208,8 @@ inline void upload_spring_positions_to_gpu(const flecs::world& ecs, SpringRender
     for (int i = 0; i < num_springs; ++i) {
         int idx_a = gpu.spring_particle_indices[i * 2];
         int idx_b = gpu.spring_particle_indices[i * 2 + 1];
-        Vector3r pa = positions[idx_a];
-        Vector3r pb = positions[idx_b];
+        Eigen::Vector3r pa = positions[idx_a];
+        Eigen::Vector3r pb = positions[idx_b];
         float rest = gpu.rest_lengths[i];
 
         // instance data: [pos_a.xyz, pos_b.xyz, rest_len]

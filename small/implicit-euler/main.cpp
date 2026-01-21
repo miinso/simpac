@@ -24,7 +24,7 @@ int main() {
     register_cloth_component(ecs);
 
     // scene setup with on_set hook for query initialization
-    Vector3r gravity(0, -9.81, 0);
+    Eigen::Vector3r gravity(0, -9.81, 0);
     ecs.component<Scene>()
         .on_set([](flecs::entity e, Scene& scene) {
             auto world = e.world();

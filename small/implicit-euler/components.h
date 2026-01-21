@@ -10,18 +10,20 @@
 #include <cstring>
 
 using Real = float;
-using Vector3r = Eigen::Matrix<Real, 3, 1, Eigen::DontAlign>;
-using Matrix3r = Eigen::Matrix<Real, 3, 3>;
-using VectorXr = Eigen::Matrix<Real, Eigen::Dynamic, 1>;
-using ArrayXr = Eigen::Array<Real, Eigen::Dynamic, 1>;
-using MatrixXr = Eigen::Matrix<Real, Eigen::Dynamic, Eigen::Dynamic>;
+namespace Eigen {
+using Vector3r = Matrix<Real, 3, 1, DontAlign>;
+using Matrix3r = Matrix<Real, 3, 3>;
+using VectorXr = Matrix<Real, Dynamic, 1>;
+using ArrayXr = Array<Real, Dynamic, 1>;
+using MatrixXr = Matrix<Real, Dynamic, Dynamic>;
+}  // namespace Eigen
 
 // Particle components
 struct ParticleIndex { int value; };
-struct Position { Vector3r value; };
-struct Velocity { Vector3r value; };
-struct Acceleration { Vector3r value; };
-struct OldPosition { Vector3r value; };
+struct Position { Eigen::Vector3r value; };
+struct Velocity { Eigen::Vector3r value; };
+struct Acceleration { Eigen::Vector3r value; };
+struct OldPosition { Eigen::Vector3r value; };
 struct Mass { Real value; };
 struct InverseMass { Real value; };
 struct ParticleState {
@@ -45,9 +47,9 @@ inline void register_vector3_reflection(flecs::world& ecs) {
         .member<float>("y")
         .member<float>("z");
 
-    ecs.component<Vector3r>()
+    ecs.component<Eigen::Vector3r>()
         .opaque(vec3f_meta)
-        .serialize([](const flecs::serializer* s, const Vector3r* data) {
+        .serialize([](const flecs::serializer* s, const Eigen::Vector3r* data) {
             if (!data) return 0;
             const float* v = data->data();
             s->member("x");
@@ -58,7 +60,7 @@ inline void register_vector3_reflection(flecs::world& ecs) {
             s->value(v[2]);
             return 0;
         })
-        .ensure_member([](Vector3r* dst, const char* member) -> void* {
+        .ensure_member([](Eigen::Vector3r* dst, const char* member) -> void* {
             if (!dst || !member) return nullptr;
             float* v = dst->data();
             if (!std::strcmp(member, "x")) return &v[0];
@@ -71,10 +73,10 @@ inline void register_vector3_reflection(flecs::world& ecs) {
 inline void register_sim_components(flecs::world& ecs) {
     register_vector3_reflection(ecs);
 
-    ecs.component<Position>().member<Vector3r>("value");
-    ecs.component<Velocity>().member<Vector3r>("value");
-    ecs.component<Acceleration>().member<Vector3r>("value");
-    ecs.component<OldPosition>().member<Vector3r>("value");
+    ecs.component<Position>().member<Eigen::Vector3r>("value");
+    ecs.component<Velocity>().member<Eigen::Vector3r>("value");
+    ecs.component<Acceleration>().member<Eigen::Vector3r>("value");
+    ecs.component<OldPosition>().member<Eigen::Vector3r>("value");
 }
 
 // Tags
@@ -102,9 +104,9 @@ struct Spring {
 struct Solver {
     // TODO: decide if we want to maintain one global solver or go per-object
     Eigen::SparseMatrix<Real> A;    // system matrix (3n x 3n)
-    VectorXr b;                     // rhs vector (3n x 1)
-    VectorXr x;                     // solution (3n x 1)
-    VectorXr x_prev;                // prev soultion (3n x 1)
+    Eigen::VectorXr b;                     // rhs vector (3n x 1)
+    Eigen::VectorXr x;                     // solution (3n x 1)
+    Eigen::VectorXr x_prev;                // prev soultion (3n x 1)
 
     std::vector<Eigen::Triplet<Real>> triplets;
 
@@ -128,7 +130,7 @@ struct Solver {
 // scene configuration and state
 struct Scene {
     Real dt;                    // timestep per simulation step
-    Vector3r gravity;           // gravity vector
+    Eigen::Vector3r gravity;           // gravity vector
 
     Real wall_time = 0;         // real elapsed time (wall-clock)
     Real sim_time = 0;          // accumulated simulation time
