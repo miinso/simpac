@@ -1,6 +1,6 @@
-#include "graphics.h"
-#include <flecs.h>
 #include <cstdio>
+#include <flecs.h>
+#include "graphics.h"
 #include "rlgl.h"
 
 struct Counter {
@@ -43,11 +43,10 @@ int main() {
     graphics::init_window(800, 600, "Flecs Explorer Demo");
 
     graphics::Camera cam{};
-    cam.position[0] = 6.0f;
-    cam.position[1] = 5.0f;
-    cam.position[2] = 6.0f;
-    cam.target[1] = 1.0f;
-    graphics::create_camera(world, "MainCamera", cam, true);
+    cam.target = Eigen::Vector3f(0.0f, 1.0f, 0.0f);
+    graphics::Position cam_pos{};
+    cam_pos.value = Eigen::Vector3f(6.0f, 5.0f, 6.0f);
+    graphics::create_camera(world, "MainCamera", cam_pos, cam, true);
 
     world.system<const Spin>("DrawScene")
         .kind(graphics::phase_on_render)
