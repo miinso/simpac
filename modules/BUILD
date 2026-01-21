@@ -12,6 +12,7 @@ cc_library(
     hdrs = [
         "graphics/camera.h",
         "graphics/graphics.h",
+        "graphics/input.h",
         "graphics/lighting.h",
         "graphics/pipelines.h",
         "graphics/resources.h",

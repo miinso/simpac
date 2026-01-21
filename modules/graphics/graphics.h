@@ -5,21 +5,26 @@
 #include <raymath.h>
 
 #ifdef __EMSCRIPTEN__
+#include <emscripten/emscripten.h>
 #include <emscripten/threading.h>
 #endif
 
-// Sub-headers
+
+// platform-specific GLSL version
+#if defined(PLATFORM_DESKTOP)
+inline constexpr int GLSL_VERSION = 330;
+#else // PLATFORM_WEB, PLATFORM_ANDROID
+inline constexpr int GLSL_VERSION = 100;
+#endif
+
+#include "input.h"
+
+// sub-headers (shim enabled) (order matters)
 #include "camera.h"
 #include "lighting.h"
 #include "pipelines.h"
 #include "resources.h"
 
-// platform-specific GLSL version
-#if defined(PLATFORM_DESKTOP)
-    inline constexpr int GLSL_VERSION = 330;
-#else  // PLATFORM_WEB, PLATFORM_ANDROID
-    inline constexpr int GLSL_VERSION = 100;
-#endif
 
 namespace graphics {
 
@@ -38,7 +43,7 @@ namespace detail {
     inline float grid_spacing = 10.0f / 12.0f;
     inline Font font = {0};
     inline bool font_loaded = false;
-}
+} // namespace detail
 
 // get the loaded font (falls back to default if not loaded)
 [[nodiscard]] inline Font get_font() {
@@ -67,9 +72,10 @@ namespace detail {
     void platform_set_target_fps(const WindowConfig& config);
     void platform_pre_close_window();
     void platform_run_loop();
-}
+} // namespace detail
 
-// check if we're on the render thread (for WASM threading safety)
+// check if we're on the render thread (for WASM threading safety) (so in worker, this always
+// evaluates to false)
 [[nodiscard]] inline bool is_render_thread() {
 #ifdef __EMSCRIPTEN__
     return emscripten_is_main_browser_thread();
@@ -122,6 +128,28 @@ flecs::entity create_camera(flecs::world& ecs, const char* name,
                             bool make_active = false);
 
 // switch the active camera for rendering
-void set_active_camera(flecs::world& ecs, flecs::entity camera_entity);
+// send an event from worker-hosted WASM to the main thread
+inline void emit_worker_event(const char* name, const char* payload) {
+#ifdef __EMSCRIPTEN__
+    const char* safe_name = name ? name : "";
+    const char* safe_payload = payload ? payload : "";
+    EM_ASM({
+        const eventName = UTF8ToString($0);
+        const rawPayload = UTF8ToString($1);
+        let data = null;
+        if (rawPayload && rawPayload.length) {
+            try {
+                data = JSON.parse(rawPayload);
+            } catch (err) {
+                data = rawPayload;
+            }
+        }
+        postMessage({ type: 'event', payload: { name: eventName, data } });
+    }, safe_name, safe_payload);
+#else
+    (void)name;
+    (void)payload;
+#endif
+}
 
 } // namespace graphics

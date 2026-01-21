@@ -70,7 +70,10 @@ namespace {
         ecs.system("graphics::begin")
             .kind(phase_pre_render)
             .run([](flecs::iter& it) {
-                if (!is_render_thread()) return;
+                // update input shim state (history, deltas)
+                graphics::shim::update();
+
+                // if (!is_render_thread()) return;
 
                 // handle canvas resize (web: JS ResizeObserver updates canvas.width/height)
                 if (IsWindowResized()) {
@@ -90,7 +93,7 @@ namespace {
         ecs.system("graphics::render3d")
             .kind(phase_on_render)
             .run([](flecs::iter& it) {
-                if (!is_render_thread()) return;
+                // if (!is_render_thread()) return;
 
                 BeginMode3D(detail::raylib_camera);
 
@@ -104,7 +107,7 @@ namespace {
         ecs.system("graphics::render2d")
             .kind(phase_post_render)
             .run([](flecs::iter& it) {
-                if (!is_render_thread()) return;
+                // if (!is_render_thread()) return;
 
                 // end shader mode if lighting was active
                 if (is_lighting_enabled()) {
@@ -128,7 +131,7 @@ namespace {
         ecs.system("graphics::end")
             .kind(phase_on_present)
             .run([](flecs::iter& it) {
-                if (!is_render_thread()) return;
+                // if (!is_render_thread()) return;
                 EndDrawing();
             });
     }
@@ -161,7 +164,7 @@ namespace detail {
             ecs_progress(runtime_world, dt);
         }
     }
-}
+} // namespace detail
 
 void init(flecs::world& world) {
     runtime_world = world.c_ptr();
