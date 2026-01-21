@@ -44,17 +44,19 @@ cc_binary(
     linkopts = select({
         "@platforms//os:emscripten": [
             # with known memory usage and expected size
-            # "-sALLOW_MEMORY_GROWTH=0", # sometimes it's a good idea to clamp it
-            # "-sSTACK_SIZE=1mb",
+            "-sALLOW_MEMORY_GROWTH=0", # sometimes it's a good idea to clamp it
+            "-sSTACK_SIZE=16mb",
+            "-sINITIAL_MEMORY=64mb",
             # "-sINITIAL_HEAP=4mb",
             # with no picture of memory footprint
-            "-sALLOW_MEMORY_GROWTH=1",
-            "-sSTACK_SIZE=16mb",
-            "-sINITIAL_HEAP=16mb",
-            "-sMAXIMUM_MEMORY=1024mb", # paired with allow_memory_growth
+            # "-sALLOW_MEMORY_GROWTH=1",
+            # "-sSTACK_SIZE=16mb",
+            # "-sINITIAL_HEAP=16mb",
+            # "-sMAXIMUM_MEMORY=1024mb", # paired with allow_memory_growth
             # ---
             "-sSINGLE_FILE",
-            "-sASSERTIONS=1",
+            # "-sASSERTIONS=2",
+            "-sEXIT_RUNTIME=0",  # include shutdown code for proper cleanup
             # "-pthread", # this introduces the SharedArrayBuffer
             "-O2",
             # "-g0",
@@ -65,8 +67,8 @@ cc_binary(
             # "-sFULL_ES3=1",
             # "-sUSE_GLFW=3",
             "-sENVIRONMENT=web,worker",
-            "-sEXPORTED_RUNTIME_METHODS=['ccall','cwrap']",
-            "-sEXPORTED_FUNCTIONS=['_main','_emscripten_shutdown','_emscripten_resize']",
+            "-sEXPORTED_RUNTIME_METHODS=['ccall','cwrap','wasmMemory']",
+            "-sEXPORTED_FUNCTIONS=['_main','_emscripten_shutdown','_emscripten_resize','_flecs_explorer_request']",
             "--embed-file resources/shaders/glsl300es/spring.fs@resources/shaders/glsl300es/spring.fs",
             "--embed-file resources/shaders/glsl300es/spring.vs@resources/shaders/glsl300es/spring.vs",
             "--embed-file resources/shaders/glsl300es/particle.fs@resources/shaders/glsl300es/particle.fs",

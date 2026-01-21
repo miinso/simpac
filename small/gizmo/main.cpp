@@ -218,10 +218,14 @@ int main() {
             DrawText(TextFormat("elapsed: %.2f", scene.elapsed), 10, 90, 20, GREEN);
         });
 
+
     // =========================================================================
     // Main loop
     // =========================================================================
-    graphics::run_loop();
+    // graphics::run_loop();
+    ecs.app()
+        .enable_rest()
+        .run();
 
     // Cleanup
     floor.materials[0].shader = {0};

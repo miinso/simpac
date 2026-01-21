@@ -123,11 +123,12 @@ inline void set_draw_fps(bool draw) {
 
 // create a camera entity with optional activation.
 // if make_active is true, this camera becomes the rendering camera.
-flecs::entity create_camera(flecs::world& ecs, const char* name,
-                            const Camera& cam = {},
-                            bool make_active = false);
+flecs::entity create_camera(flecs::world& ecs, const char* name, const Camera& cam = {}, bool make_active = false);
+flecs::entity create_camera(flecs::world& ecs, const char* name, const Position& pos, const Camera& cam = {}, bool make_active = false);
 
 // switch the active camera for rendering
+void set_active_camera(flecs::world &ecs, flecs::entity camera_entity);
+
 // send an event from worker-hosted WASM to the main thread
 inline void emit_worker_event(const char* name, const char* payload) {
 #ifdef __EMSCRIPTEN__

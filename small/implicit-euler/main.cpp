@@ -1,10 +1,11 @@
 // Mass-Spring Simulator Base
 
+#include "flecs.h"
+#include "graphics.h"
+
 #include "components.h"
 #include "systems.h"
 #include "cloth.h"
-#include "flecs.h"
-#include "graphics.h"
 #include <cstdio>
 #include <limits>
 
@@ -16,6 +17,8 @@ int main() {
     printf("Hi from %s\n", __FILE__);
 
     flecs::world ecs;
+
+    register_sim_components(ecs);
 
     // register cloth component with hooks (must be before any cloth creation)
     register_cloth_component(ecs);
@@ -33,7 +36,7 @@ int main() {
         })
         .add(flecs::Singleton);
     ecs.set<Scene>({
-        0.01666,       // dt (timestep)
+        0.016,       // dt (timestep)
         gravity        // gravity
     });
 
@@ -75,12 +78,13 @@ int main() {
     // (must call `::init()` before any raylib or gl specifics, otherwise crash)
     graphics::init(ecs);
     graphics::init_window(800, 600, "Base Simulator");
-    graphics::create_camera(ecs, "MainCamera", {
-        {50.0f, 10.0f, 50.0f},  // position
-        {0.0f, 0.5f, 0.0f},     // target
-        // TODO: we could make a slot for (optional) target entity so that
-        // camera picks up `Position` component of the target (if exists)
-    }, true);
+    graphics::Camera cam{};
+    cam.target = Eigen::Vector3f(0.0f, 0.5f, 0.0f);
+    graphics::Position cam_pos{};
+    cam_pos.value = Eigen::Vector3f(50.0f, 10.0f, 50.0f);
+    // TODO: we could make a slot for (optional) target entity so that
+    // camera picks up `Position` component of the target (if exists)
+    graphics::create_camera(ecs, "MainCamera", cam_pos, cam, true);
 
     // now set SpringRenderer to trigger on_set hook (after graphics init)
     ecs.set<SpringRenderer>({});
@@ -259,14 +263,14 @@ int main() {
         .run([](flecs::iter& it) {
             auto& ctx = it.world().get_mut<ParticleRenderer>();
             systems::upload_particle_positions_to_gpu(it.world(), ctx);
-        });
+        }).disable();
 
     ecs.system("graphics::Draw Particles GPU")
         .kind(graphics::phase_on_render)
         .run([](flecs::iter& it) {
             auto& ctx = it.world().get_mut<ParticleRenderer>();
             systems::draw_particles_gpu(ctx);
-        });
+        }).disable();
 
     ecs.system("graphics::Draw Timing Info")
         .kind(graphics::phase_post_render)
@@ -331,7 +335,7 @@ int main() {
                 if (interaction.selected == e) flags |= ParticleState::Selected;
                 state.flags = flags;
             });
-        });
+        }).disable();
 
     // =========================================================================
     // LOOK HERE!!! - THE ALGORITHM in one place
@@ -351,8 +355,8 @@ int main() {
 
             // create cloth using GridCloth component
             GridCloth cloth;
-            cloth.width = 10;
-            cloth.height = 40;
+            cloth.width = 50;
+            cloth.height = 50;
             cloth.spacing = 1.0f;
             cloth.mass = 1.0f;
             cloth.k_structural = 10000.0f;
@@ -422,7 +426,7 @@ int main() {
             collect_spring_gradient.run(dt); // h * -dE_dx (elastic forces)
 
             // build lhs, A
-            // LHS = M + h^2 * ddE_ddx  (mass matrix + timestep^2 * Hessian)
+            // LHS = M + h^2 * ddE_ddx  (mass matrix + h^2 * Hessian)
             collect_mass.run(dt);
             collect_spring_hessian.run(dt);
             

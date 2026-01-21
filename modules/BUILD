@@ -36,6 +36,7 @@ cc_library(
         "//third_party/par_shapes",
         "@flecs",
         "@raylib-latest",
+        "@eigen",
     ] + select({
         "@platforms//os:emscripten": [],
         "//conditions:default": ["@bazel_tools//tools/cpp/runfiles"],

@@ -51,19 +51,19 @@ namespace {
     void setup_render_pipeline(flecs::world& ecs) {
         // camera update in OnLoad (before rendering)
         // query for `Camera` with `ActiveCamera` tag
-        ecs.system<Camera>("graphics::update_camera")
+        ecs.system<Position, Camera>("graphics::update_camera")
             .with<ActiveCamera>()
             .kind(flecs::OnLoad)
-            .each([](Camera& cam) {
-                update_camera_controls(cam);
+            .each([](Position& pos, Camera& cam) {
+                update_camera_controls(pos, cam);
             });
 
         // sync active camera to raylib before rendering
-        ecs.system<const Camera>("graphics::sync_camera")
+        ecs.system<const Position, const Camera>("graphics::sync_camera")
             .with<ActiveCamera>()
             .kind(flecs::PostUpdate)
-            .each([](const Camera& cam) {
-                detail::raylib_camera = to_raylib(cam);
+            .each([](const Position& pos, const Camera& cam) {
+                detail::raylib_camera = to_raylib(pos, cam);
             });
 
         // PreRender: begin drawing, clear, update lighting
@@ -212,6 +212,7 @@ void init_window(const WindowConfig& config) {
         if (active_cam_query.count() == 0) {
             ecs.entity("DefaultCamera")
                 .set<Camera>({})
+                .set<Position>({})
                 .add<ActiveCamera>();
         }
     }
@@ -270,7 +271,13 @@ void run_loop() {
 // ============================================================================
 
 flecs::entity create_camera(flecs::world& ecs, const char* name, const Camera& cam, bool make_active) {
-    auto entity = ecs.entity(name).set<Camera>(cam);
+    return create_camera(ecs, name, Position{}, cam, make_active);
+}
+
+flecs::entity create_camera(flecs::world& ecs, const char* name, const Position& pos, const Camera& cam, bool make_active) {
+    auto entity = ecs.entity(name)
+                            .set<Camera>(cam)
+                            .set<Position>(pos);
 
     if (make_active) {
         // remove ActiveCamera from any existing camera

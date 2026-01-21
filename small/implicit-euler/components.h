@@ -7,6 +7,7 @@
 #include <deque>
 #include <string>
 #include <cstdint>
+#include <cstring>
 
 using Real = float;
 using Vector3r = Eigen::Matrix<Real, 3, 1, Eigen::DontAlign>;
@@ -33,6 +34,48 @@ struct ParticleState {
     };
     uint8_t flags = None;
 };
+
+// =========================================================================
+// Reflection helpers
+// =========================================================================
+
+inline void register_vector3_reflection(flecs::world& ecs) {
+    auto vec3f_meta = ecs.component()
+        .member<float>("x")
+        .member<float>("y")
+        .member<float>("z");
+
+    ecs.component<Vector3r>()
+        .opaque(vec3f_meta)
+        .serialize([](const flecs::serializer* s, const Vector3r* data) {
+            if (!data) return 0;
+            const float* v = data->data();
+            s->member("x");
+            s->value(v[0]);
+            s->member("y");
+            s->value(v[1]);
+            s->member("z");
+            s->value(v[2]);
+            return 0;
+        })
+        .ensure_member([](Vector3r* dst, const char* member) -> void* {
+            if (!dst || !member) return nullptr;
+            float* v = dst->data();
+            if (!std::strcmp(member, "x")) return &v[0];
+            if (!std::strcmp(member, "y")) return &v[1];
+            if (!std::strcmp(member, "z")) return &v[2];
+            return nullptr;
+        });
+}
+
+inline void register_sim_components(flecs::world& ecs) {
+    register_vector3_reflection(ecs);
+
+    ecs.component<Position>().member<Vector3r>("value");
+    ecs.component<Velocity>().member<Vector3r>("value");
+    ecs.component<Acceleration>().member<Vector3r>("value");
+    ecs.component<OldPosition>().member<Vector3r>("value");
+}
 
 // Tags
 struct IsPinned {};
