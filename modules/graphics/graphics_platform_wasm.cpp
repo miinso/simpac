@@ -125,7 +125,7 @@ EMSCRIPTEN_KEEPALIVE void engine_mouse_up(int button, float x, float y) {
 
 EMSCRIPTEN_KEEPALIVE void engine_mouse_wheel(float dx, float dy) {
     constexpr float kWheelScale = 1.0f / 120.0f; // normalize pixel deltas to wheel "steps"
-    graphics::shim::mouse_wheel += dy * kWheelScale; // Raylib GetMouseWheelMove returns float Y
+    graphics::shim::mouse_wheel += -dy * kWheelScale; // Raylib GetMouseWheelMove returns float Y
 }
 
 EMSCRIPTEN_KEEPALIVE void engine_mouse_enter(int entered) {
