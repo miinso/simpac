@@ -215,11 +215,12 @@ function createConnection(requestFn, mode) {
       send('GET', '/world', {}, '', recv, err),
     scriptUpdate: (path, code, params, recv, err) => {
       const args = normalizeCallbacks(params, recv, err);
+      const body = code == null ? '' : String(code);
       return send(
         'PUT',
         withPath('/script/', path),
-        { ...args.params, payload: code },
-        '',
+        { ...args.params },
+        body,
         args.recv,
         args.err
       );
