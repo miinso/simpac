@@ -358,13 +358,37 @@ int main() {
 
     setup_interaction_systems();
 
-            particle_pick_query.each([&](flecs::entity e, const Position&, ParticleState& state) {
-                uint8_t flags = static_cast<uint8_t>(state.flags & ~kInteractionMask);
-                if (e == hovered) flags |= ParticleState::Hovered;
-                if (interaction.selected == e) flags |= ParticleState::Selected;
-                state.flags = flags;
-            });
-        }).disable();
+    auto load_scene = [&]() {
+        std::string default_scene = graphics::npath("small/implicit-euler/scenes/default.flecs");
+        std::string scene_path = default_scene;
+        
+        if (scene_path.empty()) return;
+
+        auto load_script = [&](const std::string& path) -> bool {
+            auto script = ecs.script("SceneScript").filename(path.c_str()).run();
+            if (!script) {
+                std::printf("[Scene] Failed to create script entity for %s\n", path.c_str());
+                return false;
+            }
+            const EcsScript* data = script.try_get<EcsScript>();
+            
+            if (data && data->error) {
+                std::printf("[Scene] Script error for %s: %s\n", path.c_str(), data->error);
+                return false;
+            }
+            return true;
+        };
+
+        bool loaded = load_script(scene_path);
+
+        if (!loaded) {
+            std::printf("[Scene] Failed to load %s\n", scene_path.c_str());
+        } else {
+            std::printf("[Scene] Loaded %s\n", scene_path.c_str());
+        }
+    };
+
+    load_scene();
 
     // =========================================================================
     // LOOK HERE!!! - THE ALGORITHM in one place
@@ -381,6 +405,10 @@ int main() {
         .immediate()
         .run([&](flecs::iter& it) {
             auto world = it.world();
+
+            if (world.query<GridCloth>().count() > 0) {
+                return;
+            }
 
             // create cloth using GridCloth component
             GridCloth cloth;

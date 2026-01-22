@@ -29,7 +29,7 @@ cc_binary(
             # "-O3",
         ],
     }),
-    data = ["//:resources"],
+    data = ["//:resources"] + glob(["scenes/**"]),
     defines = select({
         "@platforms//os:emscripten": [
             "PLATFORM_WEB",
@@ -75,6 +75,7 @@ cc_binary(
             "--embed-file resources/shaders/glsl300es/particle.vs@resources/shaders/glsl300es/particle.vs",
             "--embed-file resources/generic.fnt@resources/generic.fnt",
             "--embed-file resources/generic.png@resources/generic.png",
+            "--embed-file small/implicit-euler/scenes/default.flecs@small/implicit-euler/scenes/default.flecs",
         ],
         "//conditions:default": [],
     }),
