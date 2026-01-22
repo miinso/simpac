@@ -230,6 +230,20 @@ function callCwrap(name: string, returnType: string, argTypes: string[], ...args
   return worker.callCwrap(name, returnType, argTypes, ...args)
 }
 
+function readFile(path: string, encoding = 'utf8') {
+  if (!worker || !worker.ready) {
+    return Promise.reject(new Error('worker not ready'))
+  }
+  return worker.fsRead(path, encoding)
+}
+
+function writeFile(path: string, contents: string, encoding = 'utf8') {
+  if (!worker || !worker.ready) {
+    return Promise.reject(new Error('worker not ready'))
+  }
+  return worker.fsWrite(path, contents, encoding)
+}
+
 function request(method: string, path: string, params: Record<string, any> = {}, body = '') {
   const query = new URLSearchParams(params).toString()
   const url = query ? `${path}?${query}` : path
@@ -250,6 +264,8 @@ defineExpose({
   terminate,
   call,
   callCwrap,
+  readFile,
+  writeFile,
   request,
   isReady
 })

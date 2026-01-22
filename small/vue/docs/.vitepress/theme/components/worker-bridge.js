@@ -221,6 +221,50 @@ function handleCwrap(payload) {
   }
 }
 
+function handleFsRead(payload) {
+  const { id, path, encoding } = payload || {};
+  if (!moduleInstance) {
+    sendError('fsReadError', id, 'module not ready');
+    return;
+  }
+  if (!path) {
+    sendError('fsReadError', id, 'path missing');
+    return;
+  }
+  if (!moduleInstance.FS || typeof moduleInstance.FS.readFile !== 'function') {
+    sendError('fsReadError', id, 'FS.readFile missing');
+    return;
+  }
+  try {
+    const result = moduleInstance.FS.readFile(path, { encoding: encoding || 'utf8' });
+    send('fsReadResult', { id, result });
+  } catch (err) {
+    sendError('fsReadError', id, String(err));
+  }
+}
+
+function handleFsWrite(payload) {
+  const { id, path, contents, encoding } = payload || {};
+  if (!moduleInstance) {
+    sendError('fsWriteError', id, 'module not ready');
+    return;
+  }
+  if (!path) {
+    sendError('fsWriteError', id, 'path missing');
+    return;
+  }
+  if (!moduleInstance.FS || typeof moduleInstance.FS.writeFile !== 'function') {
+    sendError('fsWriteError', id, 'FS.writeFile missing');
+    return;
+  }
+  try {
+    moduleInstance.FS.writeFile(path, contents ?? '', { encoding: encoding || 'utf8' });
+    send('fsWriteResult', { id, result: true });
+  } catch (err) {
+    sendError('fsWriteError', id, String(err));
+  }
+}
+
 async function init(scriptUrl, wasmUrl, offscreenCanvas, exportsList, cwrapList, webglContextAttributes) {
   canvas = offscreenCanvas || null;
   if (canvas) {
@@ -340,6 +384,16 @@ onmessage = (event) => {
 
   if (type === 'cwrap') {
     handleCwrap(payload);
+    return;
+  }
+
+  if (type === 'fsRead') {
+    handleFsRead(payload);
+    return;
+  }
+
+  if (type === 'fsWrite') {
+    handleFsWrite(payload);
     return;
   }
 
@@ -507,6 +561,10 @@ export class SimpacWorker {
             this._resolvePending(payload.id, payload.result, false);
         } else if (type === 'callError' || type === 'cwrapError') {
             this._resolvePending(payload.id, payload.message, true);
+        } else if (type === 'fsReadResult' || type === 'fsWriteResult') {
+            this._resolvePending(payload.id, payload.result, false);
+        } else if (type === 'fsReadError' || type === 'fsWriteError') {
+            this._resolvePending(payload.id, payload.message, true);
         } else if (type === 'cursor') {
             const { visible } = payload;
             this.canvas.style.cursor = visible ? 'default' : 'none';
@@ -527,6 +585,14 @@ export class SimpacWorker {
 
     callCwrap(name, returnType, argTypes, ...args) {
         return this._sendRequest('cwrap', { name, returnType, argTypes, args });
+    }
+
+    fsRead(path, encoding = 'utf8') {
+        return this._sendRequest('fsRead', { path, encoding });
+    }
+
+    fsWrite(path, contents, encoding = 'utf8') {
+        return this._sendRequest('fsWrite', { path, contents, encoding });
     }
 
     shutdown() {
