@@ -82,8 +82,15 @@ function sanitizeParams(params) {
 
 function buildQuery(params) {
   const clean = sanitizeParams(params);
-  const qs = new URLSearchParams(clean).toString();
-  return qs ? `?${qs}` : '';
+  let count = 0;
+  let qs = '';
+  for (const [key, value] of Object.entries(clean)) {
+    if (value === undefined) continue;
+    qs += count ? '&' : '?';
+    qs += `${key}=${value}`;
+    count += 1;
+  }
+  return qs;
 }
 
 function escapePath(path) {
@@ -151,7 +158,12 @@ function createConnection(requestFn, mode) {
       return send(
         'GET',
         '/query',
-        { ...args.params, expr: trimQuery(String(expr)).replaceAll(', ', ',') },
+        {
+          ...args.params,
+          expr: encodeURIComponent(
+            trimQuery(String(expr)).replaceAll(', ', ',')
+          )
+        },
         '',
         args.recv,
         args.err
@@ -162,7 +174,7 @@ function createConnection(requestFn, mode) {
       return send(
         'GET',
         '/query',
-        { ...args.params, name: String(name) },
+        { ...args.params, name: encodeURIComponent(String(name)) },
         '',
         args.recv,
         args.err
@@ -188,6 +200,7 @@ function createConnection(requestFn, mode) {
       let payload = value;
       if (typeof payload === 'object') {
         payload = JSON.stringify(payload);
+        payload = encodeURIComponent(payload);
       }
       const args = normalizeCallbacks(params, recv, err);
       return send(
