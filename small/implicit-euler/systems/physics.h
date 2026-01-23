@@ -27,8 +27,8 @@ inline void collect_external_force(const Mass& mass, const ParticleIndex& idx,
 }
 
 inline void collect_spring_gradient(Spring& spring, Real dt, Solver& solver) {
-    auto a = spring.particle_a;
-    auto b = spring.particle_b;
+    auto a = spring.e1;
+    auto b = spring.e2;
 
     bool a_pinned = a.has<IsPinned>();
     bool b_pinned = b.has<IsPinned>();
@@ -95,8 +95,8 @@ inline void collect_mass(const Mass& m, const ParticleIndex& idx, Solver& solver
 
 inline void collect_spring_hessian(Spring& spring, Real dt, Solver& solver) {
     // maybe i should merge grad/hess evals into one system
-    auto a = spring.particle_a;
-    auto b = spring.particle_b;
+    auto a = spring.e1;
+    auto b = spring.e2;
 
     bool a_pinned = a.has<IsPinned>();
     bool b_pinned = b.has<IsPinned>();

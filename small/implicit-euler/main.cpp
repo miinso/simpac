@@ -40,7 +40,7 @@ int main() {
             })
             .add(flecs::Singleton);
         ecs.set<Scene>({
-            0.016,       // dt (timestep)
+            0.0166666,       // dt (timestep)
             gravity        // gravity
         });
 

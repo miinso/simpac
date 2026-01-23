@@ -31,8 +31,8 @@ inline Vector3 toRay3(const Eigen::Vector3r& v) {
 // =========================================================================
 
 inline void draw_spring(Spring& spring) {
-    auto& x1 = spring.particle_a.get<Position>().value;
-    auto& x2 = spring.particle_b.get<Position>().value;
+    auto& x1 = spring.e1.get<Position>().value;
+    auto& x2 = spring.e2.get<Position>().value;
 
     auto diff = x1 - x2;
     auto current_length = diff.norm();
@@ -158,8 +158,8 @@ inline void upload_spring_positions_to_gpu(const flecs::world& ecs, SpringRender
         gpu.rest_lengths.reserve(num_springs);
 
         scene.spring_query.each([&](Spring& s) {
-            gpu.spring_particle_indices.push_back(s.particle_a.get<ParticleIndex>().value);
-            gpu.spring_particle_indices.push_back(s.particle_b.get<ParticleIndex>().value);
+            gpu.spring_particle_indices.push_back(s.e1.get<ParticleIndex>().value);
+            gpu.spring_particle_indices.push_back(s.e2.get<ParticleIndex>().value);
             gpu.rest_lengths.push_back((float)s.rest_length);
         });
 

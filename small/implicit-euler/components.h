@@ -94,8 +94,8 @@ struct DistanceConstraint {
 };
 
 struct Spring {
-    flecs::entity particle_a;
-    flecs::entity particle_b;
+    flecs::entity e1;
+    flecs::entity e2;
     Real rest_length;
     Real k_s;
     Real k_d;
