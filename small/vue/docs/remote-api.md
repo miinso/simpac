@@ -24,7 +24,12 @@ const reply = await conn.query('graphics.ActiveCamera', {
   full_paths: true
 });
 
-for (const item of reply?.results || []) {
+const results = reply?.results;
+if (!results) {
+  throw new Error('No results in reply');
+}
+
+for (const item of results) {
   console.log(item.name, item.tags);
 }
 ```
@@ -38,9 +43,15 @@ const reply = await conn.query('graphics.ActiveCamera, graphics.Camera, graphics
 });
 
 const entity = reply?.results?.[0];
+if (!entity) {
+  throw new Error('No entities returned');
+}
 const camera = entity?.components?.['graphics.Camera'];
-const fovy = camera?.fovy;
-const pos = entity?.components?.['graphics.Position']?.value; // { x, y, z }
+if (!camera) {
+  throw new Error('Missing graphics.Camera');
+}
+const fovy = camera.fovy;
+const pos = entity?.components?.['graphics.Position']; // { x, y, z }
 const posX = pos?.x;
 ```
 
@@ -48,7 +59,11 @@ const posX = pos?.x;
 
 ```js
 const reply = await conn.query('graphics.Camera', { values: true, full_paths: true });
-for (const item of reply?.results || []) {
+const results = reply?.results;
+if (!results) {
+  throw new Error('No results in reply');
+}
+for (const item of results) {
   const cam = item.components?.['graphics.Camera'];
   console.log(item.name, cam?.fovy);
 }
@@ -78,7 +93,9 @@ await conn.set('MainCamera', 'graphics.Camera', {
   fovy: 75,
 });
 await conn.set('MainCamera', 'graphics.Position', {
-  value: { x: 5, y: 5, z: 5 }
+  x: 5,
+  y: 5,
+  z: 5
 });
 
 // add/remove tags
@@ -118,10 +135,12 @@ Common patterns for data access:
 // query responses: data typically lives under results[].components
 const item = reply?.results?.[0];
 const cam = item?.components?.['graphics.Camera'];
-const posX = item?.components?.['graphics.Position']?.value?.x;
+const posX = item?.components?.['graphics.Position']?.x;
 
 // component reads: data might be under value/ComponentName (depending on server)
-const value = camReply?.value || camReply?.Camera || camReply;
+let value = camReply?.value;
+if (!value) value = camReply?.Camera;
+if (!value) value = camReply;
 ```
 
 ## Utilities

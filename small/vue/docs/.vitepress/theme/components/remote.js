@@ -130,6 +130,7 @@ function normalizeCallbacks(params, recv, err) {
 }
 
 function createConnection(requestFn, mode) {
+  const encodeQuery = mode === 'remote';
   const send = (method, path, params = {}, body = '', recv, err) => {
     const promise = requestFn(method, path, sanitizeParams(params), body)
       .then(parseReply);
@@ -155,15 +156,12 @@ function createConnection(requestFn, mode) {
         throw new Error('flecs.query: invalid query parameter');
       }
       const args = normalizeCallbacks(params, recv, err);
+      const exprValue = trimQuery(String(expr)).replaceAll(', ', ',');
+      const exprParam = encodeQuery ? encodeURIComponent(exprValue) : exprValue;
       return send(
         'GET',
         '/query',
-        {
-          ...args.params,
-          expr: encodeURIComponent(
-            trimQuery(String(expr)).replaceAll(', ', ',')
-          )
-        },
+        { ...args.params, expr: exprParam },
         '',
         args.recv,
         args.err
@@ -171,10 +169,12 @@ function createConnection(requestFn, mode) {
     },
     queryName: (name, params, recv, err, abort) => {
       const args = normalizeCallbacks(params, recv, err);
+      const nameValue = String(name);
+      const nameParam = encodeQuery ? encodeURIComponent(nameValue) : nameValue;
       return send(
         'GET',
         '/query',
-        { ...args.params, name: encodeURIComponent(String(name)) },
+        { ...args.params, name: nameParam },
         '',
         args.recv,
         args.err
@@ -200,7 +200,9 @@ function createConnection(requestFn, mode) {
       let payload = value;
       if (typeof payload === 'object') {
         payload = JSON.stringify(payload);
-        payload = encodeURIComponent(payload);
+        if (encodeQuery) {
+          payload = encodeURIComponent(payload);
+        }
       }
       const args = normalizeCallbacks(params, recv, err);
       return send(
