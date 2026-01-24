@@ -1,0 +1,35 @@
+P1 {
+  Position: { x: 0, y: 0, z: 0 }
+  Velocity: { x: 0, y: 0, z: 0 }
+  Mass: { 1.0 }
+  ParticleIndex: { 0 }
+  Particle
+}
+
+P2 {
+  Position: { x: 1, y: 0, z: 0 }
+  Velocity: { x: 0, y: 0, z: 0 }
+  Mass: { 1.0 }
+  ParticleIndex: { 1 }
+  Particle
+}
+
+S1 {
+  Spring: {
+    e1: P1,
+    e2: P2,
+    rest_length: 1.0,
+    k_s: 1000.0,
+    k_d: 0.1
+  }
+}
+
+MainCamera {
+  graphics.ActiveCamera
+  graphics.Position: {x: 0, y: 0, z: 3}
+    graphics.Camera: {
+    target: { x: 0, y: 0, z: 0 }
+    fovy: 60
+    projection: 0
+  }
+}

@@ -1,6 +1,13 @@
 load("@emsdk//emscripten_toolchain:wasm_rules.bzl", "wasm_cc_binary")
 load("@rules_cc//cc:defs.bzl", "cc_binary")
 
+assets_files = glob(["assets/**"])
+
+filegroup(
+    name = "assets",
+    srcs = assets_files,
+)
+
 ### wasm
 cc_binary(
     name = "main",
@@ -29,7 +36,10 @@ cc_binary(
             # "-O3",
         ],
     }),
-    data = ["//:resources"] + glob(["scenes/**"]),
+    data = [
+        ":assets",  # per-directory assets
+        "//:resources",  # root assets
+    ],
     defines = select({
         "@platforms//os:emscripten": [
             "PLATFORM_WEB",
@@ -44,9 +54,9 @@ cc_binary(
     linkopts = select({
         "@platforms//os:emscripten": [
             # with known memory usage and expected size
-            "-sALLOW_MEMORY_GROWTH=0", # sometimes it's a good idea to clamp it
+            "-sALLOW_MEMORY_GROWTH=0",  # sometimes it's a good idea to clamp it
             "-sSTACK_SIZE=16mb",
-            "-sINITIAL_MEMORY=64mb",
+            "-sINITIAL_MEMORY=100mb",
             # "-sINITIAL_HEAP=4mb",
             # with no picture of memory footprint
             # "-sALLOW_MEMORY_GROWTH=1",
@@ -75,16 +85,17 @@ cc_binary(
             "--embed-file resources/shaders/glsl300es/particle.vs@resources/shaders/glsl300es/particle.vs",
             "--embed-file resources/generic.fnt@resources/generic.fnt",
             "--embed-file resources/generic.png@resources/generic.png",
-            "--embed-file small/implicit-euler/scenes/default.flecs@small/implicit-euler/scenes/default.flecs",
+            # "--embed-file small/implicit-euler/scenes/default.flecs@small/implicit-euler/scenes/default.flecs",
+            "--embed-file %s/assets@assets" % package_name(), # embed all under ./assets
         ],
         "//conditions:default": [],
     }),
     deps = [
         "//modules:graphics2",
+        "//third_party/glad2",
         "@eigen",
         "@flecs",
         "@raylib-latest",
-        "//third_party/glad2",
     ],
 )
 

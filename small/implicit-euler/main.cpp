@@ -359,7 +359,7 @@ int main() {
     setup_interaction_systems();
 
     auto load_scene = [&]() {
-        std::string default_scene = graphics::npath("small/implicit-euler/scenes/default.flecs");
+        std::string default_scene = graphics::npath("assets/spring.flecs");
         std::string scene_path = default_scene;
         
         if (scene_path.empty()) return;
@@ -397,36 +397,6 @@ int main() {
     // fixed 60 Hz simulation tick (decoupled from display rate)
     // auto sim_tick = ecs.timer().interval(10.0f / 1000.0f);
     auto sim_tick = ecs.get<Scene>().dt;
-
-    // build particle grid cloth
-    // flecs::observer handles solver resizing automatically
-    ecs.system("Create Cloth")
-        .kind(flecs::OnStart)
-        .immediate()
-        .run([&](flecs::iter& it) {
-            auto world = it.world();
-
-            if (world.query<GridCloth>().count() > 0) {
-                return;
-            }
-
-            // create cloth using GridCloth component
-            GridCloth cloth;
-            cloth.width = 50;
-            cloth.height = 50;
-            cloth.spacing = 1.0f;
-            cloth.mass = 1.0f;
-            cloth.k_structural = 10000.0f;
-            cloth.k_shear = 10000.0f;
-            cloth.k_bending = 10.0f;
-            cloth.k_damping = 0.05f;
-            cloth.offset[0] = -cloth.width / 2.0f;
-            cloth.offset[1] = cloth.height / 2.0f;
-            cloth.offset[2] = 0.0f;
-            cloth.pin_mode = 0;  // corners
-
-            world.entity("Cloth").set<GridCloth>(cloth);
-        });
 
     // collect system DOF - ensures solver is correctly sized
     // runs before simulation, reassigns particle indices if topology changed
