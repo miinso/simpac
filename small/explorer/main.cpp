@@ -43,9 +43,11 @@ int main() {
     graphics::init_window(800, 600, "Flecs Explorer Demo");
 
     graphics::Camera cam{};
-    cam.target = Eigen::Vector3f(0.0f, 1.0f, 0.0f);
+    cam.target = {0.0f, 1.0f, 0.0f};
     graphics::Position cam_pos{};
-    cam_pos.value = Eigen::Vector3f(6.0f, 5.0f, 6.0f);
+    cam_pos.x = 6.0f;
+    cam_pos.y = 5.0f;
+    cam_pos.z = 6.0f;
     graphics::create_camera(world, "MainCamera", cam_pos, cam, true);
 
     world.system<const Spin>("DrawScene")

@@ -3,20 +3,15 @@ title: Usage
 ---
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref } from 'vue';
 
 const appRef = ref(null);
 const fovY = ref(60);
 const status = ref('booting');
-const flecsReady = ref(false);
 let conn = null;
 
 const appSrc = ref('/bazel-bin/small/implicit-euler/webapp/main.js');
 const wasmUrl = ref('');
-
-onMounted(() => {
-  flecsReady.value = typeof window !== 'undefined' && !!window.flecs;
-});
 
 function onReady() {
   status.value = 'ready';
@@ -42,13 +37,12 @@ function onInput() {
 Drop your WASM build into `docs/.vitepress/public/worker/` as `main.js` (and `main.wasm` if split).
 The Flecs client is globally injected as `window.flecs`.
 
-Status: **{{ flecsReady ? 'flecs ready' : 'flecs missing' }}**  
-Worker: **{{ status }}**
+Status: **{{ status }}**
 
 <Simpac
   ref="appRef"
   :src="appSrc"
-  :wasm-url="wasmUrl || null"
+  :wasm-url="wasmUrl"
   :debug="true"
   :cwrap="['flecs_explorer_request']"
   @ready="onReady"
@@ -64,7 +58,7 @@ Worker: **{{ status }}**
 Camera position lives in `graphics.Position` and serializes as `{ x, y, z }`:
 
 ```js
-conn.set('MainCamera', 'graphics.Position', { value: { x: 5, y: 5, z: 5 } });
+conn.set('MainCamera', 'graphics.Position', { x: 5, y: 5, z: 5 });
 ```
 
 ## Remote API surface
@@ -83,7 +77,7 @@ conn.query('Position,Velocity', { table: true }, (reply) => {});
 conn.queryName('MyQuery', { table: true }, (reply) => {});
 conn.get('MainCamera', { component: 'graphics.Camera' }, (reply) => {});
 conn.set('MainCamera', 'graphics.Camera', { fovy: 75 });
-conn.set('MainCamera', 'graphics.Position', { value: { x: 5, y: 5, z: 5 } });
+conn.set('MainCamera', 'graphics.Position', { x: 5, y: 5, z: 5 });
 conn.add('MainCamera', 'graphics.ActiveCamera');
 conn.remove('MainCamera', 'graphics.ActiveCamera');
 conn.enable('MainCamera', 'graphics.ActiveCamera');

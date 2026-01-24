@@ -3,19 +3,14 @@ title: explorer
 ---
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref } from 'vue';
 
 const appRef = ref(null);
 const fovY = ref(60);
 const status = ref('booting');
-const flecsReady = ref(false);
 let conn = null;
 
 const appSrc = ref('/bazel-bin/small/explorer/explorer_demo.js');
-
-onMounted(() => {
-  flecsReady.value = typeof window !== 'undefined' && !!window.flecs;
-});
 
 function onReady() {
   status.value = 'ready';
@@ -58,5 +53,5 @@ function onInput() {
 Camera position lives in `graphics.Position` and serializes as `{ x, y, z }`:
 
 ```js
-conn.set('MainCamera', 'graphics.Position', { value: { x: 5, y: 5, z: 5 } });
+conn.set('MainCamera', 'graphics.Position', { x: 5, y: 5, z: 5 });
 ```

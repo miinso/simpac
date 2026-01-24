@@ -17,6 +17,7 @@ const appSrc = ref('/bazel-bin/small/implicit-euler/webapp/main.js');
 const scriptName = ref('SceneScript');
 const scriptText = ref('');
 const lastError = ref('');
+const clothPos = ref({ x: 0, y: 0, z: 0 });
 
 function onReady() {
   status.value = 'ready';
@@ -32,6 +33,14 @@ function onReady() {
     console.log(resp)
     scriptText.value = resp?.code || '';
     lastError.value = resp?.error || '';
+  }, (e) => {
+    console.error(e);
+  });
+
+  conn.get("Cloth", { component: "Position" }, (resp) => {
+    const vec = resp?.value || resp?.Position || resp;
+    if (!vec) return;
+    clothPos.value = { x: vec.x, y: vec.y, z: vec.z };
   }, (e) => {
     console.error(e);
   });
@@ -51,10 +60,10 @@ async function applyScript() {
 
     console.log(reply);
     
-    const error =
-      reply?.error ||
-      (Array.isArray(reply?.errors) ? reply.errors.join('\n') : '');
-    
+    let error = reply?.error;
+    if (!error && Array.isArray(reply?.errors)) {
+      error = reply.errors.join('\n');
+    }
     lastError.value = error || '';
   } catch (err) {
     lastError.value = err instanceof Error ? err.message : String(err);
@@ -63,6 +72,18 @@ async function applyScript() {
 
 function queryWorld() {
     conn.world((world) => { console.log(world) });
+}
+
+function updateClothPosition() {
+  if (!conn) return;
+  const value = {
+    x: clothPos.value.x,
+    y: clothPos.value.y,
+    z: clothPos.value.z
+  };
+  conn.set('MainCamera', 'graphics.Position', { value }).catch((e) => {
+    console.error(e);
+  });
 }
 
 watch(scriptText, () => {
@@ -87,6 +108,20 @@ Status: **{{ status }}**
   <button @click="applyScript">Apply Script Now</button>
   <button @click="queryWorld">Query World</button>
 </div>
+<div>
+  <label>
+    Cloth X:
+    <input
+      type="range"
+      min="-50"
+      max="50"
+      step="0.5"
+      v-model.number="clothPos.x"
+      @input="updateClothPosition"
+    />
+    {{ clothPos.x.toFixed(2) }}
+  </label>
+</div>
 <div v-if="lastError">
   Script error: {{ lastError }}
 </div>
@@ -103,6 +138,7 @@ const conn = window.flecs.connect(appRef.value);
 
 const scene = `
 Cloth {
+  Position: { x: -10, y: 10, z: 0 }
   GridCloth: {
     width: 20,
     height: 20,
@@ -125,6 +161,7 @@ If you only want to tweak values, you can patch the component directly:
 
 ```js
 await conn.set('Cloth', 'GridCloth', { width: 30, height: 30 });
+await conn.set('Cloth', 'Position', { x: -10, y: 10, z: 0 });
 ```
 
 ## Notes
@@ -132,3 +169,4 @@ await conn.set('Cloth', 'GridCloth', { width: 30, height: 30 });
 - `scriptUpdate` ships source code over REST and evaluates immediately.
 - `main.cpp` creates a managed script entity named `SceneScript`.
 - `scriptUpdate` targets a script entity name, not a file path.
+- For scalar components in scripts (e.g., `Mass`), use a positional initializer like `Mass: { 1.0 }`.

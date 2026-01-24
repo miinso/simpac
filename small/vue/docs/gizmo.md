@@ -43,24 +43,25 @@ async function onReady() {
     values: true
   });
 
+  console.log(resp)
+
+//   conn.query('graphics.ActiveCamera, graphics.Camera, graphics.Position', {
+//     table: true,
+//     values: true
+//   }, (resp) => {console.log(resp)}, (e) => {console.error(e)});
+
   const entity = resp?.results?.[0];
+  if (!entity) throw new Error('Active camera not found');
   const camera = entity?.components?.['graphics.Camera'];
   const position = entity?.components?.['graphics.Position'];
-  if (!camera || !position) return;
+  if (!camera || !position) throw new Error('Missing camera components');
 
   cameraEntity.value = entity?.name || 'DefaultCamera';
-  fovY.value = camera.fovy ?? fovY.value;
-  camPos.value = {
-    x: position.value?.x ?? 0,
-    y: position.value?.y ?? 0,
-    z: position.value?.z ?? 0
-  };
+  if (typeof camera.fovy === 'number') fovY.value = camera.fovy;
+  camPos.value = position;
+  console.log(camPos.value)
 
-  targetPos.value = {
-    x: camera.target?.x ?? 0,
-    y: camera.target?.y ?? 0,
-    z: camera.target?.z ?? 0
-  };
+  targetPos.value = camera.target;
 }
 
 function onError(message) {
@@ -71,21 +72,28 @@ function onError(message) {
 function onInput() {
   if (!appRef.value || !conn) return;
   const target = cameraEntity.value || 'DefaultCamera';
-  conn.set(target, 'graphics.Camera', { fovy: fovY.value }).catch(console.error);
+  conn
+    .set(target, 'graphics.Camera', { fovy: fovY.value })
+    .then((resp) => console.log('fovy update', resp))
+    .catch((err) => console.error('fovy update failed', err));
 }
 
 function setCameraPos() {
   if (!appRef.value || !conn) return;
   const target = cameraEntity.value || 'DefaultCamera';
-  conn.set(target, 'graphics.Position', { value: { ...camPos.value } })
-    .catch(console.error);
+  conn
+    .set(target, 'graphics.Position', { ...camPos.value })
+    .then((resp) => console.log('camera position update', resp))
+    .catch((err) => console.error('camera position update failed', err));
 }
 
 function setTargetPos() {
   if (!appRef.value || !conn) return;
   const target = cameraEntity.value || 'DefaultCamera';
-  conn.set(target, 'graphics.Camera', { target: { ...targetPos.value } })
-    .catch(console.error);
+  conn
+    .set(target, 'graphics.Camera', { target: { ...targetPos.value } })
+    .then((resp) => console.log('camera target update', resp))
+    .catch((err) => console.error('camera target update failed', err));
 }
 
 // i see an exciting opportunity here..
