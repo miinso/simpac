@@ -1,0 +1,61 @@
+$ {
+  Scene: {
+    dt: 0.0166666
+    gravity: { x: 0, y: -9.81, z: 0 }
+    paused: false
+    sim_speed: 1.0
+  }
+}
+
+p1 {
+  Position: { 1, 0, 0 }
+  Velocity: { x: 0, y: 0, z: 0 }
+  Mass: { 1.0 }
+  ParticleIndex: { 0 }
+  Particle
+  ParticleState: { Selected }
+  IsPinned
+}
+
+p2 {
+  Position: { x: 1, y: 0, z: 0 }
+  Velocity: { x: 0, y: 0, z: 0 }
+  Mass: { 1.0 }
+  ParticleIndex: { 1 }
+  Particle
+}
+
+s1 {
+  Spring: {
+    e1: p1,
+    e2: p2,
+    rest_length: 1.0,
+    k_s: 1000.0,
+    k_d: 0.1
+  }
+}
+
+mycloth1 {
+  Position: { x: 0, y: 5, z: -10 }
+  GridCloth: {
+    width: 10,
+    height: 10,
+    spacing: 1.0,
+    mass: 1.0,
+    k_structural: 10000.0,
+    k_shear: 10000.0,
+    k_bending: 10.0,
+    k_damping: 0.05,
+    pin_mode: 0
+  }
+}
+
+MainCamera {
+  graphics.ActiveCamera
+  graphics.Position: { x: 0, y: 5, z: 10 }
+  graphics.Camera: {
+    target: { x: 0, y: 0, z: 0 }
+    fovy: 60
+    projection: 0
+  }
+}

@@ -22,17 +22,16 @@ int main() {
 
     register_sim_components(ecs);
 
-    Eigen::Vector3r gravity(0, -9.81, 0);
-
     auto setup_scene = [&]() {
         // register cloth component with hooks (must be before any cloth creation)
         register_cloth_component(ecs);
 
         // scene setup with on_set hook for query initialization
+        Scene::meta(ecs); // TODO: should pick place for ::meta() call. now it's all over
         ecs.component<Scene>()
             .on_set([](flecs::entity e, Scene& scene) {
                 auto world = e.world();
-                scene.particle_query = world.query_builder<ParticleIndex>()
+                scene.particle_query = world.query_builder<Position>()
                     .with<Particle>() // <Particle> is an empty tag, unlike <Spring>
                     .cached()
                     .build();
@@ -40,8 +39,8 @@ int main() {
             })
             .add(flecs::Singleton);
         ecs.set<Scene>({
-            0.0166666,       // dt (timestep)
-            gravity        // gravity
+            0.0166666f,       // dt (timestep)
+            Gravity{0.0f, -9.81f, 0.0f}        // gravity
         });
 
         ecs.component<Solver>()
@@ -49,7 +48,7 @@ int main() {
         auto& solver = ecs.ensure<Solver>();
         solver.b.setZero();
         solver.A.setZero();
-        solver.cg_tolerance = 1e-6;
+        solver.cg_tolerance = 1e-3;
         solver.cg_max_iter = 100;
     };
 
@@ -86,13 +85,6 @@ int main() {
         // (must call `::init()` before any raylib or gl specifics, otherwise crash)
         graphics::init(ecs);
         graphics::init_window(800, 600, "Base Simulator");
-        graphics::Camera cam{};
-        cam.target = Eigen::Vector3f(0.0f, 0.5f, 0.0f);
-        graphics::Position cam_pos{};
-        cam_pos.value = Eigen::Vector3f(50.0f, 10.0f, 50.0f);
-        // TODO: we could make a slot for (optional) target entity so that
-        // camera picks up `Position` component of the target (if exists)
-        graphics::create_camera(ecs, "MainCamera", cam_pos, cam, true);
 
         // now set SpringRenderer to trigger on_set hook (after graphics init)
         ecs.set<SpringRenderer>({});
@@ -105,6 +97,7 @@ int main() {
                 // cached query for per-frame position lookup
                 gpu.position_query = world.query_builder<const Position, const ParticleIndex, const ParticleState>()
                     .with<Particle>()
+                    .term_at<ParticleState>().optional() // TODO: necessary?? use maybe prefab to ensure this comp.
                     .cached()
                     .build();
 
@@ -190,7 +183,8 @@ int main() {
         .without<IsPinned>()
         .kind(0)
         .each([&](flecs::iter& it, size_t, const Mass& m, const ParticleIndex& idx, Solver& solver) {
-            systems::collect_external_force(m, idx, gravity, it.delta_time(), solver);
+            const auto& scene = it.world().get<Scene>();
+            systems::collect_external_force(m, idx, scene.gravity, it.delta_time(), solver);
         });
 
     auto collect_spring_gradient = ecs.system<Spring, Solver>("Collect Spring Gradient")
@@ -277,14 +271,14 @@ int main() {
             .run([](flecs::iter& it) {
                 auto& ctx = it.world().get_mut<ParticleRenderer>();
                 systems::upload_particle_positions_to_gpu(it.world(), ctx);
-            }).disable();
+            }).disable(0);
 
         ecs.system("graphics::Draw Particles GPU")
             .kind(graphics::phase_on_render)
             .run([](flecs::iter& it) {
                 auto& ctx = it.world().get_mut<ParticleRenderer>();
                 systems::draw_particles_gpu(ctx);
-            }).disable();
+            }).disable(0);
 
         ecs.system("graphics::Draw Timing Info")
             .kind(graphics::phase_post_render)
@@ -313,7 +307,7 @@ int main() {
                 flecs::entity hovered = flecs::entity::null();
 
                 particle_pick_query.each([&](flecs::entity e, const Position& pos, ParticleState&) {
-                    RayCollision hit = GetRayCollisionSphere(ray, systems::toRay3(pos.value), pick_radius);
+                    RayCollision hit = GetRayCollisionSphere(ray, {pos[0], pos[1], pos[2]}, pick_radius);
                     if (hit.hit && hit.distance < closest) {
                         closest = hit.distance;
                         hovered = e;
@@ -343,12 +337,12 @@ int main() {
                         cam.controls_enabled = !capture;
                     });
 
-                // update hover/selection flag bits
-                constexpr uint8_t kInteractionMask = static_cast<uint8_t>(
-                    ParticleState::Hovered | ParticleState::Selected);
+                // update hover/selection flag bits (feels overengineered)
+                constexpr uint32_t kInteractionMask =
+                    ParticleState::Hovered | ParticleState::Selected;
 
                 particle_pick_query.each([&](flecs::entity e, const Position&, ParticleState& state) {
-                    uint8_t flags = static_cast<uint8_t>(state.flags & ~kInteractionMask);
+                    uint32_t flags = (uint32_t)(state.flags & ~kInteractionMask);
                     if (e == hovered) flags |= ParticleState::Hovered;
                     if (interaction.selected == e) flags |= ParticleState::Selected;
                     state.flags = flags;
@@ -359,7 +353,7 @@ int main() {
     setup_interaction_systems();
 
     auto load_scene = [&]() {
-        std::string default_scene = graphics::npath("assets/spring.flecs");
+        std::string default_scene = graphics::npath("assets/all.flecs");
         std::string scene_path = default_scene;
         
         if (scene_path.empty()) return;
@@ -410,13 +404,22 @@ int main() {
             int n = scene.num_particles();
             int dof = n * 3;
 
-            // only resize if needed
-            if (solver.b.size() != dof) {
+            // TODO: verbose and ugly do refactor or drop ParticleIndex completely
+            bool needs_reindex = (solver.b.size() != dof);
+            if (!needs_reindex) {
+                scene.particle_query.each([&](flecs::entity e, Position&) {
+                    if (!e.has<ParticleIndex>()) {
+                        needs_reindex = true;
+                    }
+                });
+            }
+
+            if (needs_reindex) {
                 // assign sequential indices to all particles
                 int new_idx = 0;
-
-                scene.particle_query.each([&](ParticleIndex& idx) {
-                    idx.value = new_idx++;
+                scene.particle_query.each([&](flecs::entity e, Position&) {
+                    auto& idx = e.ensure<ParticleIndex>();
+                    idx = new_idx++;
                 });
 
                 // resize solver

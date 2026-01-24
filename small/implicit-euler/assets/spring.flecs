@@ -1,4 +1,4 @@
-P1 {
+p1 {
   Position: { x: 0, y: 0, z: 0 }
   Velocity: { x: 0, y: 0, z: 0 }
   Mass: { 1.0 }
@@ -6,7 +6,7 @@ P1 {
   Particle
 }
 
-P2 {
+p2 {
   Position: { x: 1, y: 0, z: 0 }
   Velocity: { x: 0, y: 0, z: 0 }
   Mass: { 1.0 }
@@ -14,10 +14,10 @@ P2 {
   Particle
 }
 
-S1 {
+s1 {
   Spring: {
-    e1: P1,
-    e2: P2,
+    e1: p1,
+    e2: p2,
     rest_length: 1.0,
     k_s: 1000.0,
     k_d: 0.1

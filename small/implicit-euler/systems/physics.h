@@ -15,15 +15,15 @@ constexpr double kEpsilon = 1e-6;
 inline void collect_momentum(const Mass& mass, const Velocity& vel,
                                    const ParticleIndex& idx, Solver& solver) {
     // RHS contribution: M * v_n (momentum)
-    auto momentum = mass.value * vel.value;
-    solver.b.segment<3>(idx.value * 3) += momentum;
+    auto momentum = mass * vel.map();
+    solver.b.segment<3>(idx * 3) += momentum;
 }
 
 inline void collect_external_force(const Mass& mass, const ParticleIndex& idx,
-                                    const Eigen::Vector3r& gravity, Real dt, Solver& solver) {
+                                    const Gravity& gravity, Real dt, Solver& solver) {
     // RHS contribution: time-discretized external force term (h * f_ext)
-    auto f_gravity = mass.value * gravity;
-    solver.b.segment<3>(idx.value * 3) += dt * f_gravity;
+    auto f_gravity = mass * gravity.map();
+    solver.b.segment<3>(idx * 3) += dt * f_gravity;
 }
 
 inline void collect_spring_gradient(Spring& spring, Real dt, Solver& solver) {
@@ -33,12 +33,12 @@ inline void collect_spring_gradient(Spring& spring, Real dt, Solver& solver) {
     bool a_pinned = a.has<IsPinned>();
     bool b_pinned = b.has<IsPinned>();
 
-    auto x_a = a.get<Position>().value;
-    auto x_b = b.get<Position>().value;
-    auto v_a = a.get<Velocity>().value;
-    auto v_b = b.get<Velocity>().value;
-    auto idx_a = a.get<ParticleIndex>().value;
-    auto idx_b = b.get<ParticleIndex>().value;
+    auto x_a = a.get<Position>().map();
+    auto x_b = b.get<Position>().map();
+    auto v_a = a.get<Velocity>().map();
+    auto v_b = b.get<Velocity>().map();
+    int idx_a = a.get<ParticleIndex>();
+    int idx_b = b.get<ParticleIndex>();
 
     auto diff = x_a - x_b; // we follow stuyck2018cloth. x_ij = x_i - x_j
     auto l = diff.norm();
@@ -61,7 +61,7 @@ inline void collect_spring_gradient(Spring& spring, Real dt, Solver& solver) {
 }
 
 inline void update_velocity(Velocity& v, const ParticleIndex& idx, const Solver& solver) {
-    v.value = solver.x.segment<3>(idx.value * 3);
+    v.map() = solver.x.segment<3>(idx * 3);
     // TODO: instead accesing solver directly, (which incur atomic access),
     // (which is a nono for threading), (even tho is not a major bottleneck),
     // we could maintain per-entity x, b vector segments,
@@ -70,16 +70,17 @@ inline void update_velocity(Velocity& v, const ParticleIndex& idx, const Solver&
 }
 
 inline void update_position(Position& x, const Velocity& v, Real dt) {
-    x.value += dt * v.value;
+    x.map() += dt * v.map();
 }
 
 inline void ground_collision(Position& x, const OldPosition& x_old, Real dt, Real friction = 0.8) {
-    if (x.value.y() < 0) {
-        x.value.y() = 0;
-        auto displacement = x.value - x_old.value;
+    if (x[1] < 0) {
+        x[1] = 0;
+        auto dx = x[0] - x_old[0];
+        auto dz = x[2] - x_old[2];
         auto friction_factor = std::min(Real(1), dt * friction);
-        x.value.x() = x_old.value.x() + displacement.x() * (1 - friction_factor);
-        x.value.z() = x_old.value.z() + displacement.z() * (1 - friction_factor);
+        x[0] = x_old[0] + dx * (1 - friction_factor);
+        x[2] = x_old[2] + dz * (1 - friction_factor);
     }
 }
 
@@ -89,7 +90,7 @@ inline void ground_collision(Position& x, const OldPosition& x_old, Real dt, Rea
 
 inline void collect_mass(const Mass& m, const ParticleIndex& idx, Solver& solver) {
     for (int i = 0; i < 3; ++i) {
-        solver.triplets.push_back({idx.value*3+i, idx.value*3+i, m.value});
+        solver.triplets.push_back({idx * 3 + i, idx * 3 + i, m});
     }
 }
 
@@ -101,10 +102,10 @@ inline void collect_spring_hessian(Spring& spring, Real dt, Solver& solver) {
     bool a_pinned = a.has<IsPinned>();
     bool b_pinned = b.has<IsPinned>();
 
-    auto x_a = a.get<Position>().value;
-    auto x_b = b.get<Position>().value;
-    auto idx_a = a.get<ParticleIndex>().value;
-    auto idx_b = b.get<ParticleIndex>().value;
+    auto x_a = a.get<Position>().map();
+    auto x_b = b.get<Position>().map();
+    int idx_a = a.get<ParticleIndex>();
+    int idx_b = b.get<ParticleIndex>();
 
     auto diff = x_a - x_b;
     auto l = diff.norm();

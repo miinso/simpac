@@ -19,20 +19,12 @@
 namespace systems {
 
 // =========================================================================
-// Helpers
-// =========================================================================
-
-inline Vector3 toRay3(const Eigen::Vector3r& v) {
-    return {(float)v.x(), (float)v.y(), (float)v.z()};
-}
-
-// =========================================================================
 // CPU Drawing (not actually CPU per se, it's just simple debug rendering unlike fancy gpu sutff)
 // =========================================================================
 
 inline void draw_spring(Spring& spring) {
-    auto& x1 = spring.e1.get<Position>().value;
-    auto& x2 = spring.e2.get<Position>().value;
+    auto x1 = spring.e1.get<Position>().map();
+    auto x2 = spring.e2.get<Position>().map();
 
     auto diff = x1 - x2;
     auto current_length = diff.norm();
@@ -48,11 +40,18 @@ inline void draw_spring(Spring& spring) {
         color = ColorLerp(GREEN, BLUE, t);
     }
 
-    DrawLine3D(toRay3(x1), toRay3(x2), color);
+    Vector3 a{x1[0], x1[1], x1[2]};
+    Vector3 b{x2[0], x2[1], x2[2]};
+    // DrawLine3D(a, b, color);
+    float base_thickness = 0.005f;
+    float thickness = base_thickness * std::pow((float)spring.k_s, 1.0f / 3.0f);
+    DrawCylinderEx(a, b, thickness, thickness, 5, color);
 }
 
 inline void draw_particle(const Position& x, const Mass& m) {
-    DrawPoint3D(toRay3(x.value), BLUE);
+    Vector3 pos{x[0], x[1], x[2]};
+    DrawPoint3D(pos, BLUE);
+    DrawSphere(pos, 0.5, BLUE);
 }
 
 inline void draw_timing_info(flecs::iter& it) {
@@ -158,8 +157,8 @@ inline void upload_spring_positions_to_gpu(const flecs::world& ecs, SpringRender
         gpu.rest_lengths.reserve(num_springs);
 
         scene.spring_query.each([&](Spring& s) {
-            gpu.spring_particle_indices.push_back(s.e1.get<ParticleIndex>().value);
-            gpu.spring_particle_indices.push_back(s.e2.get<ParticleIndex>().value);
+            gpu.spring_particle_indices.push_back(s.e1.get<ParticleIndex>());
+            gpu.spring_particle_indices.push_back(s.e2.get<ParticleIndex>());
             gpu.rest_lengths.push_back((float)s.rest_length);
         });
 
@@ -198,7 +197,7 @@ inline void upload_spring_positions_to_gpu(const flecs::world& ecs, SpringRender
             auto pos = it.field<const Position>(0);
             auto idx = it.field<const ParticleIndex>(1);
             for (auto i : it) {
-                positions[idx[i].value] = pos[i].value;
+                positions[idx[i]] = pos[i].map();
             }
         }
     });
@@ -294,16 +293,19 @@ inline void upload_particle_positions_to_gpu(const flecs::world& ecs, ParticleRe
         while (it.next()) {
             auto pos = it.field<const Position>(0);
             auto idx = it.field<const ParticleIndex>(1);
+            bool has_state = it.is_set(2); // TODO: all particles should have `ParticleState`
             auto state = it.field<const ParticleState>(2);
             for (auto i : it) {
-                int pidx = idx[i].value;
+                int pidx = idx[i];
                 if (pidx >= 0 && pidx < num_particles) {
                     int offset = pidx * ParticleRenderer::FLOATS_PER_INSTANCE;
-                    gpu.staging_buffer[offset + 0] = (float)pos[i].value.x();
-                    gpu.staging_buffer[offset + 1] = (float)pos[i].value.y();
-                    gpu.staging_buffer[offset + 2] = (float)pos[i].value.z();
+                    gpu.staging_buffer[offset + 0] = pos[i].x;
+                    gpu.staging_buffer[offset + 1] = pos[i].y;
+                    gpu.staging_buffer[offset + 2] = pos[i].z;
                     gpu.staging_buffer[offset + 3] = gpu.base_radius;
-                    gpu.staging_buffer[offset + 4] = (float)state[i].flags;
+                    gpu.staging_buffer[offset + 4] = has_state
+                        ? (float)state[i].flags
+                        : 0.0f;
                 }
             }
         }

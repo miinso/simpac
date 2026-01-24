@@ -14,8 +14,8 @@
 // TODO: add tri mesh helper
 
 namespace detail {
-inline void build_cloth_geometry(flecs::entity cloth_entity, GridCloth& cloth) {
-    auto world = cloth_entity.world();
+inline void build_cloth_geometry(flecs::entity e, GridCloth& cloth) {
+    auto world = e.world();
     world.defer_suspend();
 
     // get current global particle index (for solver indexing)
@@ -25,25 +25,24 @@ inline void build_cloth_geometry(flecs::entity cloth_entity, GridCloth& cloth) {
     std::vector<flecs::entity> particles;
     particles.resize(cloth.width * cloth.height);
 
-    Eigen::Vector3r offset(cloth.offset[0], cloth.offset[1], cloth.offset[2]);
+    auto offset = e.get<Position>().map();
 
     for (int y = 0; y < cloth.height; y++) {
         for (int x = 0; x < cloth.width; x++) {
             int local_idx = y * cloth.width + x;
             int global_idx = particle_base_idx + local_idx;
 
-            Eigen::Vector3r pos = offset + Eigen::Vector3r(
+            auto pos = offset + Eigen::Vector3r(
                 x * cloth.spacing,
                 0.0f,
                 -y * cloth.spacing
             );
 
             particles[local_idx] = world.entity()
-                .child_of(cloth_entity)  // make it a child
+                .child_of(e)  // make it a child
                 .set(Position{pos})
                 .set(OldPosition{pos})
-                .set(Velocity{Eigen::Vector3r::Zero()})
-                .set(Acceleration{Eigen::Vector3r::Zero()})
+                .set(Velocity{0, 0, 0})
                 .set(Mass{cloth.mass})
                 .set(InverseMass{1.0f / cloth.mass})
                 .set(ParticleState{})
@@ -72,7 +71,7 @@ inline void build_cloth_geometry(flecs::entity cloth_entity, GridCloth& cloth) {
             if (x < cloth.width - 1) {
                 auto right = get_particle(x + 1, y);
                 world.entity()
-                    .child_of(cloth_entity)
+                    .child_of(e)
                     .set(Spring{
                         current, right,
                         cloth.spacing,
@@ -86,7 +85,7 @@ inline void build_cloth_geometry(flecs::entity cloth_entity, GridCloth& cloth) {
             if (y < cloth.height - 1) {
                 auto down = get_particle(x, y + 1);
                 world.entity()
-                    .child_of(cloth_entity)
+                    .child_of(e)
                     .set(Spring{
                         current, down,
                         cloth.spacing,
@@ -102,7 +101,7 @@ inline void build_cloth_geometry(flecs::entity cloth_entity, GridCloth& cloth) {
                 Real diag_len = cloth.spacing * std::sqrt(2.0f);
 
                 world.entity()
-                    .child_of(cloth_entity)
+                    .child_of(e)
                     .set(Spring{
                         current, diagonal,
                         diag_len,
@@ -114,7 +113,7 @@ inline void build_cloth_geometry(flecs::entity cloth_entity, GridCloth& cloth) {
                 auto right = get_particle(x + 1, y);
                 auto down = get_particle(x, y + 1);
                 world.entity()
-                    .child_of(cloth_entity)
+                    .child_of(e)
                     .set(Spring{
                         right, down,
                         diag_len,
@@ -128,7 +127,7 @@ inline void build_cloth_geometry(flecs::entity cloth_entity, GridCloth& cloth) {
             if (x < cloth.width - 2) {
                 auto right2 = get_particle(x + 2, y);
                 world.entity()
-                    .child_of(cloth_entity)
+                    .child_of(e)
                     .set(Spring{
                         current, right2,
                         cloth.spacing * 2.0f,
@@ -141,7 +140,7 @@ inline void build_cloth_geometry(flecs::entity cloth_entity, GridCloth& cloth) {
             if (y < cloth.height - 2) {
                 auto down2 = get_particle(x, y + 2);
                 world.entity()
-                    .child_of(cloth_entity)
+                    .child_of(e)
                     .set(Spring{
                         current, down2,
                         cloth.spacing * 2.0f,
@@ -212,17 +211,27 @@ inline void register_cloth_component(flecs::world& ecs) {
     // add reflection separately (becomes untyped_component)
     ecs.component<GridCloth>()
         .member<int>("width")
+            .range(1, 256)
+            .error_range(100, 256)
         .member<int>("height")
+            // .range(1, 256)
         .member<float>("spacing")
+            .range(0.05, 10.0)
         .member<float>("mass")
+            .range(0.001, 100.0)
         .member<float>("k_structural")
+            .range(0.0, 200000.0)
         .member<float>("k_shear")
+            .range(0.0, 200000.0)
         .member<float>("k_bending")
+            .range(0.0, 200000.0)
         .member<float>("k_damping")
-        .member<float>("offset", 3)
+            .range(0.0, 10.0)
         .member<int>("pin_mode")
+            .range(0, 2)
         .member<int>("particle_count")
         .member<int>("spring_count");
     
     // TODO: figure out how to apply range limits on the adjustables
+    // tried range attribs but doesn't seem to force anything..
 }

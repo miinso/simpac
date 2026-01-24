@@ -6,12 +6,14 @@
 #include <vector>
 #include <deque>
 #include <string>
+#include <cstddef>
 #include <cstdint>
-#include <cstring>
+#include <type_traits>
 
 using Real = float;
 namespace Eigen {
 using Vector3r = Matrix<Real, 3, 1, DontAlign>;
+using Vector4r = Matrix<Real, 4, 1, DontAlign>;
 using Matrix3r = Matrix<Real, 3, 3>;
 using VectorXr = Matrix<Real, Dynamic, 1>;
 using ArrayXr = Array<Real, Dynamic, 1>;
@@ -19,64 +21,208 @@ using MatrixXr = Matrix<Real, Dynamic, Dynamic>;
 }  // namespace Eigen
 
 // Particle components
-struct ParticleIndex { int value; };
-struct Position { Eigen::Vector3r value; };
-struct Velocity { Eigen::Vector3r value; };
-struct Acceleration { Eigen::Vector3r value; };
-struct OldPosition { Eigen::Vector3r value; };
-struct Mass { Real value; };
-struct InverseMass { Real value; };
+
+/*
+  crtp keeps vec3 components uniform and lightweight.
+  plain fields for flecs/raylib; map() gives an eigen view when needed.
+*/
+template <typename Derived>
+struct vec3 {
+    Real x = Real(0);
+    Real y = Real(0);
+    Real z = Real(0);
+
+    vec3() = default;
+    vec3(Real x_, Real y_, Real z_) : x(x_), y(y_), z(z_) {}
+
+    template <typename DerivedEigen>
+    vec3(const Eigen::MatrixBase<DerivedEigen>& v)
+        : x(Real(v.x())), y(Real(v.y())), z(Real(v.z())) {}
+
+    Real* data() { return &x; }
+    const Real* data() const { return &x; }
+
+    Real& operator[](size_t i) { return data()[i]; }
+    const Real& operator[](size_t i) const { return data()[i]; }
+
+    Eigen::Map<Eigen::Vector3r> map() { return Eigen::Map<Eigen::Vector3r>(data()); }
+    Eigen::Map<const Eigen::Vector3r> map() const { return Eigen::Map<const Eigen::Vector3r>(data()); }
+};
+
+template <typename Derived>
+struct vec4 {
+    Real x = Real(0);
+    Real y = Real(0);
+    Real z = Real(0);
+    Real w = Real(0);
+
+    vec4() = default;
+    vec4(Real x_, Real y_, Real z_, Real w_) : x(x_), y(y_), z(z_), w(w_) {}
+
+    template <typename DerivedEigen>
+    vec4(const Eigen::MatrixBase<DerivedEigen>& v)
+        : x(Real(v.x())), y(Real(v.y())), z(Real(v.z())), w(Real(v.w())) {}
+
+    Real* data() { return &x; }
+    const Real* data() const { return &x; }
+
+    Real& operator[](size_t i) { return data()[i]; }
+    const Real& operator[](size_t i) const { return data()[i]; }
+
+    Eigen::Map<Eigen::Vector4r> map() { return Eigen::Map<Eigen::Vector4r>(data()); }
+    Eigen::Map<const Eigen::Vector4r> map() const { return Eigen::Map<const Eigen::Vector4r>(data()); }
+};
+
+template <typename Derived, typename Value>
+struct scalar {
+    Value value = Value(0);
+
+    scalar() = default;
+    scalar(Value v) : value(v) {}
+
+    scalar& operator=(Value v) {
+        value = v;
+        return *this;
+    }
+
+    operator Value&() { return value; }
+    operator const Value&() const { return value; }
+};
+
+template <typename Derived>
+using Vec3Component = vec3<Derived>;
+
+template <typename Derived>
+using Vec4Component = vec4<Derived>;
+
+template <typename Derived, typename Value>
+using ScalarComponent = scalar<Derived, Value>;
+
+struct Position : vec3<Position> {
+    using vec3<Position>::vec3;
+};
+
+struct Velocity : vec3<Velocity> { 
+    using vec3<Velocity>::vec3;
+};
+
+struct Acceleration : vec3<Acceleration> {
+    using vec3<Acceleration>::vec3;
+};
+
+struct OldPosition : vec3<OldPosition> {
+    using vec3<OldPosition>::vec3;
+};
+
+struct Gravity : vec3<Gravity> {
+    using vec3<Gravity>::vec3;
+};
+
+// struct Quaternion : vec4<Quaternion> {
+//     using vec4<Quaternion>::vec4;
+// };
+
+struct Mass : scalar<Mass, Real> {
+    using scalar<Mass, Real>::scalar;
+};
+
+struct InverseMass : scalar<InverseMass, Real> {
+    using scalar<InverseMass, Real>::scalar;
+};
+
+struct ParticleIndex : scalar<ParticleIndex, int> {
+    using scalar<ParticleIndex, int>::scalar;
+};
+
 struct ParticleState {
-    enum Flag : uint8_t {
+    enum Flag {
         None = 0,
         Hovered = 1 << 0,
         Selected = 1 << 1,
         Disabled = 1 << 2,
         Pinned = 1 << 3,
     };
-    uint8_t flags = None;
+
+    uint32_t flags = None;
 };
 
-// =========================================================================
-// Reflection helpers
-// =========================================================================
+struct SpringRestLength : scalar<SpringRestLength, Real> {
+    using scalar<SpringRestLength, Real>::scalar;
+};
 
-inline void register_vector3_reflection(flecs::world& ecs) {
-    auto vec3f_meta = ecs.component()
-        .member<float>("x")
-        .member<float>("y")
-        .member<float>("z");
+struct SpringStiffness : scalar<SpringStiffness, Real> {
+    using scalar<SpringStiffness, Real>::scalar;
+};
 
-    ecs.component<Eigen::Vector3r>()
-        .opaque(vec3f_meta)
-        .serialize([](const flecs::serializer* s, const Eigen::Vector3r* data) {
-            if (!data) return 0;
-            const float* v = data->data();
-            s->member("x");
-            s->value(v[0]);
-            s->member("y");
-            s->value(v[1]);
-            s->member("z");
-            s->value(v[2]);
-            return 0;
-        })
-        .ensure_member([](Eigen::Vector3r* dst, const char* member) -> void* {
-            if (!dst || !member) return nullptr;
-            float* v = dst->data();
-            if (!std::strcmp(member, "x")) return &v[0];
-            if (!std::strcmp(member, "y")) return &v[1];
-            if (!std::strcmp(member, "z")) return &v[2];
-            return nullptr;
-        });
+struct SpringDamping : scalar<SpringDamping, Real> {
+    using scalar<SpringDamping, Real>::scalar;
+};
+
+template <typename T>
+inline void register_vec3(flecs::world& ecs) {
+    ecs.component<T>()
+        .member("x", &T::x)
+        .member("y", &T::y)
+        .member("z", &T::z);
 }
 
-inline void register_sim_components(flecs::world& ecs) {
-    register_vector3_reflection(ecs);
+template <typename T>
+inline void register_vec4(flecs::world& ecs) {
+    ecs.component<T>()
+        .member("x", &T::x)
+        .member("y", &T::y)
+        .member("z", &T::z)
+        .member("w", &T::w);
+}
 
-    ecs.component<Position>().member<Eigen::Vector3r>("value");
-    ecs.component<Velocity>().member<Eigen::Vector3r>("value");
-    ecs.component<Acceleration>().member<Eigen::Vector3r>("value");
-    ecs.component<OldPosition>().member<Eigen::Vector3r>("value");
+template <typename T>
+inline void register_scalar(flecs::world& ecs, flecs::entity_t scalar_meta) {
+    using Value = std::remove_cv_t<std::remove_reference_t<decltype(T::value)>>;
+    auto opaque = ecs.component<T>().opaque(scalar_meta);
+    if constexpr (std::is_integral_v<Value>) {
+        opaque.serialize([](const flecs::serializer* s, const T* data) {
+                if (!data) return 0;
+                s->value(static_cast<int64_t>(data->value));
+                return 0;
+            })
+            .assign_int([](T* dst, int64_t value) {
+                if (!dst) return;
+                dst->value = static_cast<Value>(value);
+            });
+    } else {
+        opaque.serialize([](const flecs::serializer* s, const T* data) {
+                if (!data) return 0;
+                s->value(static_cast<double>(data->value));
+                return 0;
+            })
+            .assign_float([](T* dst, double value) {
+                if (!dst) return;
+                dst->value = static_cast<Value>(value);
+            });
+    }
+}
+
+template <typename T>
+inline void register_vec3_plain(flecs::world& ecs) {
+    register_vec3<T>(ecs);
+}
+
+template <typename T>
+inline void register_vec4_plain(flecs::world& ecs) {
+    register_vec4<T>(ecs);
+}
+
+template <typename T>
+inline void register_scalar_component(flecs::world& ecs, flecs::entity_t scalar_meta) {
+    register_scalar<T>(ecs, scalar_meta);
+}
+
+inline void register_particle_state_flags(flecs::world& ecs) {
+    ecs.component<ParticleState>()
+        .bit("Hovered", (uint32_t)ParticleState::Hovered)
+        .bit("Selected", (uint32_t)ParticleState::Selected)
+        .bit("Disabled", (uint32_t)ParticleState::Disabled)
+        .bit("Pinned", (uint32_t)ParticleState::Pinned);
 }
 
 // Tags
@@ -94,12 +240,49 @@ struct DistanceConstraint {
 };
 
 struct Spring {
+    // NOTE: flecs::entity members are script-settable, but Flecs <= 4.1.4
+    // fails to cast script identifiers to flecs::entity. See PR #1912:
+    // https://github.com/SanderMertens/flecs/pull/1912
     flecs::entity e1;
     flecs::entity e2;
-    Real rest_length;
-    Real k_s;
-    Real k_d;
+    SpringRestLength rest_length; // too much? just use Real?
+    SpringStiffness k_s;
+    SpringDamping k_d;
+
+    // reviewer note: co-locating reflection keeps schema discoverable,
+    // but couples this POD to Flecs; keep it small and call from one place.
+    static void meta(flecs::world& ecs) {
+        ecs.component<Spring>()
+            .member("e1", &Spring::e1)
+            .member("e2", &Spring::e2)
+            .member("rest_length", &Spring::rest_length)
+                .range(0.0, 10.0)
+            .member("k_s", &Spring::k_s)
+                .range(0.0, 200000.0)
+            .member("k_d", &Spring::k_d)
+                .range(0.0, 10.0);
+    }
 };
+
+inline void register_sim_components(flecs::world& ecs) {
+    register_vec3<Position>(ecs);
+    register_vec3<Velocity>(ecs);
+    register_vec3<Acceleration>(ecs);
+    register_vec3<OldPosition>(ecs);
+    register_vec3<Gravity>(ecs);
+    // register_vec4<Quaternion>(ecs); // collides with raylib's..
+
+    register_scalar<Mass>(ecs, flecs::F32);
+    register_scalar<InverseMass>(ecs, flecs::F32);
+    register_scalar<ParticleIndex>(ecs, flecs::I32);
+    register_scalar<SpringRestLength>(ecs, flecs::F32);
+    register_scalar<SpringStiffness>(ecs, flecs::F32);
+    register_scalar<SpringDamping>(ecs, flecs::F32);
+
+    register_particle_state_flags(ecs);
+
+    Spring::meta(ecs);
+}
 
 struct Solver {
     // TODO: decide if we want to maintain one global solver or go per-object
@@ -129,15 +312,15 @@ struct Solver {
 
 // scene configuration and state
 struct Scene {
-    Real dt;                    // timestep per simulation step
-    Eigen::Vector3r gravity;           // gravity vector
+    Real dt = Real(1.0f / 60.0f);     // timestep per simulation step
+    Gravity gravity = {0.0f, -9.81f, 0.0f};  // gravity vector
 
     Real wall_time = 0;         // real elapsed time (wall-clock)
     Real sim_time = 0;          // accumulated simulation time
     int frame_count = 0;        // number of simulation steps executed
 
     // cached queries (initialized via on_set hook)
-    flecs::query<ParticleIndex> particle_query;
+    flecs::query<Position> particle_query;
     flecs::query<Spring> spring_query;
 
     // query-based count accessors
@@ -147,6 +330,14 @@ struct Scene {
     // control flags
     bool paused = false;        // simulation pause state
     Real sim_speed = 1.0;       // simulation speed multiplier
+
+    static void meta(flecs::world& ecs) {
+        ecs.component<Scene>()
+            .member("dt", &Scene::dt)
+            .member("gravity", &Scene::gravity)
+            .member("paused", &Scene::paused)
+            .member("sim_speed", &Scene::sim_speed);
+    }
 };
 
 struct InteractionState {
@@ -173,9 +364,6 @@ struct GridCloth {
     float k_shear = 10000.0f;       // shear (diagonal) spring stiffness
     float k_bending = 100.0f;       // bending spring stiffness
     float k_damping = 0.0f;         // velocity damping coefficient
-
-    // position offset
-    float offset[3] = {0, 0, 0};
 
     // pinning
     // TODO: verbose. to be removed

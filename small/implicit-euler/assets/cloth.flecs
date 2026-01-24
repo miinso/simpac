@@ -1,0 +1,28 @@
+mycloth1 {
+  Position: { x: -5, y: 25, z: 0 }
+  GridCloth: {
+    width: 200,
+    height: 200,
+    spacing: 1.0,
+    mass: 1.0,
+    k_structural: 10000.0,
+    k_shear: 10000.0,
+    k_bending: 10.0,
+    k_damping: 0.05,
+    pin_mode: 0
+  }
+}
+
+MainCamera {
+  graphics.ActiveCamera
+  graphics.Position: { x: 50, y: 10, z: 50 }
+  graphics.Camera: {
+    target: { x: 0, y: 0.5, z: 0 }
+    fovy: 60
+    projection: 0
+    move_speed: 0.1
+    rotation_speed: 0.2
+    zoom_speed: 1
+    controls_enabled: true
+  }
+}

@@ -26,7 +26,7 @@ cc_binary(
             # "-DNDEBUG",
         ],
         "@platforms//os:windows": [
-            # "/O2",
+            # "/O3",
             # "/arch:AVX2",
             # "/openmp:experimental",
         ],
@@ -54,15 +54,15 @@ cc_binary(
     linkopts = select({
         "@platforms//os:emscripten": [
             # with known memory usage and expected size
-            "-sALLOW_MEMORY_GROWTH=0",  # sometimes it's a good idea to clamp it
-            "-sSTACK_SIZE=16mb",
-            "-sINITIAL_MEMORY=100mb",
+            # "-sALLOW_MEMORY_GROWTH=0",  # sometimes it's a good idea to clamp it
+            # "-sSTACK_SIZE=16mb",
+            # "-sINITIAL_MEMORY=100mb",
             # "-sINITIAL_HEAP=4mb",
             # with no picture of memory footprint
-            # "-sALLOW_MEMORY_GROWTH=1",
-            # "-sSTACK_SIZE=16mb",
-            # "-sINITIAL_HEAP=16mb",
-            # "-sMAXIMUM_MEMORY=1024mb", # paired with allow_memory_growth
+            "-sALLOW_MEMORY_GROWTH=1",
+            "-sSTACK_SIZE=16mb",
+            "-sINITIAL_HEAP=16mb",
+            "-sMAXIMUM_MEMORY=1024mb", # paired with allow_memory_growth
             # ---
             "-sSINGLE_FILE",
             # "-sASSERTIONS=2",
