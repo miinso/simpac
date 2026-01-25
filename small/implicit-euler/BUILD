@@ -92,7 +92,6 @@ cc_binary(
     }),
     deps = [
         "//modules:graphics2",
-        "//third_party/glad2",
         "@eigen",
         "@flecs",
         "@raylib-latest",

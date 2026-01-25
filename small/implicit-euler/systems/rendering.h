@@ -7,16 +7,35 @@
 #include <rlgl.h>
 #include <raymath.h>
 
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__)
     #include <GLES3/gl3.h> // for browser
+#elif defined(__APPLE__)
+    #include "external/glad_gles2.h"
 #else
-    #include <glad/gles2.h>
+    #include "external/glad.h"
 #endif
 
 #include <vector>
 #include "par_shapes.h"
 
 namespace systems {
+namespace detail {
+inline void draw_arrays_instanced(GLenum mode, GLint first, GLsizei count, GLsizei instances) {
+#if defined(__APPLE__) && !defined(__EMSCRIPTEN__)
+    glDrawArraysInstancedEXT(mode, first, count, instances);
+#else
+    glDrawArraysInstanced(mode, first, count, instances);
+#endif
+}
+
+inline void draw_elements_instanced(GLenum mode, GLsizei count, GLenum type, const void* indices, GLsizei instances) {
+#if defined(__APPLE__) && !defined(__EMSCRIPTEN__)
+    glDrawElementsInstancedEXT(mode, count, type, indices, instances);
+#else
+    glDrawElementsInstanced(mode, count, type, indices, instances);
+#endif
+}
+} // namespace detail
 
 // =========================================================================
 // CPU Drawing (not actually CPU per se, it's just simple debug rendering unlike fancy gpu sutff)
@@ -240,7 +259,7 @@ inline void draw_springs_gpu(const SpringRenderer& gpu) {
 
     // draw all springs with instanced rendering
     // 2 vertices per instance (line), repeated for each spring
-    glDrawArraysInstanced(GL_LINES, 0, SpringRenderer::VERTICES_PER_INSTANCE, gpu.allocated_springs);
+    detail::draw_arrays_instanced(GL_LINES, 0, SpringRenderer::VERTICES_PER_INSTANCE, gpu.allocated_springs);
 
     // cleanup
     rlDisableVertexBuffer();
@@ -334,7 +353,7 @@ inline void draw_particles_gpu(const ParticleRenderer& gpu) {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gpu.mesh_ebo);
 
     // draw instanced icospheres
-    glDrawElementsInstanced(GL_TRIANGLES, gpu.num_indices, GL_UNSIGNED_INT, 0, gpu.allocated_particles);
+    detail::draw_elements_instanced(GL_TRIANGLES, gpu.num_indices, GL_UNSIGNED_INT, nullptr, gpu.allocated_particles);
 
     // cleanup
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);

@@ -148,7 +148,6 @@ cc_library(
         "@platforms//os:macos": [
             "@glfw2//:glfw2", 
             "@simpac//third_party/angle",
-            "@simpac//third_party/glad2"
         ],
         "@platforms//os:emscripten": [], # no need
         "//conditions:default": [],
