@@ -169,18 +169,6 @@ inline void upload_spring_positions_to_gpu(const flecs::world& ecs, SpringRender
     if (gpu.allocated_springs != num_springs) {
         gpu.allocated_springs = num_springs;
 
-        // collect spring connectivity
-        gpu.spring_particle_indices.clear();
-        gpu.spring_particle_indices.reserve(num_springs * 2);
-        gpu.rest_lengths.clear();
-        gpu.rest_lengths.reserve(num_springs);
-
-        scene.spring_query.each([&](Spring& s) {
-            gpu.spring_particle_indices.push_back(s.e1.get<ParticleIndex>());
-            gpu.spring_particle_indices.push_back(s.e2.get<ParticleIndex>());
-            gpu.rest_lengths.push_back((float)s.rest_length);
-        });
-
         // resize staging buffer (7 floats per instance)
         gpu.staging_buffer.resize(num_springs * SpringRenderer::FLOATS_PER_INSTANCE);
 
@@ -208,6 +196,13 @@ inline void upload_spring_positions_to_gpu(const flecs::world& ecs, SpringRender
     }
 
     if (num_springs == 0) return;
+
+    // refresh spring connectivity/rest length every frame
+    gpu.spring_particle_indices.clear();
+    gpu.spring_particle_indices.reserve(num_springs * 2);
+    gpu.rest_lengths.clear();
+    gpu.rest_lengths.reserve(num_springs);
+
     queries::spring_query.each([&](const Spring& s) {
         gpu.spring_particle_indices.push_back(s.e1.get<ParticleIndex>());
         gpu.spring_particle_indices.push_back(s.e2.get<ParticleIndex>());
