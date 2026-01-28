@@ -261,6 +261,8 @@ struct Solver {
 
     std::vector<Eigen::Triplet<Real>> triplets;
 
+    bool needs_reset = false; // FIXME: feels like an ugly adhoc, but we keep it since it just works..
+
     // CG solver config
     int cg_max_iter = 100;
     Real cg_tolerance = 1e-6;

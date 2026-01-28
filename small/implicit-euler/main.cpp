@@ -46,6 +46,23 @@ int main() {
     systems::install_graphics(ecs);
     systems::install_render_systems(ecs);
 
+    // reset solver warm-start when springs change
+    ecs.observer<Spring>()
+        .event(flecs::OnSet)
+        .event(flecs::OnAdd)
+        .event(flecs::OnRemove)
+        .each([](flecs::iter& it, size_t, Spring&) {
+            it.world().get_mut<Solver>().needs_reset = true;
+        });
+
+    // reset solver warm-start when particles are added/removed
+    ecs.observer<Particle>()
+        .event(flecs::OnAdd)
+        .event(flecs::OnRemove)
+        .run([](flecs::iter& it) {
+            it.world().get_mut<Solver>().needs_reset = true;
+        });
+
     // =========================================================================
     // Simulation systems (we set .kind(0) to manually run them
     // =========================================================================
@@ -170,7 +187,21 @@ int main() {
                 printf("[Solver] Resized: %d particles, %d DOF\n", n, dof);
             }
 
-            // TODO: should reset spring/particle renderer bc ordering might not be preserved
+            // NOTE: spring renderer refreshes connectivity per-frame to handle reindexing
+            // under 1ms, so no bottleneck
+
+            bool invalid_state = (solver.x.size() > 0)
+                && (!solver.x.allFinite() || !solver.x_prev.allFinite());
+
+            if (solver.needs_reset || invalid_state) {
+                if (solver.x.size() != dof) {
+                    solver.x.resize(dof);
+                    solver.x_prev.resize(dof);
+                }
+                solver.x.setZero();
+                solver.x_prev.setZero();
+                solver.needs_reset = false;
+            }
 
             solver.b.setZero();
             solver.triplets.clear();
