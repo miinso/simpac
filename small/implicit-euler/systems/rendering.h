@@ -17,6 +17,7 @@
 #endif
 
 #include <vector>
+#include <limits>
 #include "par_shapes.h"
 
 namespace systems {
@@ -80,6 +81,10 @@ inline void draw_timing_info(flecs::iter& it) {
     scene.wall_time += it.delta_time();
 
     Font font = graphics::get_font();
+    // Font font = graphics::get_font_tiny();
+    float font_size = (float)font.baseSize;
+    // int line_spacing = (font.baseSize <= 7) ? 1 : 0;
+    // SetTextLineSpacing(line_spacing);
     char buf[512];
     snprintf(buf, sizeof(buf),
         "Wall time: %.2fs  |  Sim time: %.2fs  (dt=%.4f)\n"
@@ -94,24 +99,31 @@ inline void draw_timing_info(flecs::iter& it) {
         scene.frame_count, scene.sim_time / (scene.wall_time + 1e-9),
         solver.cg_iterations, solver.cg_max_iter, solver.cg_tolerance, solver.cg_error,
         queries::num_particles(), queries::num_springs());
-    DrawTextEx(font, buf, {21, 41}, 12, 0, WHITE);
-    DrawTextEx(font, buf, {20, 40}, 12, 0, DARKGRAY);
+    DrawTextEx(font, buf, {21, 41}, font_size, 0, WHITE);
+    DrawTextEx(font, buf, {20, 40}, font_size, 0, DARKGRAY);
 
-    // draw CG history (right-aligned)
-    if (!solver.cg_history.empty()) {
-        std::string history_text;
-        for (const auto& line : solver.cg_history) {
-            history_text += line + "\n";
-        }
+    // SetTextLineSpacing(0);
+}
 
-        int screen_width = GetScreenWidth();
-        int screen_height = GetScreenHeight();
-        Vector2 text_size = MeasureTextEx(font, history_text.c_str(), 12, 0);
-        float x = screen_width - text_size.x - 20;  // 20px padding from right edge
-        float y = screen_height - text_size.y;
-        DrawTextEx(font, history_text.c_str(), {x, y}, 12, 0, BLACK);  // shadow
-        // DrawTextEx(font, history_text.c_str(), {x, 20}, 12, 0, WHITE);
+inline void draw_solve_history(flecs::iter& it) {
+    auto& solver = it.world().get<Solver>();
+    if (solver.cg_history.empty()) return;
+
+    Font font = graphics::get_font();
+    float font_size = (float)font.baseSize;
+
+    std::string history_text;
+    for (const auto& line : solver.cg_history) {
+        history_text += line + "\n";
     }
+
+    int screen_width = GetScreenWidth();
+    int screen_height = GetScreenHeight();
+    Vector2 text_size = MeasureTextEx(font, history_text.c_str(), font_size, 0);
+    float x = screen_width - text_size.x - 20;  // 20px padding from right edge
+    float y = screen_height - text_size.y;
+    DrawTextEx(font, history_text.c_str(), {x, y}, font_size, 0, BLACK);  // shadow
+    // DrawTextEx(font, history_text.c_str(), {x, 20}, 12, 0, WHITE);
 }
 
 // =========================================================================
@@ -563,7 +575,7 @@ inline void install_render_systems(flecs::world& ecs) {
             it.world().query_builder<graphics::Camera>()
                 .with<graphics::ActiveCamera>()
                 .each([&](graphics::Camera& cam) {
-                    cam.controls_enabled = !capture;
+                    // cam.controls_enabled = !capture; TODO: do i want this?
                 });
 
             // update hover/selection flag bits (feels overengineered)
