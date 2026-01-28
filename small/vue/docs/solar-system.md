@@ -1,47 +1,40 @@
 ---
-title: explorer
+title: Solar System
 ---
+
+# Solar System
 
 <script setup>
 import { ref } from 'vue';
 
 const appRef = ref(null);
 const fovY = ref(60);
-const status = ref('booting');
 let conn = null;
 
-const appSrc = ref('/bazel-bin/small/explorer/explorer_demo.js');
-
-function onReady() {
-  status.value = 'ready';
+async function onReady() {
   conn = window.flecs.connect(appRef.value);
 
   // print world as a whole
   conn.world((world) => { console.log(world)})
 
-  conn.get('MainCamera', { component: 'graphics.Camera', values: true }).then((reply) => {
-    const value = reply?.value || reply?.Camera || reply;
-    if (value && typeof value.fovy === 'number') fovY.value = value.fovy;
-  });
-}
-
-function onError(message) {
-  status.value = `error: ${message}`;
+  const reply = await conn.get('MainCamera', { component: 'graphics.Camera', values: true });
+  const value = reply?.value || reply?.Camera || reply;
+  if (typeof value?.fovy === 'number') fovY.value = value.fovy;
 }
 
 function onInput() {
-  if (!appRef.value || !conn) return;
+  if (!conn) return;
   conn.set('MainCamera', 'graphics.Camera', { fovy: fovY.value }).catch(console.error);
 }
 </script>
 
 <Simpac
   ref="appRef"
-  :src="appSrc"
+  src="/bazel-bin/small/explorer/explorer_demo.js"
   :debug="true"
   :cwrap="['flecs_explorer_request']"
   @ready="onReady"
-  @error="onError"
+  @error="console.error($event)"
 />
 
 <label>

@@ -4,14 +4,14 @@ title: Pages
 
 # Pages
 
-[Home](/)
+- [Home](/)
 
-[post1](/post1/)
+- [post1](/post1/)
 
-[post2](/post2/)
+- [post2](/post2/)
 
-[post3](/post3/)
+- [post3](/post3/)
 
-[/nest1/post4](/nest1/post4/)
+- [scripting](/scripting/)
 
-[script](/script/)
+- [blogintro](/blogintro/)
