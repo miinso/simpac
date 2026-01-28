@@ -198,7 +198,11 @@ void init_window(const WindowConfig& config) {
     detail::CanvasSize canvas_size;
     detail::platform_before_init_window(config, canvas_size);
 
+#if defined(__EMSCRIPTEN__)
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT | FLAG_MSAA_4X_HINT);
+#else
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT);
+#endif
     InitWindow(config.width, config.height, config.title);
 
     detail::platform_after_init_window(config, canvas_size);
