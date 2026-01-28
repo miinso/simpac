@@ -1,0 +1,32 @@
+$ {
+  Scene: {
+    dt: 0.0090
+    gravity: { x: 0, y: -9.81, z: 0 }
+    paused: false
+  }
+}
+
+mycloth1 {
+  Position: { x: -100, y: 5, z: -10 }
+  GridCloth: {
+    width: 200,
+    height: 50,
+    spacing: 1.0,
+    mass: 2.0,
+    k_structural: 10000.0,
+    k_shear: 10000.0,
+    k_bending: 10.0,
+    k_damping: 5.0,
+    pin_mode: 1
+  }
+}
+
+MainCamera {
+  graphics.ActiveCamera
+  graphics.Position: { x: 0, y: -5, z: 20 }
+  graphics.Camera: {
+    target: { x: 0, y: -8, z: 0 }
+    fovy: 60
+    projection: 0
+  }
+}

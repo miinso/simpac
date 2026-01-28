@@ -1,0 +1,57 @@
+// a rope.
+
+$ {
+  Scene: {
+    dt: 1 / 60
+    gravity: { x: 0, y: -9.81, z: 0 }
+    paused: false
+  }
+}
+
+const count = 12
+const spacing = 0.8
+const mass = 1.0
+const k_s = 1200.0
+const k_d = 0.12
+const start_y = 3.0
+
+p_0 {
+  Position: { x: 0, y: $start_y, z: 0 }
+  Velocity: { x: 0, y: 0, z: 0 }
+  Mass: { $mass }
+  ParticleIndex: { 0 }
+  Particle
+  IsPinned
+}
+
+for i in 1..$count {
+  "p_$i" {
+    Position: { x: $i * $spacing, y: $start_y, z: 0 }
+    Velocity: { x: 0, y: 0, z: 0 }
+    Mass: { $mass }
+    ParticleIndex: { $i }
+    Particle
+  }
+}
+
+for i in 0..($count - 1) {
+  "s_$i" {
+    Spring: {
+      e1: "p_$i",
+      e2: "p_{$i + 1}",
+      rest_length: $spacing,
+      k_s: $k_s,
+      k_d: $k_d
+    }
+  }
+}
+
+MainCamera {
+  graphics.ActiveCamera
+  graphics.Position: { x: 4, y: 2, z: 10 }
+  graphics.Camera: {
+    target: { x: 4, y: 1.5, z: 0 }
+    fovy: 60
+    projection: 0
+  }
+}

@@ -14,6 +14,9 @@
 
 // TODO: add tri mesh helper
 
+// NOTE: i think i can drop this whole cloth.h suite,
+// since scripting just works and compile-time defs add bloats?
+
 namespace detail {
 inline void build_cloth_geometry(flecs::entity e, GridCloth& cloth) {
     auto world = e.world();

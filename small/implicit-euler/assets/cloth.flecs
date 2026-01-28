@@ -13,6 +13,14 @@ mycloth1 {
   }
 }
 
+$ {
+  Scene: {
+    dt: 0.0016
+    gravity: { x: 0, y: -9.81, z: 0 }
+    paused: false
+  }
+}
+
 MainCamera {
   graphics.ActiveCamera
   graphics.Position: { x: 50, y: 10, z: 50 }
@@ -23,6 +31,6 @@ MainCamera {
     move_speed: 0.1
     rotation_speed: 0.2
     zoom_speed: 1
-    controls_enabled: true
+    // controls_enabled: true
   }
 }
