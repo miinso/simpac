@@ -86,9 +86,10 @@ cc_binary(
             "--embed-file resources/shaders/glsl300es/particle.vs@resources/shaders/glsl300es/particle.vs",
             "--embed-file resources/fonts/generic.fnt@resources/fonts/generic.fnt",
             "--embed-file resources/fonts/generic.png@resources/fonts/generic.png",
-            "--embed-file resources/fonts/font.png@resources/fonts/font.png",
+            "--embed-file resources/fonts/tiny.png@resources/fonts/tiny.png",
             # "--embed-file small/implicit-euler/scenes/default.flecs@small/implicit-euler/scenes/default.flecs",
             "--embed-file %s/assets@assets" % package_name(), # embed all under ./assets
+            # FIXME: changing asset (script e.g.) (unlike sources) doesn't invoke new build.. what do i dooo
         ],
         "//conditions:default": [],
     }),
