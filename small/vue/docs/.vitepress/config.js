@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitepress';
 import basicSsl from '@vitejs/plugin-basic-ssl';
+import { katex } from '@mdit/plugin-katex';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -86,6 +87,21 @@ export default defineConfig({
   description: 'Worker harness playground for Simpac WASM builds.',
   cleanUrls: true,
   ignoreDeadLinks: true,
+  markdown: {
+    config: (md) => {
+      md.use(katex, {
+        delimiters: 'dollars',
+        throwOnError: false,
+        strict: 'ignore',
+        trust: true,
+        macros: {
+          '\\class': '\\htmlClass{#1}{#2}',
+          '\\t': '\\htmlData{term=#1}{#2}',
+          '\\p': '\\htmlData{param=#1}{#2}',
+        },
+      });
+    },
+  },
   themeConfig: {
     nav: [{ text: 'Home', link: '/' }, ...pageLinks],
     sidebar: [

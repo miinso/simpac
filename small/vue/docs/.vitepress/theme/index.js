@@ -1,6 +1,7 @@
 import DefaultTheme from 'vitepress/theme';
 import Simpac from './components/Simpac.vue';
 import { flecs } from './components/remote.js';
+import 'katex/dist/katex.min.css';
 import './styles.css';
 
 export default {
