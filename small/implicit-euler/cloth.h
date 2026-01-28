@@ -1,5 +1,5 @@
 // =========================================================================
-// Cloth component registration and creation helpers
+// Cloth geometry helpers
 // =========================================================================
 #pragma once
 
@@ -189,50 +189,3 @@ inline void destroy_cloth_geometry(flecs::entity cloth_entity) {
 
 } // namespace detail
 
-// =========================================================================
-// Register GridCloth component with hooks and reflection
-// =========================================================================
-
-inline void register_cloth_component(flecs::world& ecs) {
-    
-    // Register hooks first (typed component)
-    ecs.component<GridCloth>()
-        .on_set([&](flecs::entity e, GridCloth& cloth) {
-            // destroy existing geometry if any (for re-creation on parameter change)
-            detail::destroy_cloth_geometry(e);
-            // build new geometry
-            detail::build_cloth_geometry(e, cloth);
-            // NOTE: we could do .shrink() or nuke all empty table here maybe
-        })
-        .on_remove([](flecs::entity e, GridCloth& cloth) {
-            // explicit cleanup (though children should auto-delete)
-            detail::destroy_cloth_geometry(e);
-        });
-
-    // add reflection separately (becomes untyped_component)
-    ecs.component<GridCloth>()
-        .member<int>("width")
-            .range(1, 256)
-            .error_range(100, 256)
-        .member<int>("height")
-            // .range(1, 256)
-        .member<float>("spacing")
-            .range(0.05, 10.0)
-        .member<float>("mass")
-            .range(0.001, 100.0)
-        .member<float>("k_structural")
-            .range(0.0, 200000.0)
-        .member<float>("k_shear")
-            .range(0.0, 200000.0)
-        .member<float>("k_bending")
-            .range(0.0, 200000.0)
-        .member<float>("k_damping")
-            .range(0.0, 10.0)
-        .member<int>("pin_mode")
-            .range(0, 2)
-        .member<int>("particle_count")
-        .member<int>("spring_count");
-    
-    // TODO: figure out how to apply range limits on the adjustables
-    // tried range attribs but doesn't seem to force anything..
-}

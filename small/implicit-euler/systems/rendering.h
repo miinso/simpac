@@ -366,4 +366,222 @@ inline void draw_particles_gpu(const ParticleRenderer& gpu) {
     rlDisableShader();
 }
 
+// =========================================================================
+// ECS Rendering Setup
+// =========================================================================
+
+inline void register_render_components(flecs::world& ecs) {
+    ecs.component<InteractionState>()
+        .add(flecs::Singleton);
+
+    // SpringRenderer with on_set hook for query and shader initialization
+    ecs.component<SpringRenderer>()
+        .on_set([](flecs::entity e, SpringRenderer& gpu) {
+            auto world = e.world();
+            // Cached query for per-frame position lookup
+            gpu.position_query = world.query_builder<const Position, const ParticleIndex>()
+                .cached()
+                .build();
+            // Load shader (requires graphics to be initialized first)
+            Shader shader = LoadShader(
+                graphics::npath("resources/shaders/glsl300es/spring.vs").c_str(),
+                graphics::npath("resources/shaders/glsl300es/spring.fs").c_str()
+            );
+            if (IsShaderValid(shader)) {
+                gpu.shader_id = shader.id;
+                gpu.u_viewproj_loc = GetShaderLocation(shader, "u_viewproj");
+                gpu.u_strain_scale_loc = GetShaderLocation(shader, "u_strain_scale");
+            }
+        })
+        .on_remove([](flecs::entity e, SpringRenderer& gpu) {
+            if (gpu.shader_id) UnloadShader({gpu.shader_id});
+            if (gpu.instance_vbo) rlUnloadVertexBuffer(gpu.instance_vbo);
+            if (gpu.vao) rlUnloadVertexArray(gpu.vao);
+        })
+        .add(flecs::Singleton);
+
+    // ParticleRenderer with on_set hook for mesh, query, and shader initialization
+    ecs.component<ParticleRenderer>()
+        .on_set([](flecs::entity e, ParticleRenderer& gpu) {
+            auto world = e.world();
+            // cached query for per-frame position lookup
+            gpu.position_query = world.query_builder<const Position, const ParticleIndex, const ParticleState>()
+                .with<Particle>()
+                .term_at<ParticleState>().optional() // TODO: necessary?? use maybe prefab to ensure this comp.
+                .cached()
+                .build();
+
+            // generate icosphere mesh
+            std::vector<float> vertices;
+            std::vector<unsigned int> indices;
+            generate_icosphere(vertices, indices, 2); // last param for subdiv levle
+            gpu.num_vertices = vertices.size() / 6;  // 6 floats per vertex (pos+normal)
+            gpu.num_indices = indices.size();
+
+            // create vao and upload mesh (static)
+            gpu.vao = rlLoadVertexArray();
+            rlEnableVertexArray(gpu.vao);
+
+            gpu.mesh_vbo = rlLoadVertexBuffer(vertices.data(), vertices.size() * sizeof(float), false);
+
+            // create element buffer (index buffer)
+            glGenBuffers(1, &gpu.mesh_ebo);
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gpu.mesh_ebo);
+            glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
+
+            // configure mesh attributes (location 0-1)
+            constexpr int stride = 6 * sizeof(float);
+            rlEnableVertexAttribute(0);
+            rlSetVertexAttribute(0, 3, RL_FLOAT, false, stride, 0);  // position
+            rlEnableVertexAttribute(1);
+            rlSetVertexAttribute(1, 3, RL_FLOAT, false, stride, 3 * sizeof(float));  // normal
+
+            rlDisableVertexArray();
+
+            // load shader
+            Shader shader = LoadShader(
+                graphics::npath("resources/shaders/glsl300es/particle.vs").c_str(),
+                graphics::npath("resources/shaders/glsl300es/particle.fs").c_str()
+            );
+            if (IsShaderValid(shader)) {
+                gpu.shader_id = shader.id;
+                gpu.u_viewproj_loc = GetShaderLocation(shader, "u_viewproj");
+                gpu.u_color_loc = GetShaderLocation(shader, "u_color");
+            }
+        })
+        .on_remove([](flecs::entity e, ParticleRenderer& gpu) {
+            if (gpu.shader_id) UnloadShader({gpu.shader_id});
+            if (gpu.instance_vbo) rlUnloadVertexBuffer(gpu.instance_vbo);
+            if (gpu.mesh_ebo) glDeleteBuffers(1, &gpu.mesh_ebo);
+            if (gpu.mesh_vbo) rlUnloadVertexBuffer(gpu.mesh_vbo);
+            if (gpu.vao) rlUnloadVertexArray(gpu.vao);
+        })
+        .add(flecs::Singleton);
+}
+
+inline void install_graphics(flecs::world& ecs) {
+    // initialize graphics module
+    // (must call `::init()` before any raylib or gl specifics, otherwise crash)
+    graphics::init(ecs);
+    graphics::init_window(800, 600, "Base Simulator");
+
+    // now set SpringRenderer to trigger on_set hook (after graphics init)
+    ecs.set<SpringRenderer>({});
+
+    // set ParticleRenderer to trigger on_set hook
+    ecs.set<ParticleRenderer>({});
+}
+
+inline void install_render_systems(flecs::world& ecs) {
+    // cpu drawing
+    ecs.system<Spring>("graphics::DrawSpringsCPU")
+        .kind(graphics::phase_on_render)
+        .each([](Spring& s) {
+            systems::draw_spring(s);
+        }).disable();
+
+    ecs.system<const Position, const Mass>("graphics::DrawParticlesCPU")
+        .with<Particle>()
+        .kind(graphics::phase_on_render)
+        .each([](const Position& x, const Mass& m) {
+            systems::draw_particle(x, m);
+        }).disable();
+
+    // upload positions each frame before rendering
+    ecs.system("graphics::UploadSpringPositions")
+        .kind(graphics::phase_pre_render)
+        .run([](flecs::iter& it) {
+            auto& ctx = it.world().get_mut<SpringRenderer>();
+            systems::upload_spring_positions_to_gpu(it.world(), ctx);
+        }).disable(0);
+
+    ecs.system("graphics::DrawSpringsGPU")
+        .kind(graphics::phase_on_render)
+        .run([](flecs::iter& it) {
+            auto& ctx = it.world().get_mut<SpringRenderer>();
+            systems::draw_springs_gpu(ctx);
+        }).disable(0);
+
+    // upload particle positions each frame before rendering
+    ecs.system("graphics::UploadParticlePositions")
+        .kind(graphics::phase_pre_render)
+        .run([](flecs::iter& it) {
+            auto& ctx = it.world().get_mut<ParticleRenderer>();
+            systems::upload_particle_positions_to_gpu(it.world(), ctx);
+        }).disable(0);
+
+    ecs.system("graphics::DrawParticlesGPU")
+        .kind(graphics::phase_on_render)
+        .run([](flecs::iter& it) {
+            auto& ctx = it.world().get_mut<ParticleRenderer>();
+            systems::draw_particles_gpu(ctx);
+        }).disable(0);
+
+    ecs.system("graphics::DrawTimingInfo")
+        .kind(graphics::phase_post_render)
+        .run(systems::draw_timing_info);
+
+    ecs.system("graphics::DrawSolveHistory")
+        .kind(graphics::phase_post_render)
+        .run(systems::draw_solve_history)
+        .disable();
+
+    // interaction (still graphics-facing for now)
+    ecs.system("graphics::PickParticles")
+        .kind(flecs::OnLoad)
+        .run([&](flecs::iter& it) {
+            auto& interaction = it.world().get_mut<InteractionState>();
+            auto& renderer = it.world().get<ParticleRenderer>();
+
+            // ray pick -> nearest particle
+            Ray ray = GetMouseRay(GetMousePosition(), graphics::get_raylib_camera_const());
+            float pick_radius = renderer.base_radius * interaction.pick_radius_scale;
+
+            float closest = std::numeric_limits<float>::max();
+            flecs::entity hovered = flecs::entity::null();
+
+            queries::particle_pick_query.each([&](flecs::entity e, const Position& pos, ParticleState&) {
+                RayCollision hit = GetRayCollisionSphere(ray, {pos[0], pos[1], pos[2]}, pick_radius);
+                if (hit.hit && hit.distance < closest) {
+                    closest = hit.distance;
+                    hovered = e;
+                }
+            });
+
+            // TODO: do gpu picking maybe?
+            // i want no linear scan every frame looping all the particles..
+
+            interaction.hovered = hovered;
+
+            if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+                if (hovered.is_alive()) {
+                    interaction.selected = (interaction.selected == hovered)
+                        ? flecs::entity::null()
+                        : hovered;
+                } else {
+                    interaction.selected = flecs::entity::null();
+                }
+            }
+
+            // if hit, lock camera drag interaction
+            bool capture = IsMouseButtonDown(MOUSE_LEFT_BUTTON) && hovered.is_alive();
+            it.world().query_builder<graphics::Camera>()
+                .with<graphics::ActiveCamera>()
+                .each([&](graphics::Camera& cam) {
+                    cam.controls_enabled = !capture;
+                });
+
+            // update hover/selection flag bits (feels overengineered)
+            constexpr uint32_t kInteractionMask =
+                ParticleState::Hovered | ParticleState::Selected;
+
+            queries::particle_pick_query.each([&](flecs::entity e, const Position&, ParticleState& state) {
+                uint32_t flags = (uint32_t)(state.flags & ~kInteractionMask);
+                if (e == hovered) flags |= ParticleState::Hovered;
+                if (interaction.selected == e) flags |= ParticleState::Selected;
+                state.flags = flags;
+            });
+        }).disable(0);
+}
+
 } // namespace systems

@@ -144,18 +144,14 @@ struct ParticleState {
     };
 
     uint32_t flags = None;
-};
 
-struct SpringRestLength : scalar<SpringRestLength, Real> {
-    using scalar<SpringRestLength, Real>::scalar;
-};
-
-struct SpringStiffness : scalar<SpringStiffness, Real> {
-    using scalar<SpringStiffness, Real>::scalar;
-};
-
-struct SpringDamping : scalar<SpringDamping, Real> {
-    using scalar<SpringDamping, Real>::scalar;
+    static void meta(flecs::world& ecs) {
+        ecs.component<ParticleState>()
+            .bit("Hovered", (uint32_t)ParticleState::Hovered)
+            .bit("Selected", (uint32_t)ParticleState::Selected)
+            .bit("Disabled", (uint32_t)ParticleState::Disabled)
+            .bit("Pinned", (uint32_t)ParticleState::Pinned);
+    }
 };
 
 template <typename T>
@@ -217,14 +213,6 @@ inline void register_scalar_component(flecs::world& ecs, flecs::entity_t scalar_
     register_scalar<T>(ecs, scalar_meta);
 }
 
-inline void register_particle_state_flags(flecs::world& ecs) {
-    ecs.component<ParticleState>()
-        .bit("Hovered", (uint32_t)ParticleState::Hovered)
-        .bit("Selected", (uint32_t)ParticleState::Selected)
-        .bit("Disabled", (uint32_t)ParticleState::Disabled)
-        .bit("Pinned", (uint32_t)ParticleState::Pinned);
-}
-
 // Tags
 struct IsPinned {};
 struct Particle {};
@@ -245,9 +233,9 @@ struct Spring {
     // https://github.com/SanderMertens/flecs/pull/1912
     flecs::entity e1;
     flecs::entity e2;
-    SpringRestLength rest_length; // too much? just use Real?
-    SpringStiffness k_s;
-    SpringDamping k_d;
+    Real rest_length = 0;
+    Real k_s = 0;
+    Real k_d = 0;
 
     // reviewer note: co-locating reflection keeps schema discoverable,
     // but couples this POD to Flecs; keep it small and call from one place.
@@ -263,26 +251,6 @@ struct Spring {
                 .range(0.0, 10.0);
     }
 };
-
-inline void register_sim_components(flecs::world& ecs) {
-    register_vec3<Position>(ecs);
-    register_vec3<Velocity>(ecs);
-    register_vec3<Acceleration>(ecs);
-    register_vec3<OldPosition>(ecs);
-    register_vec3<Gravity>(ecs);
-    // register_vec4<Quaternion>(ecs); // collides with raylib's..
-
-    register_scalar<Mass>(ecs, flecs::F32);
-    register_scalar<InverseMass>(ecs, flecs::F32);
-    register_scalar<ParticleIndex>(ecs, flecs::I32);
-    register_scalar<SpringRestLength>(ecs, flecs::F32);
-    register_scalar<SpringStiffness>(ecs, flecs::F32);
-    register_scalar<SpringDamping>(ecs, flecs::F32);
-
-    register_particle_state_flags(ecs);
-
-    Spring::meta(ecs);
-}
 
 struct Solver {
     // TODO: decide if we want to maintain one global solver or go per-object
@@ -314,29 +282,17 @@ struct Solver {
 struct Scene {
     Real dt = Real(1.0f / 60.0f);     // timestep per simulation step
     Gravity gravity = {0.0f, -9.81f, 0.0f};  // gravity vector
+    bool paused = false;        // simulation pause state
 
     Real wall_time = 0;         // real elapsed time (wall-clock)
     Real sim_time = 0;          // accumulated simulation time
     int frame_count = 0;        // number of simulation steps executed
 
-    // cached queries (initialized via on_set hook)
-    flecs::query<Position> particle_query;
-    flecs::query<Spring> spring_query;
-
-    // query-based count accessors
-    int num_particles() const { return (int)particle_query.count(); }
-    int num_springs() const { return (int)spring_query.count(); }
-
-    // control flags
-    bool paused = false;        // simulation pause state
-    Real sim_speed = 1.0;       // simulation speed multiplier
-
     static void meta(flecs::world& ecs) {
         ecs.component<Scene>()
             .member("dt", &Scene::dt)
             .member("gravity", &Scene::gravity)
-            .member("paused", &Scene::paused)
-            .member("sim_speed", &Scene::sim_speed);
+            .member("paused", &Scene::paused);
     }
 };
 
@@ -372,6 +328,30 @@ struct GridCloth {
     // runtime info (read-only, populated by hook)
     int particle_count = 0;
     int spring_count = 0;
+
+    static void meta(flecs::world& ecs) {
+        ecs.component<GridCloth>()
+            .member<int>("width")
+                .range(1, 256)
+            .member<int>("height")
+                .range(1, 256)
+            .member<float>("spacing")
+                .range(0.05, 10.0)
+            .member<float>("mass")
+                .range(0.001, 100.0)
+            .member<float>("k_structural")
+                .range(0.0, 200000.0)
+            .member<float>("k_shear")
+                .range(0.0, 200000.0)
+            .member<float>("k_bending")
+                .range(0.0, 200000.0)
+            .member<float>("k_damping")
+                .range(0.0, 10.0)
+            .member<int>("pin_mode")
+                .range(0, 2);
+        // TODO: figure out how to apply range limits on the adjustables
+        // tried range attribs but doesn't seem to force anything..
+    }
 };
 
 // gpu spring renderer (instanced)
@@ -441,3 +421,47 @@ struct ParticleRenderer {
     // layout: [pos.xyz, radius, state] per instance = 5 floats per particle
     std::vector<float> staging_buffer;
 };
+
+namespace detail {
+void build_cloth_geometry(flecs::entity e, GridCloth& cloth);
+void destroy_cloth_geometry(flecs::entity cloth_entity);
+} // namespace detail
+
+namespace systems {
+void register_render_components(flecs::world& ecs);
+} // namespace systems
+
+inline void register_component(flecs::world& ecs) {
+    register_vec3<Position>(ecs);
+    register_vec3<Velocity>(ecs);
+    register_vec3<Acceleration>(ecs);
+    register_vec3<OldPosition>(ecs);
+    register_vec3<Gravity>(ecs);
+    // register_vec4<Quaternion>(ecs); // conflicts with raylib's..
+
+    register_scalar<Mass>(ecs, flecs::F32);
+    register_scalar<InverseMass>(ecs, flecs::F32);
+    register_scalar<ParticleIndex>(ecs, flecs::I32);
+
+    ParticleState::meta(ecs);
+
+    Spring::meta(ecs);
+    Scene::meta(ecs);
+    GridCloth::meta(ecs);
+
+    ecs.component<Scene>()
+        .add(flecs::Singleton);
+    ecs.component<Solver>()
+        .add(flecs::Singleton);
+
+    ecs.component<GridCloth>()
+        .on_set([](flecs::entity e, GridCloth& cloth) {
+            detail::destroy_cloth_geometry(e);
+            detail::build_cloth_geometry(e, cloth);
+        })
+        .on_remove([](flecs::entity e, GridCloth& cloth) {
+            detail::destroy_cloth_geometry(e);
+        });
+
+    systems::register_render_components(ecs);
+}
