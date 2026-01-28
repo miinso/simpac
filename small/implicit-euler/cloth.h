@@ -4,6 +4,7 @@
 #pragma once
 
 #include "components.h"
+#include "queries.h"
 #include <flecs.h>
 #include <cmath>
 
@@ -19,7 +20,7 @@ inline void build_cloth_geometry(flecs::entity e, GridCloth& cloth) {
     world.defer_suspend();
 
     // get current global particle index (for solver indexing)
-    int particle_base_idx = world.get<Scene>().num_particles();
+    int particle_base_idx = queries::num_particles();
 
     // create particles in grid as children of cloth entity
     std::vector<flecs::entity> particles;

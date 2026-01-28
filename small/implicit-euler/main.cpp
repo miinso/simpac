@@ -401,13 +401,13 @@ int main() {
             auto& scene = world.get<Scene>();
             auto& solver = world.get_mut<Solver>();
 
-            int n = scene.num_particles();
+            int n = queries::num_particles();
             int dof = n * 3;
 
             // TODO: verbose and ugly do refactor or drop ParticleIndex completely
             bool needs_reindex = (solver.b.size() != dof);
             if (!needs_reindex) {
-                scene.particle_query.each([&](flecs::entity e, Position&) {
+                queries::particle_query.each([&](flecs::entity e, const Position&) {
                     if (!e.has<ParticleIndex>()) {
                         needs_reindex = true;
                     }
@@ -417,7 +417,7 @@ int main() {
             if (needs_reindex) {
                 // assign sequential indices to all particles
                 int new_idx = 0;
-                scene.particle_query.each([&](flecs::entity e, Position&) {
+                queries::particle_query.each([&](flecs::entity e, const Position&) {
                     auto& idx = e.ensure<ParticleIndex>();
                     idx = new_idx++;
                 });

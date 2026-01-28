@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../components.h"
+#include "../queries.h"
 #include "graphics.h"
 #include "flecs.h"
 #include <raylib.h>
@@ -92,7 +93,7 @@ inline void draw_timing_info(flecs::iter& it) {
         scene.wall_time, scene.sim_time, scene.dt,
         scene.frame_count, scene.sim_time / (scene.wall_time + 1e-9),
         solver.cg_iterations, solver.cg_max_iter, solver.cg_tolerance, solver.cg_error,
-        scene.num_particles(), scene.num_springs());
+        queries::num_particles(), queries::num_springs());
     DrawTextEx(font, buf, {21, 41}, 12, 0, WHITE);
     DrawTextEx(font, buf, {20, 40}, 12, 0, DARKGRAY);
 
@@ -161,9 +162,8 @@ inline void generate_icosphere(std::vector<float>& vertices, std::vector<unsigne
 inline void upload_spring_positions_to_gpu(const flecs::world& ecs, SpringRenderer& gpu) {
     if (gpu.shader_id == 0) return;
 
-    auto& scene = ecs.get<Scene>();
-    int num_particles = scene.num_particles();
-    int num_springs = scene.num_springs();
+    int num_particles = queries::num_particles();
+    int num_springs = queries::num_springs();
 
     // lazy buffer allocation/reallocation on topology change
     if (gpu.allocated_springs != num_springs) {
@@ -208,6 +208,11 @@ inline void upload_spring_positions_to_gpu(const flecs::world& ecs, SpringRender
     }
 
     if (num_springs == 0) return;
+    queries::spring_query.each([&](const Spring& s) {
+        gpu.spring_particle_indices.push_back(s.e1.get<ParticleIndex>());
+        gpu.spring_particle_indices.push_back(s.e2.get<ParticleIndex>());
+        gpu.rest_lengths.push_back((float)s.rest_length);
+    });
 
     // collect positions using cached query
     std::vector<Eigen::Vector3r> positions(num_particles);
@@ -274,8 +279,7 @@ inline void draw_springs_gpu(const SpringRenderer& gpu) {
 inline void upload_particle_positions_to_gpu(const flecs::world& ecs, ParticleRenderer& gpu) {
     if (gpu.shader_id == 0) return;
 
-    auto& scene = ecs.get<Scene>();
-    int num_particles = scene.num_particles();
+    int num_particles = queries::num_particles();
 
     // lazy buffer allocation/reallocation on topology change
     if (gpu.allocated_particles != num_particles) {

@@ -14,6 +14,7 @@ cc_binary(
     srcs = [
         "cloth.h",
         "components.h",
+        "queries.h",
         "main.cpp",
         "systems.h",
         "systems/physics.h",
