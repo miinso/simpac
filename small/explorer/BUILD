@@ -43,8 +43,8 @@ cc_binary(
             "-sASSERTIONS=2",
             # "-sSAFE_HEAP=1",
             # "-sSTACK_OVERFLOW_CHECK=2",
-            "--embed-file resources/generic.fnt@resources/generic.fnt",
-            "--embed-file resources/generic.png@resources/generic.png",
+            "--embed-file resources/fonts/generic.fnt@resources/fonts/generic.fnt",
+            "--embed-file resources/fonts/generic.png@resources/fonts/generic.png",
             # "--extern-pre-js modules/graphics/simpac_worker_bridge.js"
         ],
         "//conditions:default": [],

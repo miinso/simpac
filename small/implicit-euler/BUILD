@@ -83,8 +83,9 @@ cc_binary(
             "--embed-file resources/shaders/glsl300es/spring.vs@resources/shaders/glsl300es/spring.vs",
             "--embed-file resources/shaders/glsl300es/particle.fs@resources/shaders/glsl300es/particle.fs",
             "--embed-file resources/shaders/glsl300es/particle.vs@resources/shaders/glsl300es/particle.vs",
-            "--embed-file resources/generic.fnt@resources/generic.fnt",
-            "--embed-file resources/generic.png@resources/generic.png",
+            "--embed-file resources/fonts/generic.fnt@resources/fonts/generic.fnt",
+            "--embed-file resources/fonts/generic.png@resources/fonts/generic.png",
+            "--embed-file resources/fonts/font.png@resources/fonts/font.png",
             # "--embed-file small/implicit-euler/scenes/default.flecs@small/implicit-euler/scenes/default.flecs",
             "--embed-file %s/assets@assets" % package_name(), # embed all under ./assets
         ],

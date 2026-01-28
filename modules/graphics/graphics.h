@@ -42,12 +42,17 @@ namespace detail {
     inline int grid_slices = 12;
     inline float grid_spacing = 10.0f / 12.0f;
     inline Font font = {0};
-    inline bool font_loaded = false;
+    inline Font font_tiny = {0};
 } // namespace detail
 
 // get the loaded font (falls back to default if not loaded)
 [[nodiscard]] inline Font get_font() {
-    return detail::font_loaded ? detail::font : GetFontDefault();
+    return (detail::font.texture.id > 0) ? detail::font : GetFontDefault();
+}
+
+// get the loaded tiny font (3x5) (falls back to default if not loaded)
+[[nodiscard]] inline Font get_font_tiny() {
+    return (detail::font_tiny.texture.id > 0) ? detail::font_tiny : get_font();
 }
 
 // configuration for window and rendering

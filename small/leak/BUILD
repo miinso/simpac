@@ -84,8 +84,8 @@ cc_binary(
             "-sENVIRONMENT=web,worker",
             "-sEXPORTED_RUNTIME_METHODS=['ccall','cwrap','wasmMemory']",
             "-sEXPORTED_FUNCTIONS=['_main','_emscripten_shutdown','_emscripten_resize','_leak_hold','_leak_clear','_leak_held_bytes','_leak_block_count','_emscripten_set_main_loop_timing']",
-            "--embed-file resources/generic.fnt@resources/generic.fnt",
-            "--embed-file resources/generic.png@resources/generic.png",
+            "--embed-file resources/fonts/generic.fnt@resources/fonts/generic.fnt",
+            "--embed-file resources/fonts/generic.png@resources/fonts/generic.png",
             # "-sCROSS_ORIGIN=1",
             #
             # "-sOFFSCREENCANVAS_SUPPORT=1",

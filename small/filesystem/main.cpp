@@ -32,7 +32,7 @@ int main() {
     std::string asset_path2 = graphics::npath("orphan.txt");
     std::string asset_text2 = read_text_file(asset_path2);
 
-    std::string texture_path = graphics::npath("resources/generic.png");
+    std::string texture_path = graphics::npath("resources/fonts/generic.png");
     Texture2D logo = LoadTexture(texture_path.c_str());
 
     std::string local_texture_path = graphics::npath("assets/spin.jpg");

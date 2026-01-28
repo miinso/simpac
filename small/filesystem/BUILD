@@ -56,8 +56,8 @@ cc_binary(
             "-sEXPORTED_RUNTIME_METHODS=['ccall','cwrap','FS']", # exposing 'FS'
             "-sEXPORTED_FUNCTIONS=['_main','_emscripten_shutdown','_emscripten_resize']",
             # wasm embed (path remap to assets/..)
-            "--embed-file resources/generic.fnt@resources/generic.fnt", # 1) root per-file
-            "--embed-file resources/generic.png@resources/generic.png", # 1) root per-file
+            "--embed-file resources/fonts/generic.fnt@resources/fonts/generic.fnt", # 1) root per-file
+            "--embed-file resources/fonts/generic.png@resources/fonts/generic.png", # 1) root per-file
             "--embed-file %s/assets/myfile.txt@assets/myfile.txt" % package_name(), # 3) local per-file added like this
         ] + assets_embed_linkopts, # 2) local glob added like this
         "//conditions:default": [],
