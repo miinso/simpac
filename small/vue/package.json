@@ -12,7 +12,6 @@
     "@mdit/plugin-katex": "^0.24.1",
     "@tailwindcss/forms": "^0.5.9",
     "@tailwindcss/typography": "^0.5.15",
-    "@vue/repl": "github:miinso/repl#plain",
     "autoprefixer": "^10.4.20",
     "katex": "^0.16.10",
     "markdown-it": "^14.1.0",
