@@ -7,15 +7,24 @@ title: Scripting
 Drive scene config via Flecs script in a worker-hosted WASM app.
 
 <script setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 
-const appRef = ref(null);
-const scriptText = ref('');
-const scriptName = 'SceneScript';
+const app_ref = ref(null);
+const script_text = ref('');
+const script_name = 'SceneScript';
+const systems_parent = ref('');
+const systems = ref([]);
+const systems_query = computed(() => {
+  if (systems_parent.value) {
+    return `(ChildOf, ${systems_parent.value}), flecs.system.System`;
+  }
+  return 'flecs.system.System, !(ChildOf, *)';
+});
+const disabled_tag = 'flecs.core.Disabled';
 let conn = null;
 
 function onReady() {
-  conn = window.flecs.connect(appRef.value);
+  conn = window.flecs.connect(app_ref.value);
 
   // print the entire world (serialized)
   conn.world((world) => { console.log(world) });
@@ -23,33 +32,62 @@ function onReady() {
   // get entity with full table info,
   // conn.entity("SceneScript", { table: true })
   // or get component right away
-  conn.get(scriptName, { component: "flecs.script.Script" }, (resp) => {
+  conn.get(script_name, { component: "flecs.script.Script" }, (resp) => {
     console.log(resp)
-    scriptText.value = resp?.code || '';
+    script_text.value = resp?.code || '';
   }, (e) => {
     console.error(e);
   });
+
+  load_systems();
 }
 
-async function applyScript() {
-  if (!conn) return;
+async function apply_script() {
   const reply = await conn.scriptUpdate(
-    scriptName,
-    scriptText.value,
+    script_name,
+    script_text.value,
     { try: true, check_file: true, save_file: false }
   );
   console.log(reply);
 }
 
-async function worldQuery() {
-  if (!conn) return;
+async function world_query() {
   const reply = await conn.world();
+  console.log(reply);
+}
+
+async function load_systems() {
+  const reply = await conn.query(systems_query.value, {
+    full_paths: true
+  });
+  systems.value = reply.results.map((item) => ({
+    parent: item.parent,
+    name: item.name,
+    path: item.parent ? `${item.parent}.${item.name}` : item.name,
+    enabled: !((item.tags ?? [])).includes(disabled_tag)
+  }));
+}
+
+async function toggle_system(entry) {
+  const enabled = !entry.enabled;
+  const path = entry.path.replace(/ /g, '%20');
+  const reply = enabled
+    ? await conn.remove(path, disabled_tag)
+    : await conn.add(path, disabled_tag);
+  console.log(reply);
+  entry.enabled = enabled;
+}
+
+async function query_user_made_systems() {
+  const reply = await conn.query('flecs.system.System, !ChildOf($this|up, flecs)', {
+    full_paths: true
+  });
   console.log(reply);
 }
 </script>
 
 <Simpac
-  ref="appRef"
+  ref="app_ref"
   src="/bazel-bin/small/implicit-euler/webapp/main.js"
   :debug="true"
   :cwrap="['flecs_explorer_request']"
@@ -57,10 +95,26 @@ async function worldQuery() {
   @error="console.error($event)"
 />
 
-<textarea v-model="scriptText" rows="14" cols="80" @input="applyScript"></textarea>
+<textarea v-model="script_text" rows="14" cols="80" @input="apply_script"></textarea>
 <div>
-  <button @click="applyScript">Apply Script</button>
-  <button @click="worldQuery">Get World</button>
+  <button @click="apply_script">Apply Script</button>
+  <button @click="world_query">Get World</button>
+  <button @click="load_systems">Refresh systems</button>
+  <button @click="query_user_made_systems">Query user systems</button>
+</div>
+
+<div>
+  <label>
+    Parent
+    <input v-model="systems_parent" />
+  </label>
+  <strong>Systems under {{ systems_parent }}</strong>
+  <div v-for="sys in systems" :key="sys.path">
+    <label>
+      <input type="checkbox" :checked="sys.enabled" @change="toggle_system(sys)" />
+      {{ sys.path }}
+    </label>
+  </div>
 </div>
 
 ## Startup scene
@@ -71,7 +125,7 @@ async function worldQuery() {
 ## Runtime update
 
 ```js
-const conn = window.flecs.connect(appRef.value);
+const conn = window.flecs.connect(app_ref.value);
 
 const scene = `
 Cloth {

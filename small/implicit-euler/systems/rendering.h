@@ -526,7 +526,8 @@ inline void install_render_systems(flecs::world& ecs) {
 
     ecs.system("graphics::DrawTimingInfo")
         .kind(graphics::phase_post_render)
-        .run(systems::draw_timing_info);
+        .run(systems::draw_timing_info)
+        .disable();
 
     ecs.system("graphics::DrawSolveHistory")
         .kind(graphics::phase_post_render)

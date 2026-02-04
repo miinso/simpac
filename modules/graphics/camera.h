@@ -45,7 +45,7 @@ struct Camera {
     float move_speed = 0.1f;
     float rotation_speed = 0.2f;
     float zoom_speed = 1.0f;
-    bool controls_enabled = true;
+    // bool controls_enabled = true;
 };
 
 // TODO: we could make a slot for (optional) target entity so that
@@ -91,8 +91,8 @@ inline void register_camera_components(flecs::world& ecs) {
         .member<int>("projection")
         .member<float>("move_speed")
         .member<float>("rotation_speed")
-        .member<float>("zoom_speed")
-        .member<bool>("controls_enabled");
+        .member<float>("zoom_speed");
+        // .member<bool>("controls_enabled");
 
     ecs.component<ActiveCamera>();
 }
@@ -130,7 +130,7 @@ inline void from_raylib(Position& pos, Camera& cam, const Camera3D& rc) {
 // ============================================================================
 
 inline void update_camera_controls(Position& pos, Camera& cam) {
-    if (!cam.controls_enabled) return;
+    // if (!cam.controls_enabled) return;
 
     // Convert to raylib, apply controls, convert back
     Camera3D rc = to_raylib(pos, cam);
