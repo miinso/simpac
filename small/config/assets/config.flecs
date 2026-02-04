@@ -1,0 +1,51 @@
+// config sandbox script
+
+// these are from compile-time c structs
+$ { // $ means singleton
+  Scene: {
+    dt: 1 / 120
+    option1: 0
+    option2: 0.42
+    option3: { x: 9, y: 8, z: 7 }
+  }
+  Thing1: {
+    option1: 0.15
+    option2: 9
+  }
+}
+
+// set individual props or..
+Runtime.Scene.option4 { bool: { true }}
+Runtime.Scene.option5 { f32: { 0.75 }}
+Runtime.Scene.option6 { vec3f: { x: 1, y: 2, z: 3 }}
+Runtime.Thing1.option1 { f32: { 0.2 }}
+Runtime.Thing1.option2 { i32: { 42 }}
+
+// with scope or..
+Runtime.Scene {
+  option4 { bool: { true }}
+  option5 { f32: { 0.75 }}
+  option6 { vec3f: { x: 1, y: 2, z: 3 }}
+}
+
+Runtime.Thing1 {
+  option1 { f32: { 0.2 }}
+  option2 { i32: { 2 }}
+}
+
+// with nested scope
+Runtime {
+  Scene {
+    option4 { bool: { 1 }}
+    option5 { f32: { 3 }}
+    option6 { vec3f: { x: 2, y: 2, z: 3 }}
+  }
+  Thing1 {
+  	option1 { f32: { 0.2 }}
+  	option2 { i32: { 5 }}
+    option_wow {
+      i32: { 77 } 
+      Configurable // dynamically add props if you will..
+    }
+  }
+}
