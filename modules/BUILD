@@ -164,16 +164,3 @@ cc_library(
         "@raylib-latest",
     ],
 )
-
-cc_library(
-    name = "raygui",
-    hdrs = [
-        "raygui/raygui.h",
-    ],
-    strip_include_prefix = "raygui",
-    visibility = ["//visibility:public"],
-    deps = [
-        "@raylib",
-        # "@raylib-latest",
-    ],
-)

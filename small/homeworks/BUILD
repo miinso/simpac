@@ -130,7 +130,7 @@ cc_binary(
     deps = [
         ":common",
         "//modules:graphics2",
-        "//modules:raygui",
+        "@raygui",
         "@eigen",
         "@flecs",
         "@raylib",

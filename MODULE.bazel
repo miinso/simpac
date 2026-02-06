@@ -147,6 +147,16 @@ local_repository(
 )
 
 ##
+# raygui (latest)
+##
+http_archive(
+    name = "raygui",
+    build_file = "//third_party:raygui.BUILD",
+    strip_prefix = "raygui-master",
+    urls = ["https://github.com/raysan5/raygui/archive/refs/heads/master.tar.gz"],
+)
+
+##
 # GLFW2 (post 3.3 glfw has many breaking changes hence the name)
 ##
 GLFW2_VERSION = "3.4"

@@ -91,7 +91,7 @@ cc_library(
     deps = [
         ":core",
         "@raylib",
-        "//modules:raygui",  # TODO: make it external repo and handle resources too
+        "@raygui",
     ],
 )
 
