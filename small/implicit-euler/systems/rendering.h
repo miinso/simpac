@@ -76,9 +76,15 @@ inline void draw_particle(const Position& x, const Mass& m) {
 }
 
 inline void draw_timing_info(flecs::iter& it) {
-    auto& scene = it.world().get_mut<Scene>();
     auto& solver = it.world().get<Solver>();
-    scene.wall_time += it.delta_time();
+    const auto& wall_time = it.world().lookup("Scene::wall_time").get<Real>();
+    const auto& sim_time = it.world().lookup("Scene::sim_time").get<Real>();
+    const auto& dt = it.world().lookup("Config::Scene::dt").get<Real>();
+    const auto& frame_count = it.world().lookup("Scene::frame_count").get<int>();
+    const auto& cg_max_iter = it.world().lookup("Config::Solver::cg_max_iter").get<int>();
+    const auto& cg_tolerance = it.world().lookup("Config::Solver::cg_tolerance").get<Real>();
+
+    Real sim_speed = sim_time / (wall_time + Real(1e-9));
 
     Font font = graphics::get_font();
     // Font font = graphics::get_font_tiny();
@@ -95,9 +101,9 @@ inline void draw_timing_info(flecs::iter& it) {
         "\n"
         "Strain: Red (tension), Green (rest), Blue (compression)\n"
         "Camera: WASDQE / Arrows / MouseDrag / MouseScroll",
-        scene.wall_time, scene.sim_time, scene.dt,
-        scene.frame_count, scene.sim_time / (scene.wall_time + 1e-9),
-        solver.cg_iterations, solver.cg_max_iter, solver.cg_tolerance, solver.cg_error,
+        wall_time, sim_time, dt,
+        frame_count, sim_speed,
+        solver.cg_iterations, cg_max_iter, cg_tolerance, solver.cg_error,
         queries::num_particles(), queries::num_springs());
     DrawTextEx(font, buf, {21, 41}, font_size, 0, WHITE);
     DrawTextEx(font, buf, {20, 40}, font_size, 0, DARKGRAY);
@@ -527,12 +533,12 @@ inline void install_render_systems(flecs::world& ecs) {
     ecs.system("graphics::DrawTimingInfo")
         .kind(graphics::phase_post_render)
         .run(systems::draw_timing_info)
-        .disable();
+        .disable(0);
 
     ecs.system("graphics::DrawSolveHistory")
         .kind(graphics::phase_post_render)
         .run(systems::draw_solve_history)
-        .disable();
+        .disable(0);
 
     // interaction (still graphics-facing for now)
     ecs.system("graphics::PickParticles")

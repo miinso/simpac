@@ -13,12 +13,10 @@ mycloth1 {
   }
 }
 
-$ {
-  Scene: {
-    dt: 0.0016
-    gravity: { x: 0, y: -9.81, z: 0 }
-    paused: false
-  }
+Config.Scene {
+  dt { f32: { 0.0016 } }
+  gravity { vec3f: { x: 0, y: -9.81, z: 0 } }
+  paused { bool: { false } }
 }
 
 MainCamera {
@@ -34,3 +32,4 @@ MainCamera {
     // controls_enabled: true
   }
 }
+

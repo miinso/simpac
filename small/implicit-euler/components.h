@@ -3,6 +3,7 @@
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 #include <flecs.h>
+#include <cstdio>
 #include <vector>
 #include <deque>
 #include <string>
@@ -89,15 +90,6 @@ struct scalar {
     operator const Value&() const { return value; }
 };
 
-template <typename Derived>
-using Vec3Component = vec3<Derived>;
-
-template <typename Derived>
-using Vec4Component = vec4<Derived>;
-
-template <typename Derived, typename Value>
-using ScalarComponent = scalar<Derived, Value>;
-
 struct Position : vec3<Position> {
     using vec3<Position>::vec3;
 };
@@ -114,9 +106,11 @@ struct OldPosition : vec3<OldPosition> {
     using vec3<OldPosition>::vec3;
 };
 
-struct Gravity : vec3<Gravity> {
-    using vec3<Gravity>::vec3;
+struct vec3f : vec3<vec3f> {
+    using vec3<vec3f>::vec3;
 };
+
+using Gravity = vec3f;
 
 // struct Quaternion : vec4<Quaternion> {
 //     using vec4<Quaternion>::vec4;
@@ -261,11 +255,7 @@ struct Solver {
 
     std::vector<Eigen::Triplet<Real>> triplets;
 
-    bool needs_reset = false; // FIXME: feels like an ugly adhoc, but we keep it since it just works..
-
-    // CG solver config
-    int cg_max_iter = 100;
-    Real cg_tolerance = 1e-6;
+    bool exploded = false;
 
     // CG solver stats (updated each solve)
     int cg_iterations = 0;
@@ -278,24 +268,7 @@ struct Solver {
     // Eigen::ConjugateGradient<Eigen::SparseMatrix<Real>, Eigen::Lower|Eigen::Upper, Eigen::IncompleteCholesky<Real>> cg;
     // Eigen::ConjugateGradient<Eigen::SparseMatrix<Real>, Eigen::Lower|Eigen::Upper, Eigen::IdentityPreconditioner> cg;
     Eigen::ConjugateGradient<Eigen::SparseMatrix<Real>> cg;
-};
 
-// scene configuration and state
-struct Scene {
-    Real dt = Real(1.0f / 60.0f);     // timestep per simulation step
-    Gravity gravity = {0.0f, -9.81f, 0.0f};  // gravity vector
-    bool paused = false;        // simulation pause state
-
-    Real wall_time = 0;         // real elapsed time (wall-clock)
-    Real sim_time = 0;          // accumulated simulation time
-    int frame_count = 0;        // number of simulation steps executed
-
-    static void meta(flecs::world& ecs) {
-        ecs.component<Scene>()
-            .member("dt", &Scene::dt)
-            .member("gravity", &Scene::gravity)
-            .member("paused", &Scene::paused);
-    }
 };
 
 struct InteractionState {
@@ -424,6 +397,7 @@ struct ParticleRenderer {
     std::vector<float> staging_buffer;
 };
 
+
 namespace detail {
 void build_cloth_geometry(flecs::entity e, GridCloth& cloth);
 void destroy_cloth_geometry(flecs::entity cloth_entity);
@@ -434,11 +408,11 @@ void register_render_components(flecs::world& ecs);
 } // namespace systems
 
 inline void register_component(flecs::world& ecs) {
+    register_vec3<vec3f>(ecs);
     register_vec3<Position>(ecs);
     register_vec3<Velocity>(ecs);
     register_vec3<Acceleration>(ecs);
     register_vec3<OldPosition>(ecs);
-    register_vec3<Gravity>(ecs);
     // register_vec4<Quaternion>(ecs); // conflicts with raylib's..
 
     register_scalar<Mass>(ecs, flecs::F32);
@@ -448,11 +422,8 @@ inline void register_component(flecs::world& ecs) {
     ParticleState::meta(ecs);
 
     Spring::meta(ecs);
-    Scene::meta(ecs);
     GridCloth::meta(ecs);
 
-    ecs.component<Scene>()
-        .add(flecs::Singleton);
     ecs.component<Solver>()
         .add(flecs::Singleton);
 

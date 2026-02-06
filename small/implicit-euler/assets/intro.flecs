@@ -1,9 +1,7 @@
-$ {
-  Scene: {
-    dt: 0.0090
-    gravity: { x: 0, y: -9.81, z: 0 }
-    paused: false
-  }
+Config.Scene {
+  dt { f32: { 0.0090 } }
+  gravity { vec3f: { x: 0, y: -9.81, z: 0 } }
+  paused { bool: { false } }
 }
 
 mycloth1 {
@@ -30,3 +28,4 @@ MainCamera {
     projection: 0
   }
 }
+

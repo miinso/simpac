@@ -25,8 +25,18 @@ inline constexpr int GLSL_VERSION = 100;
 #include "pipelines.h"
 #include "resources.h"
 
+struct Configurable {};
 
 namespace graphics {
+
+struct ColorRGBA {
+    float r = 1.0f;
+    float g = 1.0f;
+    float b = 1.0f;
+    float a = 1.0f;
+
+    static void meta(flecs::world& ecs);
+};
 
 // flecs phase entities - assigned during init().
 // use with .kind(graphics::PreRender) etc. when registering systems
@@ -37,10 +47,6 @@ inline flecs::entity phase_on_present;
 
 // some internal state
 namespace detail {
-    inline bool draw_grid = true;
-    inline bool draw_fps = true;
-    inline int grid_slices = 12;
-    inline float grid_spacing = 10.0f / 12.0f;
     inline Font font = {0};
     inline Font font_tiny = {0};
 } // namespace detail
@@ -109,18 +115,6 @@ void run_loop();
 
 // close window and cleanup
 void close_window();
-
-// toggle grid rendering
-inline void set_draw_grid(bool draw, int slices = 12, float spacing = 10.0f / 12.0f) {
-    detail::draw_grid = draw;
-    detail::grid_slices = slices;
-    detail::grid_spacing = spacing;
-}
-
-// toggle FPS counter
-inline void set_draw_fps(bool draw) {
-    detail::draw_fps = draw;
-}
 
 // ============================================================================
 // Camera helpers

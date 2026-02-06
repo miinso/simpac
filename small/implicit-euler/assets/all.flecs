@@ -1,9 +1,7 @@
-$ {
-  Scene: {
-    dt: 0.0166666
-    gravity: { x: 0, y: -9.81, z: 0 }
-    paused: false
-  }
+Config.Scene {
+  dt { f32: { 0.0166666 } }
+  gravity { vec3f: { x: 0, y: -9.81, z: 0 } }
+  paused { bool: { false } }
 }
 
 p1 {
@@ -58,3 +56,4 @@ MainCamera {
     projection: 0
   }
 }
+

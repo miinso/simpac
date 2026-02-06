@@ -1,11 +1,9 @@
 // demonstrates some challanging configuration. heeeaaavy particle in the middle. beware..
 
-$ {
-  Scene: {
-    dt: 1 / 60
-    gravity: { x: 0, y: -9.81, z: 0 }
-    paused: 0
-  }
+Config.Scene {
+  dt { f32: { 1 / 60 } }
+  gravity { vec3f: { x: 0, y: -9.81, z: 0 } }
+  paused { bool: { false } }
 }
 
 const width = 10
@@ -140,3 +138,4 @@ MainCamera {
     projection: 0
   }
 }
+

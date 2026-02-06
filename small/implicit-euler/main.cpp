@@ -29,15 +29,23 @@ int main() {
     // Initialize state
     // =========================================================================
 
-    ecs.set<Scene>({});
+    ecs.entity("Config::Scene::dt")
+        .set<Real>(Real(1.0f / 60.0f))
+        .add<Configurable>();
+    ecs.entity("Config::Scene::gravity")
+        .set<vec3f>({0.0f, -9.81f, 0.0f})
+        .add<Configurable>();
+    ecs.entity("Config::Scene::paused").set<bool>(false).add<Configurable>();
+    ecs.entity("Scene::wall_time").set<Real>(Real(0.0f));
+    ecs.entity("Scene::sim_time").set<Real>(Real(0.0f));
+    ecs.entity("Scene::frame_count").set<int>(0);
+    ecs.entity("Scene::dirty").set<bool>(false);
+    ecs.entity("Config::Solver::cg_max_iter").set<int>(100).add<Configurable>();
+    ecs.entity("Config::Solver::cg_tolerance").set<Real>(Real(1e-3f)).add<Configurable>();
     ecs.set<InteractionState>({});
     queries::init(ecs);
 
-    auto& solver = ecs.ensure<Solver>();
-    solver.b.setZero();
-    solver.A.setZero();
-    solver.cg_tolerance = 1e-3;
-    solver.cg_max_iter = 100;
+    ecs.ensure<Solver>();
 
     // =========================================================================
     // Install systems (graphics + rendering)
@@ -52,15 +60,15 @@ int main() {
         .event(flecs::OnAdd)
         .event(flecs::OnRemove)
         .each([](flecs::iter& it, size_t, Spring&) {
-            it.world().get_mut<Solver>().needs_reset = true;
+            it.world().lookup("Scene::dirty").get_mut<bool>() = true;
         });
 
-    // reset solver warm-start when particles are added/removed
+    // mark scene dirty when particles are added/removed
     ecs.observer<Particle>()
         .event(flecs::OnAdd)
         .event(flecs::OnRemove)
         .run([](flecs::iter& it) {
-            it.world().get_mut<Solver>().needs_reset = true;
+            it.world().lookup("Scene::dirty").get_mut<bool>() = true;
         });
 
     // =========================================================================
@@ -80,8 +88,8 @@ int main() {
         .without<IsPinned>()
         .kind(0)
         .each([&](flecs::iter& it, size_t, const Mass& m, const ParticleIndex& idx, Solver& solver) {
-            const auto& scene = it.world().get<Scene>();
-            systems::collect_external_force(m, idx, scene.gravity, it.delta_time(), solver);
+            const auto& gravity = it.world().lookup("Config::Scene::gravity").get<vec3f>();
+            systems::collect_external_force(m, idx, gravity, it.delta_time(), solver);
         });
 
     auto collect_spring_gradient = ecs.system<Spring, Solver>("Collect Spring Gradient")
@@ -109,7 +117,9 @@ int main() {
         .run([](flecs::iter& it) {
             // `Solver` here is a singleton
             auto& solver = it.world().get_mut<Solver>();
-            systems::solve(solver);
+            const auto& cg_max_iter = it.world().lookup("Config::Solver::cg_max_iter").get<int>();
+            const auto& cg_tolerance = it.world().lookup("Config::Solver::cg_tolerance").get<Real>();
+            systems::solve(solver, cg_max_iter, cg_tolerance);
         });
 
     auto update_velocity = ecs.system<Velocity, const ParticleIndex, const Solver>("Update Velocity")
@@ -148,10 +158,23 @@ int main() {
     // LOOK HERE!!! - THE ALGORITHM in one place
     // =========================================================================
 
-    // collect system DOF - ensures solver is correctly sized
-    // runs before simulation, reassigns particle indices if topology changed
-    ecs.system("CollectSystemDOF")
+    // scene indexing pass - assigns dense indices when topology changes
+    ecs.system("Scene::ReindexParticles")
         .kind(flecs::PreUpdate)
+        .run([](flecs::iter& it) {
+            auto world = it.world();
+            if (!world.lookup("Scene::dirty").get<bool>()) return;
+
+            int new_idx = 0;
+            queries::particle_query.each([&](flecs::entity e, const Position&) {
+                e.set<ParticleIndex>(new_idx++);
+            });
+        });
+
+    // solver prep - size, reset, and clear per-frame buffers
+    ecs.system("Solver::PrepareFrame")
+        .kind(flecs::PreUpdate)
+        // .after("Scene::ReindexParticles") // error C2039: 'after': is not a member of 'flecs::system_builder<>'
         .run([](flecs::iter& it) {
             auto world = it.world();
             auto& solver = world.get_mut<Solver>();
@@ -159,64 +182,51 @@ int main() {
             int n = queries::num_particles();
             int dof = n * 3;
 
-            // TODO: verbose and ugly do refactor or drop ParticleIndex completely
-            bool needs_reindex = (solver.b.size() != dof);
-            if (!needs_reindex) {
-                queries::particle_query.each([&](flecs::entity e, const Position&) {
-                    if (!e.has<ParticleIndex>()) {
-                        needs_reindex = true;
-                    }
-                });
-            }
-
-            if (needs_reindex) {
-                // assign sequential indices to all particles
-                int new_idx = 0;
-                queries::particle_query.each([&](flecs::entity e, const Position&) {
-                    auto& idx = e.ensure<ParticleIndex>();
-                    idx = new_idx++;
-                });
-
-                // resize solver
+            bool resized = solver.b.size() != dof;
+            if (resized) {
                 solver.b.resize(dof);
-                solver.b.setZero();
-                solver.x.setZero(dof);
-                solver.x_prev.setZero(dof);
+                solver.x.resize(dof);
+                solver.x_prev.resize(dof);
                 solver.A.resize(dof, dof);
-
                 printf("[Solver] Resized: %d particles, %d DOF\n", n, dof);
             }
 
-            // NOTE: spring renderer refreshes connectivity per-frame to handle reindexing
-            // under 1ms, so no bottleneck
-
             bool invalid_state = (solver.x.size() > 0)
                 && (!solver.x.allFinite() || !solver.x_prev.allFinite());
+            if (invalid_state) {
+                solver.exploded = true;
+            }
 
-            if (solver.needs_reset || invalid_state) {
-                if (solver.x.size() != dof) {
-                    solver.x.resize(dof);
-                    solver.x_prev.resize(dof);
-                }
+            if (world.lookup("Scene::dirty").get<bool>() || solver.exploded || resized) {
                 solver.x.setZero();
                 solver.x_prev.setZero();
-                solver.needs_reset = false;
+                solver.exploded = false;
             }
 
             solver.b.setZero();
             solver.triplets.clear();
         });
 
-    ecs.system("ImplicitEuler") // main simulation loop
+    ecs.system("Scene::ClearDirty")
+        .kind(flecs::PreUpdate)
+        .run([](flecs::iter& it) {
+            it.world().lookup("Scene::dirty").get_mut<bool>() = false;
+        });
+
+    ecs.system("Implicit Euler") // main simulation loop
         .kind(flecs::PreUpdate)
         .run([&](flecs::iter& it) {
-            auto& scene = it.world().get_mut<Scene>();
-            if (scene.paused) return;
-            Real dt = scene.dt;
+            auto& wall_time = it.world().lookup("Scene::wall_time").get_mut<Real>();
+            wall_time += it.delta_time();
+
+            if (it.world().lookup("Config::Scene::paused").get<bool>()) return;
+            const auto& dt = it.world().lookup("Config::Scene::dt").get<Real>();
 
             // accumulate simulation time and frame count
-            scene.sim_time += dt;
-            scene.frame_count++;
+            auto& sim_time = it.world().lookup("Scene::sim_time").get_mut<Real>();
+            auto& frame_count = it.world().lookup("Scene::frame_count").get_mut<int>();
+            sim_time += dt;
+            frame_count += 1;
 
             // build rhs, b
             // RHS = M * v_n + h * f_gravity - h * dE_dx
@@ -225,7 +235,7 @@ int main() {
             collect_spring_gradient.run(dt); // h * -dE_dx (elastic forces)
 
             // build lhs, A
-            // LHS = M + h^2 * ddE_ddx  (mass matrix + h^2 * Hessian)
+            // LHS = M + h^2 * ddE_ddx (mass matrix + h^2 * Hessian)
             collect_mass.run(dt);
             collect_spring_hessian.run(dt);
             

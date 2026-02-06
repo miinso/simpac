@@ -2,14 +2,43 @@
 
 #include <cstdio>
 #include <functional>
+#include <algorithm>
 
 namespace graphics {
 
+void ColorRGBA::meta(flecs::world& ecs) {
+    ecs.component<ColorRGBA>()
+        .member("r", &ColorRGBA::r)
+        .member("g", &ColorRGBA::g)
+        .member("b", &ColorRGBA::b)
+        .member("a", &ColorRGBA::a);
+}
+
 namespace {
-    // stored window config for clear color
-    Color clear_color = RAYWHITE;
     ecs_world_t* runtime_world = nullptr;
     std::function<void()> progress_func;
+
+    ColorRGBA to_rgba(Color color) {
+        return {
+            color.r / 255.0f,
+            color.g / 255.0f,
+            color.b / 255.0f,
+            color.a / 255.0f
+        };
+    }
+
+    Color to_color(const ColorRGBA& color) {
+        auto to_byte = [](float v) -> unsigned char {
+            float clamped = std::clamp(v, 0.0f, 1.0f);
+            return (unsigned char)(clamped * 255.0f);
+        };
+        return {
+            to_byte(color.r),
+            to_byte(color.g),
+            to_byte(color.b),
+            to_byte(color.a)
+        };
+    }
 
     Font load_font_grid(const char* path,
                         int cell_w,
@@ -194,7 +223,8 @@ namespace {
                 }
 
                 BeginDrawing();
-                ClearBackground(clear_color);
+                const auto& bg = it.world().lookup("Config::graphics::backgroundColor").get<ColorRGBA>();
+                ClearBackground(to_color(bg));
 
                 // update lighting with camera position if enabled
                 if (is_lighting_enabled()) {
@@ -227,15 +257,21 @@ namespace {
                     EndShaderMode();
                 }
 
+                // FIXME: these will panic if lookup returns null
+                const auto& show_grid = it.world().lookup("Config::graphics::debugOptions::showGrid").get<bool>();
+                const auto& grid_slices = it.world().lookup("Config::graphics::debugOptions::gridSlices").get<int>();
+                const auto& grid_spacing = it.world().lookup("Config::graphics::debugOptions::gridSpacing").get<float>();
+                const auto& shows_stats = it.world().lookup("Config::graphics::showsStatistics").get<bool>();
+
                 // draw grid if enabled
-                if (detail::draw_grid) {
-                    DrawGrid(detail::grid_slices, detail::grid_spacing);
+                if (show_grid) {
+                    DrawGrid(grid_slices, grid_spacing);
                 }
 
                 EndMode3D();
 
                 // draw FPS if enabled
-                if (detail::draw_fps) {
+                if (shows_stats) {
                     DrawFPS(20, 20);
                 }
             });
@@ -286,6 +322,24 @@ void init(flecs::world& world) {
 
     // register camera components with reflection
     register_camera_components(world);
+    ColorRGBA::meta(world);
+
+    world.component<Configurable>();
+    world.entity("Config::graphics::showsStatistics")
+        .set<bool>(true)
+        .add<Configurable>();
+    world.entity("Config::graphics::debugOptions::showGrid")
+        .set<bool>(true)
+        .add<Configurable>();
+    world.entity("Config::graphics::debugOptions::gridSlices")
+        .set<int>(12)
+        .add<Configurable>();
+    world.entity("Config::graphics::debugOptions::gridSpacing")
+        .set<float>(10.0f / 12.0f)
+        .add<Configurable>();
+    world.entity("Config::graphics::backgroundColor")
+        .set<ColorRGBA>(to_rgba(RAYWHITE))
+        .add<Configurable>();
 
     // create custom rendering phases
     phase_pre_render = world.entity("PreRender")
@@ -319,8 +373,10 @@ void init_window(const WindowConfig& config) {
     InitWindow(config.width, config.height, config.title);
 
     detail::platform_after_init_window(config, canvas_size);
-
-    clear_color = config.clear_color;
+    if (runtime_world) {
+        flecs::world ecs(runtime_world);
+        ecs.entity("Config::graphics::backgroundColor").set<ColorRGBA>(to_rgba(config.clear_color));
+    }
 
     // create default camera entity if none exists
     if (runtime_world) {
@@ -421,16 +477,15 @@ flecs::entity create_camera(flecs::world& ecs, const char* name, const Position&
 }
 
 void set_active_camera(flecs::world& ecs, flecs::entity camera_entity) {
-    // remove ActiveCamera from all cameras
-    ecs.query_builder<Camera>()
-        .with<ActiveCamera>()
-        .build()
-        .each([](flecs::entity e, Camera&) {
-            e.remove<ActiveCamera>();
-        });
-
     // add to the specified camera
     if (camera_entity.has<Camera>()) {
+        // remove ActiveCamera from all cameras
+        ecs.query_builder<Camera>()
+            .with<ActiveCamera>()
+            .build()
+            .each([](flecs::entity e, Camera&) {
+                e.remove<ActiveCamera>();
+            });
         camera_entity.add<ActiveCamera>();
     }
 }

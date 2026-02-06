@@ -20,7 +20,7 @@ inline void collect_momentum(const Mass& mass, const Velocity& vel,
 }
 
 inline void collect_external_force(const Mass& mass, const ParticleIndex& idx,
-                                    const Gravity& gravity, Real dt, Solver& solver) {
+                                    const vec3f& gravity, Real dt, Solver& solver) {
     // RHS contribution: time-discretized external force term (h * f_ext)
     auto f_gravity = mass * gravity.map();
     solver.b.segment<3>(idx * 3) += dt * f_gravity;
@@ -138,12 +138,12 @@ inline void collect_spring_hessian(Spring& spring, Real dt, Solver& solver) {
     }
 }
 
-inline void solve(Solver& solver) {
+inline void solve(Solver& solver, int cg_max_iter, Real cg_tolerance) {
     // build sparse mat
     solver.A.setFromTriplets(solver.triplets.begin(), solver.triplets.end());
 
-    solver.cg.setMaxIterations(solver.cg_max_iter);
-    solver.cg.setTolerance(solver.cg_tolerance);
+    solver.cg.setMaxIterations(cg_max_iter);
+    solver.cg.setTolerance(cg_tolerance);
 
     if (solver.cg.info() == Eigen::InvalidInput) {
         solver.cg.compute(solver.A);
@@ -158,20 +158,25 @@ inline void solve(Solver& solver) {
     // store stats for debug display
     solver.cg_iterations = (int)solver.cg.iterations();
     solver.cg_error = solver.cg.error();
+    if (solver.cg.info() != Eigen::Success
+        || !solver.x.allFinite()
+        || !solver.x_prev.allFinite()) {
+        solver.exploded = true;
+    }
 
-    static int frame = 0;
-    if (++frame % 50 == 0 || solver.cg.info() != Eigen::Success) {
-        char buf[128];
-        snprintf(buf, sizeof(buf), "[%d] CG: %d iter, err=%e%s",
-                 frame, solver.cg_iterations, solver.cg_error,
-                 solver.cg.info() != Eigen::Success ? " FAILED" : "");
+    char buf[128];
+    snprintf(buf, sizeof(buf), "CG: %d iter, err=%e%s",
+             solver.cg_iterations,
+             solver.cg_error,
+             solver.cg.info() != Eigen::Success ? " FAILED" : "");
 
+    if (solver.cg.info() != Eigen::Success) {
         printf("%s\n", buf);
+    }
 
-        solver.cg_history.push_back(buf);
-        if (solver.cg_history.size() > (size_t)solver.cg_history_max_lines) {
-            solver.cg_history.pop_front();
-        }
+    solver.cg_history.push_back(buf);
+    if (solver.cg_history.size() > (size_t)solver.cg_history_max_lines) {
+        solver.cg_history.pop_front();
     }
 }
 

@@ -36,8 +36,6 @@ struct vec3f : vec3<vec3f> {
     using vec3<vec3f>::vec3;
 };
 
-struct Configurable {};
-
 // for compile-time (types + meta)
 struct Scene {
     Real dt = Real(1.0f / 60.0f);
@@ -166,8 +164,6 @@ int main() {
 
     register_components(ecs);
     graphics::init(ecs);
-    graphics::set_draw_grid(false);
-    graphics::set_draw_fps(false);
     graphics::init_window({1024, 640, "Config"});
 
     // for compile-time (data lives in components)
