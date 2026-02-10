@@ -38,6 +38,7 @@ refresh_compile_commands(
     # Optionally, filter out emscripten/wasm platform builds
     targets = {
         # Only generate compile commands for the native linalg app, skip WebAssembly builds
-        "//small/implicit-euler:all": "",
+        "//small/cloth:all": "",
+        "//modules:graphics2": "",
     },
 )

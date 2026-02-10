@@ -12,13 +12,13 @@ import { computed, ref } from 'vue';
 const app_ref = ref(null);
 const script_text = ref('');
 const script_name = 'SceneScript';
-const systems_parent = ref('');
+const systems_parent = ref('sim');
 const systems = ref([]);
 const systems_query = computed(() => {
   if (systems_parent.value) {
-    return `(ChildOf, ${systems_parent.value}), flecs.system.System`;
+    return `(ChildOf, ${systems_parent.value}), flecs.system.System, ?Disabled`;
   }
-  return 'flecs.system.System, !(ChildOf, *)';
+  return 'flecs.system.System, !(ChildOf, *), ?Disabled';
 });
 const disabled_tag = 'flecs.core.Disabled';
 let conn = null;
@@ -58,13 +58,15 @@ async function world_query() {
 
 async function load_systems() {
   const reply = await conn.query(systems_query.value, {
-    full_paths: true
+    full_paths: true,
+    fields: true,
+    values: false
   });
   systems.value = reply.results.map((item) => ({
     parent: item.parent,
     name: item.name,
     path: item.parent ? `${item.parent}.${item.name}` : item.name,
-    enabled: !((item.tags ?? [])).includes(disabled_tag)
+    enabled: item.fields?.is_set?.[2] === false
   }));
 }
 
@@ -79,7 +81,7 @@ async function toggle_system(entry) {
 }
 
 async function query_user_made_systems() {
-  const reply = await conn.query('flecs.system.System, !ChildOf($this|up, flecs)', {
+  const reply = await conn.query('flecs.system.System, !ChildOf($this|up, flecs), ?Disabled', {
     full_paths: true
   });
   console.log(reply);
@@ -88,7 +90,7 @@ async function query_user_made_systems() {
 
 <Simpac
   ref="app_ref"
-  src="/bazel-bin/small/implicit-euler/webapp/main.js"
+  src="/bazel-bin/small/cloth/webapp/main.js"
   :debug="true"
   :cwrap="['flecs_explorer_request']"
   @ready="onReady"
@@ -120,7 +122,7 @@ async function query_user_made_systems() {
 ## Startup scene
 
 - WASM default: `scenes/default.flecs` (embedded in the build).
-- Native default: `small/implicit-euler/scenes/default.flecs` via `graphics::npath`.
+- Native default: `small/cloth/scenes/default.flecs` via `graphics::npath`.
 
 ## Runtime update
 

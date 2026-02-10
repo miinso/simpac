@@ -1,5 +1,6 @@
 load("@emsdk//emscripten_toolchain:wasm_rules.bzl", "wasm_cc_binary")
 load("@rules_cc//cc:defs.bzl", "cc_binary")
+load("@rules_cc//cc:defs.bzl", "cc_library")
 
 assets_files = glob(["assets/**"])
 
@@ -8,9 +9,8 @@ filegroup(
     srcs = assets_files,
 )
 
-### wasm
-cc_binary(
-    name = "main",
+cc_library(
+    name = "sim",
     srcs = [
         "components.h",
         "components/base.h",
@@ -23,7 +23,6 @@ cc_binary(
         "physics/spring.h",
         "queries.h",
         "vars.h",
-        "main_implicit.cpp",
         "systems.h",
         "systems/render.h",
         "systems/render_draw.h",
@@ -47,10 +46,6 @@ cc_binary(
             # "-O3",
         ],
     }),
-    data = [
-        ":assets",  # per-directory assets
-        "//:resources",  # root assets
-    ],
     defines = select({
         "@platforms//os:emscripten": [
             "PLATFORM_WEB",
@@ -60,7 +55,23 @@ cc_binary(
             # "EIGEN_DONT_PARALLELIZE",
         ],
     }),
-    includes = [
+    deps = [
+        "//modules:graphics2",
+        "@eigen",
+        "@flecs",
+        "@raylib-latest",
+    ],
+)
+
+### wasm
+cc_binary(
+    name = "main",
+    srcs = [
+        "main_implicit.cpp",
+    ],
+    data = [
+        ":assets",  # per-directory assets
+        "//:resources",  # root assets
     ],
     linkopts = select({
         "@platforms//os:emscripten": [
@@ -97,17 +108,14 @@ cc_binary(
             "--embed-file resources/fonts/generic.fnt@resources/fonts/generic.fnt",
             "--embed-file resources/fonts/generic.png@resources/fonts/generic.png",
             "--embed-file resources/fonts/tiny.png@resources/fonts/tiny.png",
-            # "--embed-file small/implicit-euler/scenes/default.flecs@small/implicit-euler/scenes/default.flecs",
+            # "--embed-file small/cloth/scenes/default.flecs@small/cloth/scenes/default.flecs",
             "--embed-file %s/assets@assets" % package_name(), # embed all under ./assets
             # FIXME: changing asset (script e.g.) (unlike sources) doesn't invoke new build.. what do i dooo
         ],
         "//conditions:default": [],
     }),
     deps = [
-        "//modules:graphics2",
-        "@eigen",
-        "@flecs",
-        "@raylib-latest",
+        ":sim",
     ],
 )
 

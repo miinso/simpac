@@ -73,7 +73,7 @@ async function worldQuery() {
 
 <Simpac
   ref="appRef"
-  src="/bazel-bin/small/implicit-euler/webapp/main.js"
+  src="/bazel-bin/small/cloth/webapp/main.js"
   :aspectRatio="'4:3'"
   :debug="true"
   :cwrap="['flecs_explorer_request']"

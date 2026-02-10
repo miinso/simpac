@@ -30,7 +30,7 @@ The Flecs client is globally injected as `window.flecs`.
 
 <Simpac
   ref="appRef"
-  src="/bazel-bin/small/implicit-euler/webapp/main.js"
+  src="/bazel-bin/small/cloth/webapp/main.js"
   :debug="true"
   :cwrap="['flecs_explorer_request']"
   @ready="onReady"
