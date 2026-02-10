@@ -44,6 +44,7 @@ struct ParticleRenderer {
     int num_indices = 0;
 
     int u_viewproj_loc = -1;
+    int u_base_radius_loc = -1;
     int u_color_loc = -1;
 
     float base_radius = 0.5f;
@@ -51,7 +52,7 @@ struct ParticleRenderer {
 
     int allocated_particles = 0;
 
-    flecs::query<const Position, const ParticleIndex, const ParticleState> position_query;
+    flecs::query<const Position, const ParticleIndex, const Mass, const ParticleState> position_query;
     std::vector<float> staging_buffer;
 };
 

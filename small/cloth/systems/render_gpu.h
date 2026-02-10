@@ -198,8 +198,9 @@ inline void upload_particle_positions_to_gpu(const flecs::world& ecs, ParticleRe
         while (it.next()) {
             auto pos = it.field<const Position>(0);
             auto idx = it.field<const ParticleIndex>(1);
-            bool has_state = it.is_set(2);
-            auto state = it.field<const ParticleState>(2);
+            auto mass = it.field<const Mass>(2);
+            bool has_state = it.is_set(3);
+            auto state = it.field<const ParticleState>(3);
             for (auto i : it) {
                 int pidx = idx[i];
                 if (pidx >= 0 && pidx < num_particles) {
@@ -207,7 +208,7 @@ inline void upload_particle_positions_to_gpu(const flecs::world& ecs, ParticleRe
                     gpu.staging_buffer[offset + 0] = pos[i].x;
                     gpu.staging_buffer[offset + 1] = pos[i].y;
                     gpu.staging_buffer[offset + 2] = pos[i].z;
-                    gpu.staging_buffer[offset + 3] = gpu.base_radius;
+                    gpu.staging_buffer[offset + 3] = (float)mass[i];
                     gpu.staging_buffer[offset + 4] = has_state ? (float)state[i].flags : 0.0f;
                 }
             }
@@ -224,6 +225,7 @@ inline void draw_particles_gpu(const ParticleRenderer& gpu) {
     Matrix viewproj = MatrixMultiply(rlGetMatrixModelview(), rlGetMatrixProjection());
     rlEnableShader(gpu.shader_id);
     rlSetUniformMatrix(gpu.u_viewproj_loc, viewproj);
+    rlSetUniform(gpu.u_base_radius_loc, &gpu.base_radius, SHADER_UNIFORM_FLOAT, 1);
     rlSetUniform(gpu.u_color_loc, gpu.color, SHADER_UNIFORM_VEC3, 1);
 
     rlEnableVertexArray(gpu.vao);

@@ -40,9 +40,16 @@ inline void draw_spring(Spring& spring) {
 }
 
 inline void draw_particle(const Position& x, const Mass& m) {
+    Real mass = std::max((Real)1e-12f, (Real)m);
+    Real radius_scale = std::pow(mass, (Real)0.0752575f); // 10000x mass -> 2x radius
+    Real tint = (Real)1.0f - (std::log10(std::max(mass, (Real)1.0f)) / (Real)10.0f);
+    if (tint < (Real)0) tint = (Real)0;
+    if (tint > (Real)1) tint = (Real)1;
+
     Vector3 pos{x[0], x[1], x[2]};
-    DrawPoint3D(pos, BLUE);
-    DrawSphere(pos, 0.5, BLUE);
+    Color color = ColorLerp(BLACK, BLUE, (float)tint);
+    DrawPoint3D(pos, color);
+    DrawSphere(pos, 0.5f * (float)radius_scale, color);
 }
 
 inline void draw_timing_info(flecs::iter& it) {

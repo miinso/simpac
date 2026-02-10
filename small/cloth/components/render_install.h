@@ -40,7 +40,7 @@ inline void register_render_components(flecs::world& ecs) {
     ecs.component<ParticleRenderer>()
         .on_set([](flecs::entity e, ParticleRenderer& gpu) {
             auto world = e.world();
-            gpu.position_query = world.query_builder<const Position, const ParticleIndex, const ParticleState>()
+            gpu.position_query = world.query_builder<const Position, const ParticleIndex, const Mass, const ParticleState>()
                 .with<Particle>()
                 .term_at<ParticleState>().optional()
                 .cached()
@@ -76,6 +76,7 @@ inline void register_render_components(flecs::world& ecs) {
             if (IsShaderValid(shader)) {
                 gpu.shader_id = shader.id;
                 gpu.u_viewproj_loc = GetShaderLocation(shader, "u_viewproj");
+                gpu.u_base_radius_loc = GetShaderLocation(shader, "u_base_radius");
                 gpu.u_color_loc = GetShaderLocation(shader, "u_color");
             }
         })

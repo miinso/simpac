@@ -5,6 +5,7 @@ precision highp float;
 in vec3 v_normal;
 in vec3 v_world_pos;
 in float v_state;
+in float v_mass;
 
 // uniforms
 uniform vec3 u_color;
@@ -31,6 +32,9 @@ void main() {
     } else if ((flags & 1) != 0) {
         color = mix(color, vec3(1.0, 0.95, 0.2), 0.6); // hovered
     }
+    float log10m = log2(max(v_mass, 1.0)) / 3.321928;
+    float tint = 1.0 - clamp(log10m / 10.0, 0.0, 1.0); // 1->1.0, 1e10->0.0
+    color *= tint;
     color *= lighting;
     fragColor = vec4(color, 1.0);
 }
