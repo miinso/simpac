@@ -32,18 +32,120 @@ s1 {
   }
 }
 
-mycloth1 {
-  Position: { x: 0, y: 5, z: -10 }
-  GridCloth: {
-    width: 10,
-    height: 10,
-    spacing: 1.0,
-    mass: 1.0,
-    k_structural: 10000.0,
-    k_shear: 10000.0,
-    k_bending: 10.0,
-    k_damping: 0.05,
-    pin_mode: 0
+// additional cloth patch using Particle + Spring (replaces GridCloth)
+const width = 10
+const height = 10
+const spacing = 1.0
+const mass = 1.0
+const k_struct = 10000.0
+const k_shear = 10000.0
+const k_bending = 10.0
+const k_d = 0.05
+const particle_offset = 2
+
+const start_x = 0.0
+const start_y = 5.0
+const start_z = -10.0
+const last_x = $width - 1
+
+for y in 0..$height {
+  for x in 0..$width {
+    "cp_{$y}_{$x}" {
+      Position: { x: $start_x + $x * $spacing, y: $start_y, z: $start_z - $y * $spacing }
+      Velocity: { x: 0, y: 0, z: 0 }
+      Mass: { $mass }
+      ParticleIndex: { $particle_offset + $y * $width + $x }
+      Particle
+    }
+  }
+}
+
+// pin corners (old pin_mode = corners)
+cp_0_0 { IsPinned }
+"cp_0_{$last_x}" { IsPinned }
+
+// structural springs (horizontal)
+for y in 0..$height {
+  for x in 0..($width - 1) {
+    "cs_h_{$y}_{$x}" {
+      Spring: {
+        e1: "cp_{$y}_{$x}",
+        e2: "cp_{$y}_{$x + 1}",
+        rest_length: $spacing,
+        k_s: $k_struct,
+        k_d: $k_d
+      }
+    }
+  }
+}
+
+// structural springs (vertical)
+for y in 0..($height - 1) {
+  for x in 0..$width {
+    "cs_v_{$y}_{$x}" {
+      Spring: {
+        e1: "cp_{$y}_{$x}",
+        e2: "cp_{$y + 1}_{$x}",
+        rest_length: $spacing,
+        k_s: $k_struct,
+        k_d: $k_d
+      }
+    }
+  }
+}
+
+// shear springs
+for y in 0..($height - 1) {
+  for x in 0..($width - 1) {
+    "cs_d1_{$y}_{$x}" {
+      Spring: {
+        e1: "cp_{$y}_{$x}",
+        e2: "cp_{$y + 1}_{$x + 1}",
+        rest_length: $spacing * 1.41421356,
+        k_s: $k_shear,
+        k_d: $k_d
+      }
+    }
+
+    "cs_d2_{$y}_{$x}" {
+      Spring: {
+        e1: "cp_{$y + 1}_{$x}",
+        e2: "cp_{$y}_{$x + 1}",
+        rest_length: $spacing * 1.41421356,
+        k_s: $k_shear,
+        k_d: $k_d
+      }
+    }
+  }
+}
+
+// bending springs (horizontal)
+for y in 0..$height {
+  for x in 0..($width - 2) {
+    "cs_bh_{$y}_{$x}" {
+      Spring: {
+        e1: "cp_{$y}_{$x}",
+        e2: "cp_{$y}_{$x + 2}",
+        rest_length: $spacing * 2.0,
+        k_s: $k_bending,
+        k_d: $k_d * 0.5
+      }
+    }
+  }
+}
+
+// bending springs (vertical)
+for y in 0..($height - 2) {
+  for x in 0..$width {
+    "cs_bv_{$y}_{$x}" {
+      Spring: {
+        e1: "cp_{$y}_{$x}",
+        e2: "cp_{$y + 2}_{$x}",
+        rest_length: $spacing * 2.0,
+        k_s: $k_bending,
+        k_d: $k_d * 0.5
+      }
+    }
   }
 }
 
@@ -56,4 +158,3 @@ MainCamera {
     projection: 0
   }
 }
-
