@@ -5,17 +5,25 @@ load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_test")
 # graphics module - shared many time accross the projects
 cc_library(
     name = "graphics2",
-    srcs = ["graphics/graphics.cpp"] + select({
+    srcs = [
+        "graphics/fonts.cpp",
+        "graphics/graphics.cpp",
+    ] + select({
         "@platforms//os:emscripten": ["graphics/graphics_platform_wasm.cpp"],
         "//conditions:default": ["graphics/graphics_platform_native.cpp"],
     }),
     hdrs = [
         "graphics/camera.h",
+        "graphics/components.h",
+        "graphics/fonts.h",
         "graphics/graphics.h",
         "graphics/input.h",
         "graphics/lighting.h",
         "graphics/pipelines.h",
         "graphics/resources.h",
+        "graphics/systems.h",
+        "graphics/tags.h",
+        "graphics/vars.h",
     ],
     copts = select({
         "@platforms//os:windows": [],  # win

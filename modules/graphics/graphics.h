@@ -21,44 +21,24 @@ inline constexpr int GLSL_VERSION = 100;
 
 // sub-headers (shim enabled) (order matters)
 #include "camera.h"
+#include "components.h"
+#include "fonts.h"
 #include "lighting.h"
 #include "pipelines.h"
 #include "resources.h"
-
-struct Configurable {};
+#include "systems.h"
+#include "vars.h"
 
 namespace graphics {
 
-struct ColorRGBA {
-    float r = 1.0f;
-    float g = 1.0f;
-    float b = 1.0f;
-    float a = 1.0f;
-
-    static void meta(flecs::world& ecs);
-};
-
-// flecs phase entities - assigned during init().
-// use with .kind(graphics::PreRender) etc. when registering systems
-inline flecs::entity phase_pre_render;
-inline flecs::entity phase_on_render;
-inline flecs::entity phase_post_render;
-inline flecs::entity phase_on_present;
-
-// some internal state
-namespace detail {
-    inline Font font = {0};
-    inline Font font_tiny = {0};
-} // namespace detail
-
 // get the loaded font (falls back to default if not loaded)
 [[nodiscard]] inline Font get_font() {
-    return (detail::font.texture.id > 0) ? detail::font : GetFontDefault();
+    return fonts::get();
 }
 
 // get the loaded tiny font (3x5) (falls back to default if not loaded)
 [[nodiscard]] inline Font get_font_tiny() {
-    return (detail::font_tiny.texture.id > 0) ? detail::font_tiny : get_font();
+    return fonts::get_tiny();
 }
 
 // configuration for window and rendering
@@ -98,6 +78,7 @@ namespace detail {
 // initialize graphics module with flecs world.
 // sets up rendering phases and core systems
 void init(flecs::world& world);
+void init(flecs::world& world, const WindowConfig& config);
 
 // initialize window with config
 void init_window(const WindowConfig& config);
@@ -116,17 +97,7 @@ void run_loop();
 // close window and cleanup
 void close_window();
 
-// ============================================================================
-// Camera helpers
-// ============================================================================
-
-// create a camera entity with optional activation.
-// if make_active is true, this camera becomes the rendering camera.
-flecs::entity create_camera(flecs::world& ecs, const char* name, const Camera& cam = {}, bool make_active = false);
-flecs::entity create_camera(flecs::world& ecs, const char* name, const Position& pos, const Camera& cam = {}, bool make_active = false);
-
-// switch the active camera for rendering
-void set_active_camera(flecs::world &ecs, flecs::entity camera_entity);
+// camera helpers live in `graphics::camera`.
 
 // send an event from worker-hosted WASM to the main thread
 inline void emit_worker_event(const char* name, const char* payload) {

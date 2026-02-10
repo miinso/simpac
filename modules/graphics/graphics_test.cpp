@@ -25,10 +25,10 @@ TEST(GraphicsLifecycle, InitCreatesPhases) {
     flecs::world world;
     graphics::init(world);
 
-    EXPECT_TRUE(world.lookup("PreRender").is_alive());
-    EXPECT_TRUE(world.lookup("OnRender").is_alive());
-    EXPECT_TRUE(world.lookup("PostRender").is_alive());
-    EXPECT_TRUE(world.lookup("OnPresent").is_alive());
+    EXPECT_TRUE(world.lookup("graphics::PreRender").is_alive());
+    EXPECT_TRUE(world.lookup("graphics::OnRender").is_alive());
+    EXPECT_TRUE(world.lookup("graphics::PostRender").is_alive());
+    EXPECT_TRUE(world.lookup("graphics::OnPresent").is_alive());
 
     graphics::close_window();
 }

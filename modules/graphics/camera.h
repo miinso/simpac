@@ -72,6 +72,8 @@ namespace detail {
 // Component registration with reflection (for REST API)
 // ============================================================================
 
+namespace components {
+
 template <typename T>
 inline void register_vec3f(flecs::world& ecs) {
     ecs.component<T>()
@@ -96,6 +98,8 @@ inline void register_camera_components(flecs::world& ecs) {
 
     ecs.component<ActiveCamera>();
 }
+
+} // namespace components
 
 // ============================================================================
 // Conversion helpers
@@ -170,5 +174,55 @@ inline void update_camera_controls(Position& pos, Camera& cam) {
 [[nodiscard]] inline const Camera3D& get_raylib_camera_const() {
     return detail::raylib_camera;
 }
+
+namespace camera {
+
+// remove active tag from all camera entities
+inline void clear_active(flecs::world& ecs) {
+    ecs.query_builder<Camera>()
+        .with<ActiveCamera>()
+        .build()
+        .each([](flecs::entity e, Camera&) {
+            e.remove<ActiveCamera>();
+        });
+}
+
+// make sure one camera is active when none exists
+inline void ensure_default(flecs::world& ecs) {
+    auto active_camera_query = ecs.query<Camera, ActiveCamera>();
+    if (active_camera_query.count() > 0) return;
+
+    ecs.entity("DefaultCamera")
+        .set<Camera>({})
+        .set<Position>({})
+        .add<ActiveCamera>();
+}
+
+// create camera entity from explicit position + camera params
+inline flecs::entity create(flecs::world& ecs, const char* name, const Position& pos, const Camera& cam = {}, bool make_active = false) {
+    auto entity = ecs.entity(name)
+        .set<Camera>(cam)
+        .set<Position>(pos);
+
+    if (make_active) {
+        clear_active(ecs);
+        entity.add<ActiveCamera>();
+    }
+    return entity;
+}
+
+// create camera entity with default position
+inline flecs::entity create(flecs::world& ecs, const char* name, const Camera& cam = {}, bool make_active = false) {
+    return create(ecs, name, Position{}, cam, make_active);
+}
+
+// set given camera as the single active camera
+inline void set_active(flecs::world& ecs, flecs::entity camera_entity) {
+    if (!camera_entity.has<Camera>()) return;
+    clear_active(ecs);
+    camera_entity.add<ActiveCamera>();
+}
+
+} // namespace camera
 
 } // namespace graphics

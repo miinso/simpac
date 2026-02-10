@@ -1,0 +1,87 @@
+#pragma once
+
+#include <flecs.h>
+#include <raylib.h>
+
+#include "camera.h"
+#include "input.h"
+#include "lighting.h"
+#include "pipelines.h"
+#include "vars.h"
+
+namespace graphics::systems {
+
+inline void install_pipeline_systems(flecs::world& ecs) {
+    // camera update in OnLoad (before rendering)
+    ecs.system<Position, Camera>("graphics::update_camera")
+        .with<ActiveCamera>()
+        .kind(flecs::OnLoad)
+        .each([](Position& pos, Camera& cam) {
+            update_camera_controls(pos, cam);
+        });
+
+    // sync active camera to raylib before rendering
+    ecs.system<const Position, const Camera>("graphics::sync_camera")
+        .with<ActiveCamera>()
+        .kind(flecs::PostUpdate)
+        .each([](const Position& pos, const Camera& cam) {
+            detail::raylib_camera = to_raylib(pos, cam);
+        });
+
+    // PreRender: begin drawing, clear, update lighting
+    ecs.system("graphics::begin")
+        .kind(PreRender)
+        .run([](flecs::iter& it) {
+            graphics::shim::update();
+
+            if (IsWindowResized()) {
+                SetWindowSize(GetScreenWidth(), GetScreenHeight());
+            }
+
+            BeginDrawing();
+            ClearBackground(graphics::to_color(props::background_color.get<ColorRGBA>()));
+
+            if (is_lighting_enabled()) {
+                update_lighting_camera_pos(detail::raylib_camera.position);
+            }
+        });
+
+    // OnRender: begin 3D mode
+    ecs.system("graphics::render3d")
+        .kind(OnRender)
+        .run([](flecs::iter& it) {
+            BeginMode3D(detail::raylib_camera);
+
+            if (is_lighting_enabled()) {
+                BeginShaderMode(get_lighting_shader());
+            }
+        });
+
+    // PostRender: end 3D mode, draw overlays
+    ecs.system("graphics::render2d")
+        .kind(PostRender)
+        .run([](flecs::iter& it) {
+            if (is_lighting_enabled()) {
+                EndShaderMode();
+            }
+
+            if (props::show_grid.get<bool>()) {
+                DrawGrid(props::grid_slices.get<int>(), props::grid_spacing.get<float>());
+            }
+
+            EndMode3D();
+
+            if (props::shows_statistics.get<bool>()) {
+                DrawFPS(20, 20);
+            }
+        });
+
+    // OnPresent: end drawing
+    ecs.system("graphics::end")
+        .kind(OnPresent)
+        .run([](flecs::iter& it) {
+            EndDrawing();
+        });
+}
+
+} // namespace graphics::systems
