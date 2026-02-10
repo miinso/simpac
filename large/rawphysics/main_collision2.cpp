@@ -174,7 +174,7 @@ int main() {
     // OnRender
     ecs.system<const Position, const Orientation>("draw rigidbody origin")
             .with<RigidBody>()
-            .kind(graphics::phase_on_render)
+            .kind(graphics::OnRender)
             .each([&](const Position &x, const Orientation &q) {
                 auto aa = Eigen::AngleAxisd(q.value);
                 DrawCircle3D(e2r(x.value), 0.2, e2r(aa.axis()), aa.angle() * RAD2DEG, RED);
@@ -182,7 +182,7 @@ int main() {
 
     ecs.system<const Position, const Orientation, const RenderMesh>("draw rigidbody render mesh")
             .with<RigidBody>()
-            .kind(graphics::phase_on_render)
+            .kind(graphics::OnRender)
             .each([](flecs::entity e, const Position &x, const Orientation &q,
                      const RenderMesh &render_mesh) {
                 auto aa = Eigen::AngleAxisd(q.value);
@@ -192,7 +192,7 @@ int main() {
 
     ecs.system<const Position, const Orientation>("draw rigidbody frame")
             .with<RigidBody>()
-            .kind(graphics::phase_on_render)
+            .kind(graphics::OnRender)
             .each([](const Position &x, const Orientation &q) {
                 float scale = 0.5;
                 auto R = q.value.toRotationMatrix();
@@ -204,7 +204,7 @@ int main() {
             });
 
     // Flecs 4.1.1+: get<T>() returns reference, not pointer
-    ecs.system<Constraint>("draw contacts").kind(graphics::phase_on_render).each([](const Constraint &c) {
+    ecs.system<Constraint>("draw contacts").kind(graphics::OnRender).each([](const Constraint &c) {
         if (c.type == phys::pbd::COLLISION_CONSTRAINT) {
             auto e1 = c.e1;
             auto e2 = c.e2;
@@ -223,7 +223,7 @@ int main() {
 
     ecs.system<const Position, const Orientation>("draw coordinate frame")
             .with<RigidBody>()
-            .kind(graphics::phase_on_render)
+            .kind(graphics::OnRender)
             .each([](const Position &x, const Orientation &q) {
                 // world uses y-up. xyz = rgb
 
@@ -237,7 +237,7 @@ int main() {
             });
 
     // PostRender
-    ecs.system("info").kind(graphics::phase_post_render).run([](flecs::iter &it) {
+    ecs.system("info").kind(graphics::PostRender).run([](flecs::iter &it) {
 		const auto& scene = it.world().get<Scene>();
 
 		Font font = graphics::get_font();
@@ -252,7 +252,7 @@ int main() {
 	});
 
     // handle keyboard input
-    ecs.system("key handle").kind(graphics::phase_pre_render).run([&](flecs::iter &it) {
+    ecs.system("key handle").kind(graphics::PreRender).run([&](flecs::iter &it) {
         if (IsKeyDown(KEY_SPACE)) {
             // throw_object (ecs);
         }

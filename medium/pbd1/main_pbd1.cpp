@@ -68,16 +68,16 @@ int main() {
         .each(pbd_particle_update_velocity);
 
     //////// drawings below
-    // graphics2: use graphics::phase_on_render instead of graphics::OnRender
+    // graphics2: use graphics::OnRender instead of graphics::OnRender
     ecs.system<Position>("draw_particle")
         .with<Particle>()
-        .kind(graphics::phase_on_render)
+        .kind(graphics::OnRender)
         .each([](Position& x) {
             DrawSphere({x.value.x(), x.value.y(), x.value.z()}, 0.05, BLUE);
         });
 
     ecs.system<DistanceConstraint>("draw_distance_constraint")
-        .kind(graphics::phase_on_render)
+        .kind(graphics::OnRender)
         .each([](DistanceConstraint& c) {
             auto e1 = c.e1;
             auto e2 = c.e2;
@@ -91,10 +91,10 @@ int main() {
                 {x1.x(), x1.y(), x1.z()}, {x2.x(), x2.y(), x2.z()}, 0.02, 0.02, 4, GREEN);
         });
 
-    // graphics2: use graphics::phase_post_render instead of graphics::PostRender
+    // graphics2: use graphics::PostRender instead of graphics::PostRender
     // graphics2: use graphics::get_raylib_camera_const() instead of graphics::camera1
     ecs.system<DistanceConstraint>("draw_constraint_lambda")
-        .kind(graphics::phase_post_render)
+        .kind(graphics::PostRender)
         .each([](DistanceConstraint& c) {
             auto e1 = c.e1;
             auto e2 = c.e2;
@@ -115,7 +115,7 @@ int main() {
             DrawText(label, screenPos.x, screenPos.y, 20, BLUE);
         });
 
-    ecs.system("DrawTimingInfo").kind(graphics::phase_post_render).run([](flecs::iter& it) {
+    ecs.system("DrawTimingInfo").kind(graphics::PostRender).run([](flecs::iter& it) {
         Font font = graphics::get_font();
 
         const auto& scene = it.world().get<Scene>();

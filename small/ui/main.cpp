@@ -42,8 +42,8 @@ int main() {
         .set(ui::UiDrawOrder{layout_id, layout_order++})
         .set(ui::UiText{"Quit"});
 
-    ui::register_layout_system(world, graphics::phase_pre_render);
-    ui::register_dispatch_system_ordered(world, graphics::phase_post_render);
+    ui::register_layout_system(world, graphics::PreRender);
+    ui::register_dispatch_system_ordered(world, graphics::PostRender);
 
     world.app().run();
     return 0;

@@ -294,7 +294,7 @@ int main() {
     // OnRender
     ecs.system<const Geometry>("draw_geometry_rb")
         .with<RigidBody>()
-        .kind(graphics::phase_on_render)
+        .kind(graphics::OnRender)
         .each([](const Geometry& geom) {
             DrawMesh(geom.renderable, LoadMaterialDefault(), MatrixIdentity());
 
@@ -304,7 +304,7 @@ int main() {
             }
         });
 
-    ecs.system<const AABB>("draw_aabb").kind(graphics::phase_on_render).each([](const AABB& aabb) {
+    ecs.system<const AABB>("draw_aabb").kind(graphics::OnRender).each([](const AABB& aabb) {
         BoundingBox bbox;
         bbox.min = {(float)aabb.aabb_.m_p[0][0], (float)aabb.aabb_.m_p[0][1], (float)aabb.aabb_.m_p[0][2]};
         bbox.max = {(float)aabb.aabb_.m_p[1][0], (float)aabb.aabb_.m_p[1][1], (float)aabb.aabb_.m_p[1][2]};
@@ -313,7 +313,7 @@ int main() {
     });
 
     ecs.system<const BVH>("draw_bvh")
-        .kind(graphics::phase_on_render)
+        .kind(graphics::OnRender)
         .each([](const BVH& bvh) {
             if (!bvh.initialized)
                 return;
@@ -344,7 +344,7 @@ int main() {
         .disable();
 
     ecs.system<const Contact>("draw_contact")
-        .kind(graphics::phase_on_render)
+        .kind(graphics::OnRender)
         .each([](const Contact& contact) {
             // const auto& contact = contacts[i];
             const auto& x = contact.x_world;

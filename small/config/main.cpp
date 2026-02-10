@@ -226,7 +226,7 @@ int main() {
     }
 
     ecs.system("DrawConfig")
-        .kind(graphics::phase_post_render)
+        .kind(graphics::PostRender)
         // .after("graphics::render2d")
         .run([&](flecs::iter& it) {
             auto world = it.world();

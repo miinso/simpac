@@ -130,15 +130,15 @@ int main() {
     // =========================================================================
 
     ecs.system<const Position, const ParticleProperties>("DrawParticles")
-        .kind(graphics::phase_on_render)
+        .kind(graphics::OnRender)
         .each(systems::draw_particles);
 
     ecs.system<const Position, const PlaneProperties>("DrawPlanes")
-        .kind(graphics::phase_on_render)
+        .kind(graphics::OnRender)
         .each(systems::draw_planes);
 
     ecs.system<Scene>("DisplayTimingInfo")
-        .kind(graphics::phase_post_render)
+        .kind(graphics::PostRender)
         .each([](flecs::iter& it, size_t, Scene& scene) {
             scene.frame_time = GetFrameTime() * 1000.0;
             DrawText(TextFormat("Simulation Took: %.2f ms", scene.sim_time), 20, 60, 20, LIME);
@@ -147,7 +147,7 @@ int main() {
         });
 
     ecs.system<Scene>("HandleTimestepControl")
-        .kind(graphics::phase_post_render)
+        .kind(graphics::PostRender)
         .each([](flecs::iter& it, size_t, Scene& scene) {
             float logValue = systems::LinearToLog(scene.frequency_slider, scene.min_frequency, scene.max_frequency);
 

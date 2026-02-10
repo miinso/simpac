@@ -206,7 +206,7 @@ int main () {
 
     ecs.system<const Position, const Orientation> ("draw_physics_mesh")
     .with<RigidBody> ()
-    .kind (graphics::phase_on_render)
+    .kind (graphics::OnRender)
     .each ([&] (const Position& x, const Orientation& q) {
         // draw physics mesh
         // DrawCube(e2r(x.value), q.value.w(), 1, 1, BLUE);
@@ -226,7 +226,7 @@ int main () {
     .system<const Position, const Orientation, const Mesh0> (
     "draw_physics_mesh2")
     .with<RigidBody> ()
-    .kind (graphics::phase_on_render)
+    .kind (graphics::OnRender)
     .each ([&] (flecs::entity e, const Position& x, const Orientation& q, const Mesh0& mesh0) {
         // draw physics mesh
         // DrawCube(e2r(x.value), q.value.w(), 1, 1, BLUE);
@@ -243,7 +243,7 @@ int main () {
 
     // ecs.system<const Position, const Orientation>("draw_render_mesh")
     //     .with<RigidBody>()
-    //     .kind(graphics::phase_on_render)
+    //     .kind(graphics::OnRender)
     //     .each([&](const Position& x, const Orientation q) {
     //         // draw render mesh
     //         auto angle = 2.0 * acos(q.value.w());
@@ -257,7 +257,7 @@ int main () {
 
     ecs.system<const Position, const Mass> ("draw mass info")
     .with<RigidBody> ()
-    .kind (graphics::phase_post_render)
+    .kind (graphics::PostRender)
     .each ([] (const Position& x, const Mass& m) {
         Vector3 textPos = e2r (x.value);
         textPos.y += 0.2f;
@@ -271,7 +271,7 @@ int main () {
     });
 
     ecs.system<Constraint> ("draw position constraint")
-    .kind (graphics::phase_on_render)
+    .kind (graphics::OnRender)
     .each ([] (const Constraint& c) {
         auto e1 = c.e1;
         auto e2 = c.e2;
@@ -292,7 +292,7 @@ int main () {
         DrawCylinderEx (e2r (r1_wc), e2r (r2_wc), 0.01, 0.01, 5, color);
     });
 
-    ecs.system ("DrawTimingInfo").kind (graphics::phase_post_render).run ([] (flecs::iter& it) {
+    ecs.system ("DrawTimingInfo").kind (graphics::PostRender).run ([] (flecs::iter& it) {
         const auto& scene = it.world ().get<Scene> ();
 
         Font font = graphics::get_font();
@@ -312,7 +312,7 @@ int main () {
 
     // key input
 
-    ecs.system ("key handle").kind (graphics::phase_pre_render).run ([&] (flecs::iter& it) {
+    ecs.system ("key handle").kind (graphics::PreRender).run ([&] (flecs::iter& it) {
         if (IsKeyDown (KEY_SPACE)) {
             // throw_object (ecs);
         }

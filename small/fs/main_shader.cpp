@@ -112,9 +112,9 @@ int main() {
     shader_entity.set<ShaderC>(sc);
 
     // file watcher system
-    ecs.system<ShaderC>().kind(graphics::phase_pre_render).each(update_shader_system);
+    ecs.system<ShaderC>().kind(graphics::PreRender).each(update_shader_system);
 
-    ecs.system<const ShaderC>("draw_shader").kind(graphics::phase_post_render).each([](const ShaderC& shader) {
+    ecs.system<const ShaderC>("draw_shader").kind(graphics::PostRender).each([](const ShaderC& shader) {
         if (!IsShaderValid(shader.shader)) {
             // fallback to drawing without shader
             DrawRectangle(0, 0, 688, 344, WHITE);

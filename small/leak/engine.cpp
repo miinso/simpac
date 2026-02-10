@@ -54,7 +54,7 @@ int main() {
     graphics::init(world);
     graphics::init_window(800, 600, "Leak Engine");
 
-    world.system("DrawOverlay").kind(graphics::phase_post_render).run([](flecs::iter &it) {
+    world.system("DrawOverlay").kind(graphics::PostRender).run([](flecs::iter &it) {
         static int counter = 0;
         Vector2 m = GetMousePosition();
         DrawText(TextFormat("Hello from engine: %i", counter++), 20, 40, 20, DARKGREEN);

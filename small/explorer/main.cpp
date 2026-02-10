@@ -48,10 +48,10 @@ int main() {
     cam_pos.x = 6.0f;
     cam_pos.y = 5.0f;
     cam_pos.z = 6.0f;
-    graphics::create_camera(world, "MainCamera", cam_pos, cam, true);
+    graphics::camera::create(world, "MainCamera", cam_pos, cam, true);
 
     world.system<const Spin>("DrawScene")
-        .kind(graphics::phase_on_render)
+        .kind(graphics::OnRender)
         .each([](const Spin& spin) {
             rlPushMatrix();
                 rlRotatef(spin.angle, 0, 1, 0);

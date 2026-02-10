@@ -55,7 +55,7 @@ int main() {
     // load some mesh
     // auto local_geom = entity.get_mut<LocalGeometry>();
 
-    ecs.system<MeshRenderer>().kind(graphics::phase_on_render).each([&](MeshRenderer& renderer) {
+    ecs.system<MeshRenderer>().kind(graphics::OnRender).each([&](MeshRenderer& renderer) {
         renderer.draw();
         renderer.draw_wireframe();
     });

@@ -222,23 +222,23 @@ int main() {
     // =========================================================================
 
     ecs.system<const Position, const Velocity, const Size, const BoidColor>("DrawBoids")
-        .kind(graphics::phase_on_render)
+        .kind(graphics::OnRender)
         .each(systems::draw_boid);
 
     ecs.system<const Obstacle>("DrawObstacles")
-        .kind(graphics::phase_on_render)
+        .kind(graphics::OnRender)
         .each([](const Obstacle& obstacle) { systems::draw_obstacle(obstacle); });
 
     ecs.system("DrawBounds")
-        .kind(graphics::phase_on_render)
+        .kind(graphics::OnRender)
         .run(systems::draw_bounds);
 
     ecs.system("VisualizeSpatialHash")
-        .kind(graphics::phase_on_render)
+        .kind(graphics::OnRender)
         .run(systems::visualize_spatial_hash);
 
     ecs.system("DisplayTimingInfo")
-        .kind(graphics::phase_post_render)
+        .kind(graphics::PostRender)
         .run([](flecs::iter& it) {
             auto& scene = it.world().get_mut<Scene>();
             scene.frame_time = GetFrameTime() * 1000.0;

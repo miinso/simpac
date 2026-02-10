@@ -111,23 +111,23 @@ int main() {
     // =========================================================================
 
     ecs.system<const Position, const ParticleProperties>("DrawParticles")
-        .kind(graphics::phase_on_render)
+        .kind(graphics::OnRender)
         .each(systems::draw_particles);
 
     ecs.system<const body, const trimesh>("render_body")
-        .kind(graphics::phase_on_render)
+        .kind(graphics::OnRender)
         .each([](const body& b, const trimesh& t) { systems::render_body(b, t); });
 
     ecs.system<DiskGenerator>("render_generator")
-        .kind(graphics::phase_on_render)
+        .kind(graphics::OnRender)
         .each([](const DiskGenerator& gen) { systems::render_generator(gen); });
 
     ecs.system<const aabb, const body>("RenderAABB")
-        .kind(graphics::phase_on_render)
+        .kind(graphics::OnRender)
         .each(systems::render_aabb);
 
     ecs.system<Scene>("DisplayTimingInfo")
-        .kind(graphics::phase_post_render)
+        .kind(graphics::PostRender)
         .each([](flecs::iter& it, size_t, Scene& scene) {
             scene.frame_time = GetFrameTime() * 1000.0;
             auto particle_query = it.world().query<const Particle>();

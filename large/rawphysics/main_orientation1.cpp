@@ -176,7 +176,7 @@ int main()
 	// OnRender
 	ecs.system<const Position, const Orientation>("draw rigidbody origin")
 	    .with<RigidBody>()
-	    .kind(graphics::phase_on_render)
+	    .kind(graphics::OnRender)
 	    .each([&](const Position &x, const Orientation &q) {
 		    auto aa = Eigen::AngleAxisd(q.value);
 		    DrawCircle3D(e2r(x.value), 0.2, e2r(aa.axis()), aa.angle() * RAD2DEG, RED);
@@ -184,7 +184,7 @@ int main()
 
 	ecs.system<const Position, const Orientation, const RenderMesh>("draw rigidbody render mesh")
 	    .with<RigidBody>()
-	    .kind(graphics::phase_on_render)
+	    .kind(graphics::OnRender)
 	    .each([](flecs::entity e, const Position &x, const Orientation &q, const RenderMesh &render_mesh) {
 		    auto aa = Eigen::AngleAxisd(q.value);
 		    DrawModelWiresEx(render_mesh.model, e2r(x.value), e2r(aa.axis()), aa.angle() * RAD2DEG, e2r(Vector3r::Ones()), BLACK);
@@ -192,7 +192,7 @@ int main()
 
 	ecs.system<const Position, const Orientation>("draw rigidbody frame")
 	    .with<RigidBody>()
-	    .kind(graphics::phase_on_render)
+	    .kind(graphics::OnRender)
 	    .each([](const Position &x, const Orientation &q) {
 		    float scale  = 0.5;
 		    auto  R      = q.value.toRotationMatrix();
@@ -205,7 +205,7 @@ int main()
 
 	// Flecs 4.1.1+: get<T>() returns reference, not pointer
 	ecs.system<Constraint>("draw orientation constraint")
-	    .kind(graphics::phase_on_render)
+	    .kind(graphics::OnRender)
 	    .each([](const Constraint &c) {
 		    auto e1 = c.e1;
 		    auto e2 = c.e2;
@@ -224,7 +224,7 @@ int main()
 	// PostRender
 	ecs.system<const Position, const Mass>("post draw rigidbody mass info")
 	    .with<RigidBody>()
-	    .kind(graphics::phase_post_render)
+	    .kind(graphics::PostRender)
 	    .each([](const Position &x, const Mass &m) {
 		    Vector3 textPos = e2r(x.value);
 		    textPos.y += 0.2f;
@@ -236,7 +236,7 @@ int main()
 		    DrawText(label, screenPos.x, screenPos.y, 20, BLUE);
 	    });
 
-	ecs.system("DrawTimingInfo").kind(graphics::phase_post_render).run([](flecs::iter &it) {
+	ecs.system("DrawTimingInfo").kind(graphics::PostRender).run([](flecs::iter &it) {
 		const auto& scene = it.world().get<Scene>();
 
 		Font font = graphics::get_font();
@@ -256,7 +256,7 @@ int main()
 
 	// key input
 	// Flecs 4.1.1+: get_mut<T>() returns reference, not pointer
-	ecs.system("key handle").kind(graphics::phase_pre_render).run([&](flecs::iter &it) {
+	ecs.system("key handle").kind(graphics::PreRender).run([&](flecs::iter &it) {
 		if (IsKeyDown(KEY_SPACE))
 		{
 			rb2.get_mut<AngularVelocity>().value.x() +=

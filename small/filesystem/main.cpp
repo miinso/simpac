@@ -57,7 +57,7 @@ int main() {
         });
 
     world.system("DrawOverlay")
-        .kind(graphics::phase_post_render)
+        .kind(graphics::PostRender)
         .run([&](flecs::iter&) {
             DrawText("Project asset:", 20, 40, 20, DARKGRAY);
             DrawText(asset_text.c_str(), 20, 70, 20, DARKGREEN);

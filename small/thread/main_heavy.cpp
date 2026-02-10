@@ -132,7 +132,7 @@ int main() {
 
     ecs.system<Position>("DrawParticle")
         .with<Particle>()
-        .kind(graphics::phase_on_render)
+        .kind(graphics::OnRender)
         .each([](Position& x) {
             systems::draw_particle(x);
         });
@@ -141,7 +141,7 @@ int main() {
     auto q_constraint = ecs.query_builder().with<Constraint>().cached().build();
 
     ecs.system("DrawStats")
-        .kind(graphics::phase_post_render)
+        .kind(graphics::PostRender)
         .run([&](flecs::iter& it) {
             auto constraint_count = q_constraint.count();
             auto particle_count = q_particle.count();

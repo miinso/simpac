@@ -208,7 +208,7 @@ int main() {
 
     // Flecs 4.1.1+: get_mut<T>() returns reference, not pointer
     ecs.system<DistanceConstraint>("draw_distance_constraint")
-        .kind(graphics::phase_on_render)
+        .kind(graphics::OnRender)
         .each([](DistanceConstraint& c) {
             auto e1 = c.e1;
             auto e2 = c.e2;
@@ -234,7 +234,7 @@ int main() {
 
     ecs.system<const Position, const Mass>("draw_particle")
         .with<Particle>()
-        .kind(graphics::phase_on_render)
+        .kind(graphics::OnRender)
         .each([](const Position& x, const Mass m) {
             DrawSphere(e2r(x.value), 0.05 * std::pow(m.value, 1.0f / 3.0f), BLUE);
             // DrawSphereWires(e2r(x.value), 0.05 * std::pow(m.value, 1.0f / 3.0f), 16, 16, BLUE);
@@ -242,7 +242,7 @@ int main() {
 
     ecs.system<const Position, const Mass>("draw mass info")
         .with<Particle>()
-        .kind(graphics::phase_post_render)
+        .kind(graphics::PostRender)
         .each([](const Position& x, const Mass& m) {
             Vector3 textPos = e2r(x.value);
             textPos.y += 0.2f;
@@ -257,7 +257,7 @@ int main() {
 
     // Flecs 4.1.1+: get_mut<T>() returns reference, not pointer
     ecs.system<DistanceConstraint>("draw_constraint_lambda")
-        .kind(graphics::phase_post_render)
+        .kind(graphics::PostRender)
         .each([](DistanceConstraint& c) {
             auto e1 = c.e1;
             auto e2 = c.e2;
@@ -277,7 +277,7 @@ int main() {
             DrawText(label, screenPos.x, screenPos.y, 20, BLUE);
         });
 
-    ecs.system("DrawTimingInfo").kind(graphics::phase_post_render).run([](flecs::iter& it) {
+    ecs.system("DrawTimingInfo").kind(graphics::PostRender).run([](flecs::iter& it) {
         const auto& scene = it.world().get<Scene>();
 
         Font font = graphics::get_font();

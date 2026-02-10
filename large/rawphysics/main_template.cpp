@@ -16,7 +16,7 @@ int main() {
     graphics::init(ecs);
     graphics::init_window(640, 480, "Physics Simulator");
 
-    ecs.system("DrawTimingInfo").kind(graphics::phase_post_render).run([](flecs::iter& it) {
+    ecs.system("DrawTimingInfo").kind(graphics::PostRender).run([](flecs::iter& it) {
         
         DrawText("If tilapia can do it, so can you!!!", 200, 200, 40, DARKGREEN);
         DrawText(TextFormat("Global Time: %.2f", global_time), 20, 40, 20, BLUE);

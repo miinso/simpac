@@ -235,7 +235,7 @@ int main() {
             UpdateLight(shader, lights[i]);
     });
 
-    ecs.system("draw 3d").kind(graphics::phase_on_render).run([&](flecs::iter& it) {
+    ecs.system("draw 3d").kind(graphics::OnRender).run([&](flecs::iter& it) {
         // ClearBackground(BLACK);
         // BeginShaderMode(shader);
         // Set floor model texture tiling and emissive color parameters on shader
@@ -290,7 +290,7 @@ int main() {
         }
     });
 
-    ecs.system("DrawTimingInfo").kind(graphics::phase_post_render).run([&](flecs::iter& it) {
+    ecs.system("DrawTimingInfo").kind(graphics::PostRender).run([&](flecs::iter& it) {
         DrawText("Toggle lights: [1][2][3][4]", 10, 40, 20, LIGHTGRAY);
 
         DrawText(TextFormat("elapsed: %f", global_time), 10, 90, 20, GREEN);

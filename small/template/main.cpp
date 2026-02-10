@@ -10,7 +10,7 @@ int main() {
     graphics::init_window(800, 600, "Template");
 
     world.system("DrawOverlay")
-        .kind(graphics::phase_post_render)
+        .kind(graphics::PostRender)
         .run([](flecs::iter&) {
             DrawText("Hello from template", 20, 40, 20, DARKGREEN);
         });

@@ -175,7 +175,7 @@ int main() {
     // Render systems
     // =========================================================================
     ecs.system("DrawModels")
-        .kind(graphics::phase_on_render)
+        .kind(graphics::OnRender)
         .run([&](flecs::iter& it) {
             // Floor
             SetShaderValue(shader, textureTilingLoc, &floorTextureTiling, SHADER_UNIFORM_VEC2);
@@ -197,7 +197,7 @@ int main() {
         });
 
     ecs.system<Light, GizmoTransform, const LightShaderLocs>("DrawLights")
-        .kind(graphics::phase_on_render)
+        .kind(graphics::OnRender)
         .each([&](Light& light, GizmoTransform& gt, const LightShaderLocs& locs) {
             // Draw light visualization
             systems::draw_light(light);
@@ -209,7 +209,7 @@ int main() {
         });
 
     ecs.system("DrawUI")
-        .kind(graphics::phase_post_render)
+        .kind(graphics::PostRender)
         .run([&](flecs::iter& it) {
             auto& scene = it.world().get_mut<Scene>();
             scene.elapsed += it.delta_time();

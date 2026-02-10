@@ -240,7 +240,7 @@ int main() {
         .set(ui::UiTextBuffer{text_input, (int)sizeof(text_input)})
         .set(ui::UiResult{});
 
-    ui::register_layout_system(world, graphics::phase_pre_render);
+    ui::register_layout_system(world, graphics::PreRender);
 
     world.system("UpdateDemoState")
         .kind(flecs::PostUpdate)
@@ -304,7 +304,7 @@ int main() {
         });
 
     world.system("DrawDemoUi")
-        .kind(graphics::phase_post_render)
+        .kind(graphics::PostRender)
         .run([=](flecs::iter& it) {
             auto& state = it.world().get_mut<DemoState>();
 

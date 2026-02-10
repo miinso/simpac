@@ -20,8 +20,8 @@ int main() {
     graphics::init(ecs);
     graphics::init_window(800, 800, "Physics Simulator");
 
-    // graphics2: use graphics::phase_post_render instead of graphics::PostRender
-    ecs.system("DrawTimingInfo").kind(graphics::phase_post_render).run([](flecs::iter& it) {
+    // graphics2: use graphics::PostRender instead of graphics::PostRender
+    ecs.system("DrawTimingInfo").kind(graphics::PostRender).run([](flecs::iter& it) {
         DrawText("If tilapia can do it, so can you!!!", 200, 200, 40, DARKGREEN);
     });
 

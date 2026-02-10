@@ -69,12 +69,12 @@ int main() {
             .set<MeshFilter>(filter)
             .add<MeshRenderer>();
 
-    ecs.system<MeshRenderer>().kind(graphics::phase_on_render).each([&](MeshRenderer& renderer) {
+    ecs.system<MeshRenderer>().kind(graphics::OnRender).each([&](MeshRenderer& renderer) {
         renderer.draw();
         renderer.draw_wireframe();
     });
 
-    ecs.system<MeshFilter>().kind(graphics::phase_on_render).each([&](MeshFilter& mesh) {
+    ecs.system<MeshFilter>().kind(graphics::OnRender).each([&](MeshFilter& mesh) {
         auto& v = mesh.local_vertices.getVertices();
         auto& v2 = mesh.world_vertices.getVertices();
         for (int i = 0; i < mesh.world_vertices.size(); ++i) {

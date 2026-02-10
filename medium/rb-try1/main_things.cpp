@@ -278,7 +278,7 @@ int main() {
     // OnRender
     ecs.system<const Geometry>("draw_geometry_rb")
         .with<RigidBody>()
-        .kind(graphics::phase_on_render)
+        .kind(graphics::OnRender)
         .each([mat1](const Geometry& geom) {
             DrawMesh(geom.renderable, mat1, MatrixIdentity());
 
@@ -305,7 +305,7 @@ int main() {
             }
         });
 
-    ecs.system<const AABB>("draw_aabb").kind(graphics::phase_on_render).each([](const AABB& aabb) {
+    ecs.system<const AABB>("draw_aabb").kind(graphics::OnRender).each([](const AABB& aabb) {
         BoundingBox bbox;
         bbox.min = {(float)aabb.aabb_.m_p[0][0], (float)aabb.aabb_.m_p[0][1], (float)aabb.aabb_.m_p[0][2]};
         bbox.max = {(float)aabb.aabb_.m_p[1][0], (float)aabb.aabb_.m_p[1][1], (float)aabb.aabb_.m_p[1][2]};
@@ -339,7 +339,7 @@ int main() {
         });
     });
 
-    ecs.system<const BVH>("draw_bvh").kind(graphics::phase_on_render).each([](const BVH& bvh) {
+    ecs.system<const BVH>("draw_bvh").kind(graphics::OnRender).each([](const BVH& bvh) {
         if (!bvh.initialized) return;
 
         Color colors[] = {{255, 0, 0, 50}, {0, 255, 0, 50}, {0, 0, 255, 50}};
@@ -359,7 +359,7 @@ int main() {
         bvh.bvh_.traverse_depth_first(predicate, callback);
     });
 
-    ecs.system<const Contact>("draw_contact").kind(graphics::phase_on_render).each([](const Contact& contact) {
+    ecs.system<const Contact>("draw_contact").kind(graphics::OnRender).each([](const Contact& contact) {
         const auto& x = contact.x_world;
         const auto& cp = contact.closest_point_world;
         const auto& n = contact.normal_world;

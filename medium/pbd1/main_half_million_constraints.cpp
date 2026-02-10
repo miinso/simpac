@@ -87,10 +87,10 @@ int main() {
         .each(pbd_particle_update_velocity);
 
     //////// drawings below
-    // graphics2: use graphics::phase_on_render instead of graphics::OnRender
+    // graphics2: use graphics::OnRender instead of graphics::OnRender
     ecs.system<Position>("draw_particle")
         .with<Particle>()
-        .kind(graphics::phase_on_render)
+        .kind(graphics::OnRender)
         .each([](Position& x) {
             // DrawSphere({x.value.x(), x.value.y(), x.value.z()}, 0.05, BLUE);
             DrawPoint3D({x.value.x(), x.value.y(), x.value.z()}, BLUE);
@@ -99,8 +99,8 @@ int main() {
     auto q_particle = ecs.query_builder().with<Particle>().cached().build();
     auto q_constraint = ecs.query_builder().with<Constraint>().cached().build();
 
-    // graphics2: use graphics::phase_post_render instead of graphics::PostRender
-    ecs.system("DrawTimingInfo").kind(graphics::phase_post_render).run([&](flecs::iter& it) {
+    // graphics2: use graphics::PostRender instead of graphics::PostRender
+    ecs.system("DrawTimingInfo").kind(graphics::PostRender).run([&](flecs::iter& it) {
         auto constraint_count = q_constraint.count();
         auto particle_count = q_particle.count();
 

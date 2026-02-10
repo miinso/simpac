@@ -123,33 +123,33 @@ int main() {
     // =========================================================================
 
     ecs.system<DistanceConstraint>("DrawConstraints")
-        .kind(graphics::phase_on_render)
+        .kind(graphics::OnRender)
         .each([](DistanceConstraint& c) {
             systems::draw_constraint(c);
         });
 
     ecs.system<const Position, const Mass>("DrawParticles")
         .with<Particle>()
-        .kind(graphics::phase_on_render)
+        .kind(graphics::OnRender)
         .each([](const Position& x, const Mass& m) {
             systems::draw_particle(x, m);
         });
 
     ecs.system<const Position, const Mass>("DrawMassInfo")
         .with<Particle>()
-        .kind(graphics::phase_post_render)
+        .kind(graphics::PostRender)
         .each([](const Position& x, const Mass& m) {
             systems::draw_mass_info(x, m);
         });
 
     ecs.system<DistanceConstraint>("DrawConstraintLambda")
-        .kind(graphics::phase_post_render)
+        .kind(graphics::PostRender)
         .each([](DistanceConstraint& c) {
             systems::draw_constraint_lambda(c);
         });
 
     ecs.system("DrawTimingInfo")
-        .kind(graphics::phase_post_render)
+        .kind(graphics::PostRender)
         .run(systems::draw_timing_info);
 
     // =========================================================================
