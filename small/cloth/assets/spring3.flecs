@@ -7,7 +7,7 @@ Config.Scene {
 }
 
 Config.Solver {
-  cg_max_iter { i32: { 80 } }
+  cg_max_iter { i32: { 100 } }
   cg_tolerance { f32: { 0.00001 } } // script doesn't accept scientific notation
 }
 

@@ -2,7 +2,13 @@ load("@emsdk//emscripten_toolchain:wasm_rules.bzl", "wasm_cc_binary")
 load("@rules_cc//cc:defs.bzl", "cc_binary")
 load("@rules_cc//cc:defs.bzl", "cc_library")
 
+# per-file embed opts keep wasm link cache invalidation working on asset edits.
 assets_files = glob(["assets/**"])
+assets_embed_linkopts = [
+    opt
+    for f in assets_files
+    for opt in ["--embed-file", "$(location %s)@%s" % (f, f)]
+]
 
 filegroup(
     name = "assets",
@@ -72,7 +78,8 @@ cc_binary(
     data = [
         ":assets",  # per-directory assets
         "//:resources",  # root assets
-    ],
+    ] + assets_files,
+    additional_linker_inputs = ["//:resources"] + assets_files,
     linkopts = select({
         "@platforms//os:emscripten": [
             # with known memory usage and expected size
@@ -109,9 +116,7 @@ cc_binary(
             "--embed-file resources/fonts/generic.png@resources/fonts/generic.png",
             "--embed-file resources/fonts/tiny.png@resources/fonts/tiny.png",
             # "--embed-file small/cloth/scenes/default.flecs@small/cloth/scenes/default.flecs",
-            "--embed-file %s/assets@assets" % package_name(), # embed all under ./assets
-            # FIXME: changing asset (script e.g.) (unlike sources) doesn't invoke new build.. what do i dooo
-        ],
+        ] + assets_embed_linkopts,
         "//conditions:default": [],
     }),
     deps = [
