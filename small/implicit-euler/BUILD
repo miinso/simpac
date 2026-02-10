@@ -12,13 +12,23 @@ filegroup(
 cc_binary(
     name = "main",
     srcs = [
-        "cloth.h",
         "components.h",
+        "components/base.h",
+        "components/core.h",
+        "components/render.h",
+        "components/render_install.h",
+        "components/solver.h",
+        "physics.h",
+        "physics/integration.h",
+        "physics/spring.h",
         "queries.h",
-        "main.cpp",
+        "vars.h",
+        "main_implicit.cpp",
         "systems.h",
-        "systems/physics.h",
-        "systems/rendering.h",
+        "systems/render.h",
+        "systems/render_draw.h",
+        "systems/render_gpu.h",
+        "systems/render_install.h",
     ],
     copts = select({
         "@platforms//os:emscripten": [
