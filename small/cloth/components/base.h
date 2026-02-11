@@ -125,4 +125,3 @@ inline void register_scalar(flecs::world& ecs, flecs::entity_t scalar_meta) {
             });
     }
 }
-

@@ -49,6 +49,7 @@ struct ParticleState {
         Selected = 1 << 1,
         Disabled = 1 << 2,
         Pinned = 1 << 3,
+        Dragged = 1 << 4,
     };
 
     uint32_t flags = None;
@@ -58,7 +59,8 @@ struct ParticleState {
             .bit("Hovered", (uint32_t)ParticleState::Hovered)
             .bit("Selected", (uint32_t)ParticleState::Selected)
             .bit("Disabled", (uint32_t)ParticleState::Disabled)
-            .bit("Pinned", (uint32_t)ParticleState::Pinned);
+            .bit("Pinned", (uint32_t)ParticleState::Pinned)
+            .bit("Dragged", (uint32_t)ParticleState::Dragged);
     }
 };
 

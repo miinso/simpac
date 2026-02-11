@@ -12,10 +12,10 @@
 namespace graphics::systems {
 
 inline void install_pipeline_systems(flecs::world& ecs) {
-    // camera update in OnLoad (before rendering)
+    // camera update in PreRender (before render passes)
     ecs.system<Position, Camera>("graphics::update_camera")
         .with<ActiveCamera>()
-        .kind(flecs::OnLoad)
+        .kind(PreRender)
         .each([](Position& pos, Camera& cam) {
             update_camera_controls(pos, cam);
         });
@@ -23,7 +23,7 @@ inline void install_pipeline_systems(flecs::world& ecs) {
     // sync active camera to raylib before rendering
     ecs.system<const Position, const Camera>("graphics::sync_camera")
         .with<ActiveCamera>()
-        .kind(flecs::PostUpdate)
+        .kind(PreRender)
         .each([](const Position& pos, const Camera& cam) {
             detail::raylib_camera = to_raylib(pos, cam);
         });

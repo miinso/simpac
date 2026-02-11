@@ -187,7 +187,7 @@ int main() {
 
     // non-GL singletons
     ecs.ensure<Solver>();
-    ecs.set<MousePickState>({});
+    ecs.set<ParticleInteractionState>({});
 
     // 3) Services
     graphics::init(ecs, {800, 600, "Base Simulator"});
@@ -208,6 +208,13 @@ int main() {
         .event(flecs::OnRemove)
         .each([](flecs::iter& it, size_t, Spring&) {
             state::dirty.get_mut<bool>() = true;
+        });
+
+    // mark scene dirty when particles are added/removed
+    ecs.observer<Particle>()
+        .event(flecs::OnAdd)
+        .each([](flecs::entity e, const Particle&) {
+            e.add<ParticleState>();
         });
 
     // mark scene dirty when particles are added/removed

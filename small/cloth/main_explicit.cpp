@@ -68,7 +68,7 @@ int main() {
     props::paused.set<bool>(false);
 
     // non-GL singletons
-    ecs.set<MousePickState>({});
+    ecs.set<ParticleInteractionState>({});
 
     // 3) Services
     graphics::init(ecs, {800, 600, "Base Simulator"});
@@ -85,6 +85,7 @@ int main() {
         .event(flecs::OnAdd)
         .each([](flecs::entity e, const Particle&) {
             e.add<Force>();
+            e.add<ParticleState>();
         });
 
     // mark scene dirty when particles are added/removed

@@ -82,6 +82,11 @@ namespace graphics::shim {
 
 } // namespace graphics::shim
 
+namespace graphics::input {
+    // when true, camera/input consumers should ignore left-mouse drag this frame.
+    inline bool capture_mouse_left = false;
+}
+
 // override raylib functions with our shim
 #if defined(__EMSCRIPTEN__)
 // undefine just in case (though usually functions aren't macros)

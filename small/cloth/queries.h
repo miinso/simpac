@@ -7,7 +7,7 @@ namespace queries {
 
 inline flecs::query<const Position> particle_query;
 inline flecs::query<const Spring> spring_query;
-inline flecs::query<const Position, ParticleState> particle_pick_query;
+inline flecs::query<const Position, const Mass, ParticleState> particle_pick_query;
 
 // build cached query handles once, after component registration.
 inline void seed(flecs::world& ecs) {
@@ -20,7 +20,7 @@ inline void seed(flecs::world& ecs) {
         .cached()
         .build();
 
-    particle_pick_query = ecs.query_builder<const Position, ParticleState>()
+    particle_pick_query = ecs.query_builder<const Position, const Mass, ParticleState>()
         .with<Particle>()
         .cached()
         .build();

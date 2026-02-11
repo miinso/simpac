@@ -7,6 +7,8 @@
 
 #include <cstddef>
 
+#include "input.h"
+
 namespace graphics {
 
 // ============================================================================
@@ -149,9 +151,9 @@ inline void update_camera_controls(Position& pos, Camera& cam) {
         },
         // Rotation: mouse drag or arrow keys
         {
-            GetMouseDelta().x * IsMouseButtonDown(MOUSE_LEFT_BUTTON) * cam.rotation_speed +
+            GetMouseDelta().x * (IsMouseButtonDown(MOUSE_LEFT_BUTTON) && !input::capture_mouse_left) * cam.rotation_speed +
                 (IsKeyDown(KEY_RIGHT) - IsKeyDown(KEY_LEFT)) * 1.5f,
-            GetMouseDelta().y * IsMouseButtonDown(MOUSE_LEFT_BUTTON) * cam.rotation_speed +
+            GetMouseDelta().y * (IsMouseButtonDown(MOUSE_LEFT_BUTTON) && !input::capture_mouse_left) * cam.rotation_speed +
                 (IsKeyDown(KEY_DOWN) - IsKeyDown(KEY_UP)) * 1.5f,
             0.0f
         },

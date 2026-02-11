@@ -26,15 +26,18 @@ void main() {
     int flags = int(v_state + 0.5);
     vec3 color = u_color;
 
+    float log10m = log2(max(v_mass, 1.0)) / 3.321928;
+    float tint = 1.0 - clamp(log10m / 10.0, 0.0, 1.0); // 1->1.0, 1e10->0.0
+    color *= tint;
+
     // check particle state
-    if ((flags & 2) != 0) {
+    if ((flags & 16) != 0) {
+        color = mix(color, vec3(0.25, 1.0, 1.0), 0.9); // dragged
+    } else if ((flags & 2) != 0) {
         color = mix(color, vec3(1.0, 0.6, 0.2), 0.7); // selected
     } else if ((flags & 1) != 0) {
         color = mix(color, vec3(1.0, 0.95, 0.2), 0.6); // hovered
     }
-    float log10m = log2(max(v_mass, 1.0)) / 3.321928;
-    float tint = 1.0 - clamp(log10m / 10.0, 0.0, 1.0); // 1->1.0, 1e10->0.0
-    color *= tint;
     color *= lighting;
     fragColor = vec4(color, 1.0);
 }
@@ -45,4 +48,5 @@ void main() {
 //     Selected = 1 << 1,
 //     Disabled = 1 << 2,
 //     Pinned = 1 << 3,
+//     Dragged = 1 << 4,
 // };
