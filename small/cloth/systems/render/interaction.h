@@ -179,14 +179,13 @@ inline void pick_particles(flecs::iter& it) {
     });
 }
 
-// drag stage (mode: kinematic):
+// drag stage (kinematic):
 // - temporarily pins dragged particle
 // - writes position directly to cursor target
 inline void drag_particles_kinematic(flecs::iter& it) {
     auto& pick = it.world().get_mut<ParticleInteractionState>();
-    // mode and liveness guards keep this system no-op unless actively dragging
+    // liveness guards keep this system no-op unless actively dragging
     if (!pick.dragging || !pick.pressed.is_alive()) return;
-    if (pick.drag_mode != ParticleInteractionState::Kinematic) return;
 
     if (!pick.drag_added_pin) {
         pick.pressed.add<IsPinned>();
@@ -204,14 +203,13 @@ inline void drag_particles_kinematic(flecs::iter& it) {
     detail::set_velocity_zero(pick.pressed);
 }
 
-// drag stage (mode: virtual spring):
+// drag stage (virtual spring):
 // - applies F = k(x_target - x) - d v
 // - keeps particle unpinned
-inline void drag_particles_virtual_spring(flecs::iter& it) {
+inline void drag_particles_spring(flecs::iter& it) {
     auto& pick = it.world().get_mut<ParticleInteractionState>();
-    // mode and liveness guards keep this system no-op unless actively dragging
+    // liveness guards keep this system no-op unless actively dragging
     if (!pick.dragging || !pick.pressed.is_alive()) return;
-    if (pick.drag_mode != ParticleInteractionState::VirtualSpring) return;
 
     if (pick.drag_added_pin) {
         detail::release_drag_pin(pick);

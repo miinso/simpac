@@ -5,11 +5,6 @@
 #include <vector>
 
 struct ParticleInteractionState {
-    enum DragMode {
-        Kinematic = 0,
-        VirtualSpring = 1,
-    };
-
     // NOTE: for now we store only single entity but this can change
     flecs::entity hovered;
     flecs::entity selected;
@@ -33,7 +28,6 @@ struct ParticleInteractionState {
     vec3f drag_offset = {0.0f, 0.0f, 0.0f};
     bool drag_added_pin = false;
 
-    int drag_mode = VirtualSpring;
     float virtual_spring_k = 800.0f;
     float virtual_spring_d = 24.0f;
 

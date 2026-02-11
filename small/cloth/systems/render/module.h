@@ -71,12 +71,12 @@ inline void install_render_systems(flecs::world& ecs) {
     ecs.system("graphics::DragParticlesKinematic")
         .kind(flecs::OnLoad)
         .run(interaction::drag_particles_kinematic)
-        .disable(0);
+        .disable();
 
-    ecs.system("graphics::DragParticlesVirtualSpring")
+    ecs.system("graphics::DragParticlesSpring")
         .kind(flecs::OnLoad)
-        .run(interaction::drag_particles_virtual_spring)
-        .disable(0);
+        .run(interaction::drag_particles_spring)
+        .disable();
 }
 
 } // namespace systems
