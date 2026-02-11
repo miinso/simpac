@@ -3,7 +3,7 @@
 // convenience header - includes all system implementations
 #include "vars.h"
 #include "queries.h"
-#include "systems/render.h"
+#include "systems/render/module.h"
 
 // verb convention:
 // register_* : register types/components/meta only.

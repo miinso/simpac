@@ -22,7 +22,6 @@ cc_library(
         "components/base.h",
         "components/core.h",
         "components/render.h",
-        "components/render_install.h",
         "components/solver.h",
         "physics.h",
         "physics/integration.h",
@@ -30,10 +29,10 @@ cc_library(
         "queries.h",
         "vars.h",
         "systems.h",
-        "systems/render.h",
-        "systems/render_draw.h",
-        "systems/render_gpu.h",
-        "systems/render_install.h",
+        "systems/render/module.h",
+        "systems/render/draw.h",
+        "systems/render/gpu.h",
+        "systems/render/interaction.h",
     ],
     copts = select({
         "@platforms//os:emscripten": [

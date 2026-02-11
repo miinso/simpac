@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../components.h"
-#include "../queries.h"
+#include "../../components.h"
+#include "../../queries.h"
 #include "graphics.h"
 
 #include <raylib.h>
@@ -17,8 +17,6 @@
 #endif
 
 #include <vector>
-
-#include "par_shapes.h"
 
 namespace render {
 namespace detail {
@@ -40,37 +38,6 @@ inline void draw_elements_instanced(GLenum mode, GLsizei count, GLenum type, con
 }
 
 } // namespace detail
-
-inline void generate_icosphere(std::vector<float>& vertices, std::vector<unsigned int>& indices, int subdivisions = 1) {
-    par_shapes_mesh* mesh = par_shapes_create_subdivided_sphere(subdivisions);
-
-    vertices.clear();
-    vertices.reserve(mesh->npoints * 6);
-
-    for (int i = 0; i < mesh->npoints; ++i) {
-        vertices.push_back(mesh->points[i * 3 + 0]);
-        vertices.push_back(mesh->points[i * 3 + 1]);
-        vertices.push_back(mesh->points[i * 3 + 2]);
-
-        if (mesh->normals) {
-            vertices.push_back(mesh->normals[i * 3 + 0]);
-            vertices.push_back(mesh->normals[i * 3 + 1]);
-            vertices.push_back(mesh->normals[i * 3 + 2]);
-        } else {
-            vertices.push_back(mesh->points[i * 3 + 0]);
-            vertices.push_back(mesh->points[i * 3 + 1]);
-            vertices.push_back(mesh->points[i * 3 + 2]);
-        }
-    }
-
-    indices.clear();
-    indices.reserve(mesh->ntriangles * 3);
-    for (int i = 0; i < mesh->ntriangles * 3; ++i) {
-        indices.push_back(mesh->triangles[i]);
-    }
-
-    par_shapes_free_mesh(mesh);
-}
 
 inline void upload_spring_positions_to_gpu(const flecs::world& ecs, SpringRenderer& gpu) {
     if (gpu.shader_id == 0) return;
