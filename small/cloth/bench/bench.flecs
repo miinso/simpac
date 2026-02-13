@@ -1,0 +1,117 @@
+Config.Scene {
+  dt { f32: { 1 / 60 } }
+  gravity { vec3f: { x: 0, y: -9.81, z: 0 } }
+  paused { bool: { false } }
+}
+
+Config.Solver {
+  cg_max_iter { i32: { 100 } }
+  cg_tolerance { f32: { 0.00001 } }
+}
+
+const width = __WIDTH__
+const height = __HEIGHT__
+const spacing = 0.9
+const mass = 1.0
+const k_struct = 1200.0
+const k_shear = 1200.0
+const k_bending = 360.0
+const k_d = 0.12
+const start_x = -($width - 1) * $spacing * 0.5
+const start_y = 3.0
+const start_z = 0.0
+
+for y in 0..$height {
+  for x in 0..$width {
+    "p_{$y}_{$x}" {
+      Position: { x: $start_x + $x * $spacing, y: $start_y, z: $start_z - $y * $spacing }
+      Velocity: { x: 0, y: 0, z: 0 }
+      Mass: { $mass }
+      ParticleIndex: { $y * $width + $x }
+      Particle
+    }
+  }
+}
+
+for x in 0..$width {
+  "p_0_{$x}" { IsPinned }
+}
+
+for y in 0..$height {
+  for x in 0..($width - 1) {
+    "s_h_{$y}_{$x}" {
+      Spring: {
+        e1: "p_{$y}_{$x}",
+        e2: "p_{$y}_{$x + 1}",
+        rest_length: $spacing,
+        k_s: $k_struct,
+        k_d: $k_d
+      }
+    }
+  }
+}
+
+for y in 0..($height - 1) {
+  for x in 0..$width {
+    "s_v_{$y}_{$x}" {
+      Spring: {
+        e1: "p_{$y}_{$x}",
+        e2: "p_{$y + 1}_{$x}",
+        rest_length: $spacing,
+        k_s: $k_struct,
+        k_d: $k_d
+      }
+    }
+  }
+}
+
+for y in 0..($height - 1) {
+  for x in 0..($width - 1) {
+    "s_d1_{$y}_{$x}" {
+      Spring: {
+        e1: "p_{$y}_{$x}",
+        e2: "p_{$y + 1}_{$x + 1}",
+        rest_length: $spacing * 1.41421356,
+        k_s: $k_shear,
+        k_d: $k_d
+      }
+    }
+    "s_d2_{$y}_{$x}" {
+      Spring: {
+        e1: "p_{$y + 1}_{$x}",
+        e2: "p_{$y}_{$x + 1}",
+        rest_length: $spacing * 1.41421356,
+        k_s: $k_shear,
+        k_d: $k_d
+      }
+    }
+  }
+}
+
+for y in 0..$height {
+  for x in 0..($width - 2) {
+    "s_bh_{$y}_{$x}" {
+      Spring: {
+        e1: "p_{$y}_{$x}",
+        e2: "p_{$y}_{$x + 2}",
+        rest_length: $spacing * 2.0,
+        k_s: $k_bending,
+        k_d: $k_d * 0.5
+      }
+    }
+  }
+}
+
+for y in 0..($height - 2) {
+  for x in 0..$width {
+    "s_bv_{$y}_{$x}" {
+      Spring: {
+        e1: "p_{$y}_{$x}",
+        e2: "p_{$y + 2}_{$x}",
+        rest_length: $spacing * 2.0,
+        k_s: $k_bending,
+        k_d: $k_d * 0.5
+      }
+    }
+  }
+}

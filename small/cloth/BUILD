@@ -68,6 +68,22 @@ cc_library(
     ],
 )
 
+# regression benchmark
+cc_binary(
+    name = "bench",
+    srcs = [
+        "bench/bench.h",
+        "bench/bench.cpp",
+    ],
+    data = [
+        "bench/bench.flecs",
+    ],
+    deps = [
+        ":sim",
+        "@google_benchmark//:benchmark",
+    ],
+)
+
 ### wasm
 cc_binary(
     name = "main",

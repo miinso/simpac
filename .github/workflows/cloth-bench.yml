@@ -1,0 +1,78 @@
+name: cloth-bench
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cloth-bench-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup bazel with cache
+        uses: bazel-contrib/setup-bazel@0.18.0
+        with:
+          bazelisk-cache: true
+          repository-cache: true
+          disk-cache: true
+          external-cache: true
+
+      - name: Install native deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libasound2-dev \
+            libgl1-mesa-dev \
+            libglu1-mesa-dev \
+            libx11-dev \
+            libxcursor-dev \
+            libxinerama-dev \
+            libxi-dev \
+            libxrandr-dev \
+            libwayland-dev \
+            libxkbcommon-dev
+
+      - name: Build cloth bench
+        run: bazel build -c opt //small/cloth:bench
+
+      - name: Run cloth bench
+        run: |
+          mkdir -p small/cloth/bench/results
+          ./bazel-bin/small/cloth/bench \
+            --benchmark_min_time=1.5s \
+            --benchmark_repetitions=1
+          latest="$(ls -1t small/cloth/bench/results/bench_*.json | head -n1)"
+          cp "$latest" small/cloth/bench/results/ci_bench.json
+
+      - name: Upload benchmark artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloth-bench-json
+          path: |
+            small/cloth/bench/results/ci_bench.json
+
+      - name: Store benchmark history and chart
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          name: cloth-implicit-euler
+          tool: googlecpp
+          output-file-path: small/cloth/bench/results/ci_bench.json
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-push: true
+          gh-pages-branch: gh-pages
+          benchmark-data-dir-path: .
+          summary-always: false
+          alert-threshold: "120%"
+          comment-on-alert: true
+          fail-on-alert: false
+          max-items-in-chart: 100

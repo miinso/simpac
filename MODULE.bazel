@@ -36,14 +36,14 @@ git_override(
 ##
 # emcc
 ##
-bazel_dep(name = "emsdk")
+bazel_dep(name = "emsdk", version = "4.0.17")
 
 # bring your own or.. comment this `local_path_override` block and uncomment
 # the `git_override` below.
-local_path_override(
-    module_name = "emsdk",
-    path = "../emsdk/bazel",
-)
+# local_path_override(
+#     module_name = "emsdk",
+#     path = "../emsdk/bazel",
+# )
 
 # git_override(
 #     module_name = "emsdk",
