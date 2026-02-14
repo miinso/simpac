@@ -48,7 +48,10 @@ int main() {
     cam_pos.x = 6.0f;
     cam_pos.y = 5.0f;
     cam_pos.z = 6.0f;
-    graphics::camera::create(world, "MainCamera", cam_pos, cam, true);
+    auto main_camera = world.entity("MainCamera")
+        .set<graphics::Camera>(cam)
+        .set<graphics::Position>(cam_pos);
+    graphics::camera::active_camera_source(world).add<graphics::ActiveCamera>(main_camera.id());
 
     world.system<const Spin>("DrawScene")
         .kind(graphics::OnRender)

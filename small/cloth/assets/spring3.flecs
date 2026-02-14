@@ -130,13 +130,19 @@ for y in 0..($height - 2) {
   }
 }
 
-MainCamera {
-  graphics.ActiveCamera
+DefaultCamera {
   graphics.Position: { x: 0, y: 3, z: 10 }
   graphics.Camera: {
     target: { x: 0, y: 1.5, z: -2 }
     fovy: 60
     projection: 0
+    move_speed: 0.1
+    rotation_speed: 0.2
+    zoom_speed: 1.0
   }
+}
+
+graphics.ActiveCameraSource {
+  (graphics.ActiveCamera, DefaultCamera)
 }
 

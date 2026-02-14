@@ -14,7 +14,9 @@ namespace graphics::systems {
 inline void install_pipeline_systems(flecs::world& ecs) {
     // camera update in PreRender (before render passes)
     ecs.system<Position, Camera>("graphics::update_camera")
-        .with<ActiveCamera>()
+        .term_at(0).src("$cam")
+        .term_at(1).src("$cam")
+        .with<ActiveCamera>("$cam").src(camera::active_camera_source(ecs).id())
         .kind(PreRender)
         .each([](Position& pos, Camera& cam) {
             update_camera_controls(pos, cam);
@@ -22,7 +24,9 @@ inline void install_pipeline_systems(flecs::world& ecs) {
 
     // sync active camera to raylib before rendering
     ecs.system<const Position, const Camera>("graphics::sync_camera")
-        .with<ActiveCamera>()
+        .term_at(0).src("$cam")
+        .term_at(1).src("$cam")
+        .with<ActiveCamera>("$cam").src(camera::active_camera_source(ecs).id())
         .kind(PreRender)
         .each([](const Position& pos, const Camera& cam) {
             detail::raylib_camera = to_raylib(pos, cam);
@@ -71,7 +75,7 @@ inline void install_pipeline_systems(flecs::world& ecs) {
 
             EndMode3D();
 
-            if (props::shows_statistics.get<bool>()) {
+            if (props::show_fps.get<bool>()) {
                 DrawFPS(20, 20);
             }
         });

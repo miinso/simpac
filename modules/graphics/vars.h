@@ -7,14 +7,14 @@
 namespace graphics {
 
 namespace props {
-inline flecs::entity shows_statistics;
+inline flecs::entity show_fps;
 inline flecs::entity show_grid;
 inline flecs::entity grid_slices;
 inline flecs::entity grid_spacing;
 inline flecs::entity background_color;
 
 inline void seed(flecs::world& world) {
-    props::shows_statistics = world.entity("Config::graphics::showsStatistics")
+    props::show_fps = world.entity("Config::graphics::showFps")
         .set<bool>(true)
         .add<Configurable>();
     props::show_grid = world.entity("Config::graphics::debugOptions::showGrid")

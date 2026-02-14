@@ -118,12 +118,11 @@ void init_window(const WindowConfig& config) {
     if (runtime_world) {
         flecs::world ecs(runtime_world);
         props::background_color.set<color4f>(to_rgba(config.clear_color));
-    }
 
-    // create default camera entity if none exists
-    if (runtime_world) {
-        flecs::world ecs(runtime_world);
-        camera::ensure_default(ecs);
+        auto default_camera = ecs.entity("DefaultCamera")
+            .set<Camera>({})
+            .set<Position>({});
+        camera::active_camera_source(ecs).add<ActiveCamera>(default_camera.id());
     }
 
     fonts::load_from_resources();

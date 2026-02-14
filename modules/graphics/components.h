@@ -73,7 +73,9 @@ inline void register_camera_components(flecs::world& ecs) {
         .member<float>("rotation_speed")
         .member<float>("zoom_speed");
 
-    ecs.component<ActiveCamera>();
+    ecs.component<ActiveCamera>()
+        .add(flecs::Exclusive)
+        .add(flecs::PairIsTag);
 }
 
 inline void register_components(flecs::world& world) {

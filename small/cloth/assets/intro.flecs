@@ -122,11 +122,14 @@ for y in 0..($height - 2) {
 }
 
 MainCamera {
-  graphics.ActiveCamera
   graphics.Position: { x: 0, y: -5, z: 20 }
   graphics.Camera: {
     target: { x: 0, y: -8, z: 0 }
     fovy: 60
     projection: 0
   }
+}
+
+graphics.ActiveCameraSource {
+  (graphics.ActiveCamera, MainCamera)
 }

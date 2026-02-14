@@ -1,13 +1,24 @@
-// a rope.
-
 Config.Scene {
   dt { f32: { 1 / 60 } }
-  gravity { vec3r: { x: 0, y: -9.81, z: 0 } }
-  paused { bool: { false } }
+  // gravity { vec3f: { x: 0, y: 9.81, z: 0 } }
 }
 
-const count = 12
-const spacing = 0.8
+DefaultCamera {
+  graphics.Camera: {
+    target: { x: 0, y: 2, z: 00 }
+    up: { x: 0, y: 1, z: 0 }
+    fovy: 60
+    projection: 0
+  }
+  graphics.Position: { x: 0, y: 5, z: 10 }
+}
+
+graphics.ActiveCameraSource {
+  (graphics.ActiveCamera, DefaultCamera)
+}
+
+const count = 5
+const spacing = 1
 const mass = 1.0
 const k_s = 1200.0
 const k_d = 0.12
@@ -43,17 +54,3 @@ for i in 0..($count - 1) {
     }
   }
 }
-
-MainCamera {
-  graphics.Position: { x: 4, y: 2, z: 10 }
-  graphics.Camera: {
-    target: { x: 4, y: 1.5, z: 0 }
-    fovy: 60
-    projection: 0
-  }
-}
-
-graphics.ActiveCameraSource {
-  (graphics.ActiveCamera, MainCamera)
-}
-

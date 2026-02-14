@@ -116,7 +116,6 @@ for y in 0..($height - 2) {
 }
 
 MainCamera {
-  graphics.ActiveCamera
   graphics.Position: { x: 50, y: 10, z: 50 }
   graphics.Camera: {
     target: { x: 0, y: 0.5, z: 0 }
@@ -126,4 +125,8 @@ MainCamera {
     rotation_speed: 0.2
     zoom_speed: 1
   }
+}
+
+graphics.ActiveCameraSource {
+  (graphics.ActiveCamera, MainCamera)
 }
