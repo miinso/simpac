@@ -14,7 +14,7 @@ inline void seed(flecs::world& ecs) {
         .set<Real>(Real(1.0f / 60.0f))
         .add<Configurable>();
     gravity = ecs.entity("Config::Scene::gravity")
-        .set<vec3f>({0.0f, -9.81f, 0.0f})
+        .set<vec3r>({0.0f, -9.81f, 0.0f})
         .add<Configurable>();
     paused = ecs.entity("Config::Scene::paused")
         .set<bool>(false)

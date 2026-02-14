@@ -64,7 +64,7 @@ int main() {
 
     // hint: override core props here
     props::dt.set<Real>(Real(1.0f / 60.0f));
-    props::gravity.set<vec3f>({0.0f, -9.81f, 0.0f});
+    props::gravity.set<Gravity>({0.0f, -9.81f, 0.0f});
     props::paused.set<bool>(false);
 
     // non-GL singletons
@@ -135,8 +135,7 @@ int main() {
             .without<IsPinned>()
             .kind(0)
             .each([](flecs::iter&, size_t, Force& f, const Mass& m) {
-                const auto& gravity = props::gravity.get<vec3f>();
-                f.map() += m * gravity.map();
+                f.map() += m * props::gravity.get<vec3r>().map();
             });
 
         apply_spring_elastic_force = ecs.system<Spring>("Apply Spring Elastic Force")

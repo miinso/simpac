@@ -19,7 +19,6 @@ cc_library(
     name = "sim",
     srcs = [
         "components.h",
-        "components/base.h",
         "components/core.h",
         "components/render.h",
         "components/solver.h",
