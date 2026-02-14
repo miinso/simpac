@@ -102,17 +102,26 @@ function resolveUrl(input: string | null | undefined) {
 
 function computeCanvasSize() {
   const container = containerRef.value
-  if (!container) return { width: 1, height: 1 }
+  if (!container) return { cssWidth: 1, cssHeight: 1, width: 1, height: 1 }
   const dpr = effectivePixelRatio.value || 1
-  const width = Math.max(1, Math.floor(container.clientWidth * dpr))
-  const height = Math.max(1, Math.floor(container.clientHeight * dpr))
-  return { width, height }
+  const rect = container.getBoundingClientRect()
+  const cssWidth = Math.max(1, Math.floor(rect.width))
+  const cssHeight = Math.max(1, Math.floor(rect.height))
+  const width = Math.max(1, Math.floor(cssWidth * dpr))
+  const height = Math.max(1, Math.floor(cssHeight * dpr))
+  return { cssWidth, cssHeight, width, height }
 }
 
 function syncCanvasSize(notifyWorker = false) {
   const canvas = canvasRef.value
   if (!canvas) return
-  const { width, height } = computeCanvasSize()
+  const { cssWidth, cssHeight, width, height } = computeCanvasSize()
+
+  // Keep CSS display size snapped to integer px to avoid one-off browser scaling blur.
+  const cssW = `${cssWidth}px`
+  const cssH = `${cssHeight}px`
+  if (canvas.style.width !== cssW) canvas.style.width = cssW
+  if (canvas.style.height !== cssH) canvas.style.height = cssH
 
   if (!canvasTransferred && (canvas.width !== width || canvas.height !== height)) {
     canvas.width = width
@@ -300,7 +309,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .simpac-container {
   position: relative;
-  background: #1a1a1a;
+  /* background: #1a1a1a; */
   border-radius: 8px;
   overflow: hidden;
 }
@@ -308,7 +317,7 @@ onBeforeUnmount(() => {
   display: block;
   width: 100%;
   height: 100%;
-  background: #f5f5f5;
+  /* background: #f5f5f5; */
 }
 .simpac-status {
   position: absolute;

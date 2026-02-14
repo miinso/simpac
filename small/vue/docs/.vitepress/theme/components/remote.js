@@ -137,6 +137,12 @@ function createConnection(requestFn, mode) {
     return dispatch(promise, recv, err);
   };
 
+  const normalizePath = (path) => {
+    const p = String(path || '');
+    if (!p) return '/';
+    return p[0] === '/' ? p : `/${p}`;
+  };
+
   const withPath = (prefix, path) => `${prefix}${escapePath(path)}`;
 
   const conn = {
@@ -145,7 +151,7 @@ function createConnection(requestFn, mode) {
     disconnect: () => {},
     request: (path, params, recv, err, abort) => {
       const args = normalizeCallbacks(params, recv, err);
-      return send('GET', path, args.params, '', args.recv, args.err);
+      return send('GET', normalizePath(path), args.params, '', args.recv, args.err);
     },
     entity: (path, params, recv, err, abort) => {
       const args = normalizeCallbacks(params, recv, err);

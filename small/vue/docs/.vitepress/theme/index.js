@@ -1,6 +1,8 @@
 import DefaultTheme from 'vitepress/theme';
 import Simpac from './components/Simpac.vue';
 import { flecs } from './components/remote.js';
+import * as imath from './components/imath.js';
+import * as engine from './lib/index.js';
 import 'katex/dist/katex.min.css';
 import './styles.css';
 
@@ -10,16 +12,12 @@ export default {
   async enhanceApp({ app }) {
     app.component('Simpac', Simpac);
     app.config.globalProperties.$flecs = flecs;
+    app.config.globalProperties.$imath = imath;
+    app.config.globalProperties.$engine = engine;
     if (typeof window !== 'undefined') {
       window.flecs = flecs;
-    }
-
-    if (!import.meta.env.SSR) {
-    //   import('@vue/repl').then(({ default: Repl }) => {
-    //     app.component('Repl', Repl);
-    //   });
-        const mod = await import('@vue/repl');
-        app.component('Repl', mod.Repl);
+      window.imath = imath;
+      window.engine = engine;
     }
   }
 };
