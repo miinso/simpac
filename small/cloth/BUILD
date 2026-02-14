@@ -108,6 +108,7 @@ cc_binary(
             "-sMAXIMUM_MEMORY=1024mb", # paired with allow_memory_growth
             # ---
             "-sSINGLE_FILE",
+            "-sWASMFS",
             # "-sASSERTIONS=2",
             "-sEXIT_RUNTIME=0",  # include shutdown code for proper cleanup
             # "-pthread", # this introduces the SharedArrayBuffer
