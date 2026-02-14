@@ -1,74 +1,12 @@
 import { defineConfig } from 'vitepress';
 import basicSsl from '@vitejs/plugin-basic-ssl';
 import { katex } from '@mdit/plugin-katex';
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 const isVercelDev = process.env.VERCEL_DEV === '1';
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const docsRoot = path.resolve(__dirname, '..');
-
-function extractTitle(contents, fallback) {
-  const frontmatterMatch = contents.match(/^---[\s\S]*?^---/m);
-  if (frontmatterMatch) {
-    const titleMatch = frontmatterMatch[0].match(/^title:\s*(.+)\s*$/m);
-    if (titleMatch) return titleMatch[1].trim().replace(/^["']|["']$/g, '');
-  }
-  return fallback;
-}
-
-function loadPages() {
-  const entries = fs.readdirSync(docsRoot, { withFileTypes: true });
-  return entries
-    .filter((entry) => entry.isFile() && entry.name.endsWith('.md') && entry.name !== 'index.md')
-    .map((entry) => {
-      const slug = entry.name.replace(/\.md$/, '');
-      const contents = fs.readFileSync(path.join(docsRoot, entry.name), 'utf8');
-      const title = extractTitle(contents, slug);
-      return { text: title, link: `/${slug}` };
-    })
-    .sort((a, b) => a.text.localeCompare(b.text));
-}
-
-const pageLinks = loadPages();
-
-function createNavWatcher() {
-  return {
-    name: 'simpac-nav-watcher',
-    configureServer(server) {
-      const isPage = (file) => {
-        if (!file || typeof file !== 'string') return false;
-        if (!file.endsWith('.md')) return false;
-        const normalized = file.split(path.sep).join('/');
-        if (normalized.includes('/.vitepress/')) return false;
-        return true;
-      };
-
-      const restart = () => {
-        if (typeof server.restart === 'function') {
-          server.restart();
-        } else {
-          server.ws.send({ type: 'full-reload' });
-        }
-      };
-
-      const onChange = (file) => {
-        if (isPage(file)) {
-          restart();
-        }
-      };
-
-      server.watcher.on('add', onChange);
-      server.watcher.on('unlink', onChange);
-      server.watcher.on('change', onChange);
-    }
-  };
-}
 
 export default defineConfig({
   vite: {
-    plugins: isVercelDev ? [createNavWatcher()] : [basicSsl(), createNavWatcher()],
+    plugins: isVercelDev ? [] : [basicSsl()],
     server: {
       https: false, // enable if needed for cross-origin isolation
       headers: {
@@ -103,11 +41,58 @@ export default defineConfig({
     },
   },
   themeConfig: {
-    nav: [{ text: 'Home', link: '/' }, ...pageLinks],
+    nav: [
+      { text: 'Home', link: '/' },
+      { text: 'API Usage', link: '/apis/api-usage' },
+      { text: 'Blog Intro', link: '/posts/blogintro' },
+      { text: 'Explicit', link: '/posts/explicit' },
+      { text: 'Filesystem', link: '/apis/filesystem' },
+      { text: 'Gizmo', link: '/apis/gizmo' },
+      {
+        text: 'Gallery',
+        items: [
+          { text: 'Inje Sinnam', link: '/gallery/inje-sinnam' }
+        ]
+      },
+      { text: 'Labs', link: '/labs' },
+      { text: 'Remote API', link: '/apis/remote-api' },
+      { text: 'Repl API', link: '/apis/repl-api' },
+      { text: 'Scripting', link: '/apis/scripting' },
+      { text: 'Toggle 2', link: '/apis/toggle2' }
+    ],
     sidebar: [
       {
+        text: 'APIs',
+        items: [
+          { text: 'API Usage', link: '/apis/api-usage' },
+          { text: 'Config API', link: '/apis/config-api' },
+          { text: 'Filesystem', link: '/apis/filesystem' },
+          { text: 'Gizmo', link: '/apis/gizmo' },
+          { text: 'Remote API', link: '/apis/remote-api' },
+          { text: 'Repl API', link: '/apis/repl-api' },
+          { text: 'System API', link: '/apis/system-api' },
+          { text: 'Scripting', link: '/apis/scripting' },
+          { text: 'Toggle 2', link: '/apis/toggle2' }
+        ]
+      },
+      {
         text: 'Posts',
-        items: pageLinks
+        items: [
+          { text: 'Explicit', link: '/posts/explicit' },
+          { text: 'Blog Intro', link: '/posts/blogintro' }
+        ]
+      },
+      {
+        text: 'Labs',
+        items: [
+          { text: 'Labs Home', link: '/labs' },
+          { text: 'Config Lab', link: '/labs/config' },
+          { text: 'Tweak Lab', link: '/labs/tweak' },
+          { text: 'Repl Lab', link: '/labs/repl' },
+          { text: 'Toggle Lab', link: '/labs/toggle' },
+          { text: 'Blocks', link: '/labs/blocks/' },
+          { text: 'Blocks MK1', link: '/labs/blocks/mk1' }
+        ]
       }
     ]
   }

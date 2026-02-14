@@ -8,8 +8,9 @@ outline: false
 Click the symbols to toggle draw systems via Flecs REST.
 
 <script setup>
-import { onBeforeUnmount, onMounted, ref } from 'vue';
-import { bindInteractiveMath, createTerms } from './interactive-math.js';
+import { getCurrentInstance, onBeforeUnmount, onMounted, ref } from 'vue';
+
+const { createTerms, bindInteractiveMath } = getCurrentInstance().appContext.config.globalProperties.$imath;
 
 const appRef = ref(null);
 let conn = null;

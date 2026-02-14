@@ -7,7 +7,7 @@ title: repl
 
 <script setup>
 import { nextTick, ref, watch } from 'vue';
-import { useStore } from '@vue/repl';
+import { Repl as ReplEditor, useStore } from '@vue/repl';
 
 const appRef = ref(null);
 const scriptText = ref('');
@@ -81,7 +81,7 @@ async function worldQuery() {
   @error="console.error($event)"
 />
 
-<Repl class="h-32 rounded-md"
+<ReplEditor class="h-32 rounded-md"
     :store="store"
     :initialValue="initialValue"
     filename="App.vue"

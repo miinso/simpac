@@ -12,6 +12,6 @@ title: Pages
 
 - [post3](/post3/)
 
-- [scripting](/scripting/)
+- [scripting](/apis/scripting/)
 
-- [blogintro](/blogintro/)
+- [blogintro](/posts/blogintro/)

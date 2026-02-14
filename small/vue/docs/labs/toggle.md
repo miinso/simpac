@@ -8,8 +8,9 @@ outline: false
 Click the math symbols to toggle terms. Parameters use sliders below.
 
 <script setup>
-import { onBeforeUnmount, onMounted } from 'vue';
-import { bindInteractiveMath, createTerms } from './interactive-math.js';
+import { getCurrentInstance, onBeforeUnmount, onMounted } from 'vue';
+
+const { createTerms, bindInteractiveMath } = getCurrentInstance().appContext.config.globalProperties.$imath;
 
 const termDefs = {
   gravity: {
