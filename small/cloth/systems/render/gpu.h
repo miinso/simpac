@@ -37,9 +37,29 @@ inline void draw_elements_instanced(GLenum mode, GLsizei count, GLenum type, con
 #endif
 }
 
+inline void pack_spring_instance(std::vector<float>& staging_buffer, int& inst_idx,
+                                 const vec3f& a, const vec3f& b, float rest_length) {
+    staging_buffer[inst_idx++] = a.x;
+    staging_buffer[inst_idx++] = a.y;
+    staging_buffer[inst_idx++] = a.z;
+    staging_buffer[inst_idx++] = b.x;
+    staging_buffer[inst_idx++] = b.y;
+    staging_buffer[inst_idx++] = b.z;
+    staging_buffer[inst_idx++] = rest_length;
+}
+
+inline void pack_particle_instance(std::vector<float>& staging_buffer, int offset,
+                                   const vec3f& p, float mass, float flags) {
+    staging_buffer[offset + 0] = p.x;
+    staging_buffer[offset + 1] = p.y;
+    staging_buffer[offset + 2] = p.z;
+    staging_buffer[offset + 3] = mass;
+    staging_buffer[offset + 4] = flags;
+}
+
 } // namespace detail
 
-inline void upload_spring_positions_to_gpu(const flecs::world& ecs, SpringRenderer& gpu) {
+inline void upload_spring_positions_to_gpu(const flecs::world&, SpringRenderer& gpu) {
     if (gpu.shader_id == 0) return;
 
     int num_particles = queries::num_particles();
@@ -83,32 +103,24 @@ inline void upload_spring_positions_to_gpu(const flecs::world& ecs, SpringRender
         gpu.rest_lengths.push_back((float)s.rest_length);
     });
 
-    std::vector<Eigen::Vector3r> positions(num_particles);
+    std::vector<vec3f> positions(num_particles);
     gpu.position_query.run([&](flecs::iter& it) {
         while (it.next()) {
             auto pos = it.field<const Position>(0);
             auto idx = it.field<const ParticleIndex>(1);
             for (auto i : it) {
-                positions[idx[i]] = pos[i].map();
+                positions[idx[i]] = vec3f(pos[i].map());
             }
         }
     });
 
     int inst_idx = 0;
     for (int i = 0; i < num_springs; ++i) {
-        int idx_a = gpu.spring_particle_indices[i * 2];
-        int idx_b = gpu.spring_particle_indices[i * 2 + 1];
-        Eigen::Vector3r pa = positions[idx_a];
-        Eigen::Vector3r pb = positions[idx_b];
-        float rest = gpu.rest_lengths[i];
-
-        gpu.staging_buffer[inst_idx++] = (float)pa.x();
-        gpu.staging_buffer[inst_idx++] = (float)pa.y();
-        gpu.staging_buffer[inst_idx++] = (float)pa.z();
-        gpu.staging_buffer[inst_idx++] = (float)pb.x();
-        gpu.staging_buffer[inst_idx++] = (float)pb.y();
-        gpu.staging_buffer[inst_idx++] = (float)pb.z();
-        gpu.staging_buffer[inst_idx++] = rest;
+        const int idx_a = gpu.spring_particle_indices[i * 2];
+        const int idx_b = gpu.spring_particle_indices[i * 2 + 1];
+        detail::pack_spring_instance(
+            gpu.staging_buffer, inst_idx, positions[idx_a], positions[idx_b], gpu.rest_lengths[i]
+        );
     }
 
     rlUpdateVertexBuffer(gpu.instance_vbo, gpu.staging_buffer.data(),
@@ -171,12 +183,14 @@ inline void upload_particle_positions_to_gpu(const flecs::world& ecs, ParticleRe
             for (auto i : it) {
                 int pidx = idx[i];
                 if (pidx >= 0 && pidx < num_particles) {
-                    int offset = pidx * ParticleRenderer::FLOATS_PER_INSTANCE;
-                    gpu.staging_buffer[offset + 0] = pos[i].x;
-                    gpu.staging_buffer[offset + 1] = pos[i].y;
-                    gpu.staging_buffer[offset + 2] = pos[i].z;
-                    gpu.staging_buffer[offset + 3] = (float)mass[i];
-                    gpu.staging_buffer[offset + 4] = has_state ? (float)state[i].flags : 0.0f;
+                    const int offset = pidx * ParticleRenderer::FLOATS_PER_INSTANCE;
+                    detail::pack_particle_instance(
+                        gpu.staging_buffer,
+                        offset,
+                        vec3f(pos[i].map()),
+                        (float)mass[i],
+                        has_state ? (float)state[i].flags : 0.0f
+                    );
                 }
             }
         }

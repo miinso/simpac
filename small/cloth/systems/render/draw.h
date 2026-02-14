@@ -16,12 +16,11 @@
 namespace render {
 
 inline void draw_spring(Spring& spring) {
-    auto x1 = spring.e1.get<Position>().map();
-    auto x2 = spring.e2.get<Position>().map();
-
-    auto diff = x1 - x2;
-    auto current_length = diff.norm();
-    auto strain = (current_length - spring.rest_length) / spring.rest_length;
+    const auto a = spring.e1.get<Position>().map();
+    const auto b = spring.e2.get<Position>().map();
+    const auto diff = a - b;
+    const float current_length = (float)diff.norm();
+    const float strain = (current_length - (float)spring.rest_length) / (float)spring.rest_length;
 
     Color color;
     if (strain > 0) {
@@ -32,44 +31,42 @@ inline void draw_spring(Spring& spring) {
         color = ColorLerp(GREEN, BLUE, t);
     }
 
-    Vector3 a{x1[0], x1[1], x1[2]};
-    Vector3 b{x2[0], x2[1], x2[2]};
     float base_thickness = 0.005f;
     float thickness = base_thickness * std::pow((float)spring.k_s, 1.0f / 3.0f);
-    DrawCylinderEx(a, b, thickness, thickness, 5, color);
+    DrawCylinderEx(vec3f(a), vec3f(b), thickness, thickness, 5, color);
 }
 
 inline void draw_particle(const Position& x, const Mass& m) {
-    Real mass = std::max((Real)1e-12f, (Real)m);
-    Real radius_scale = std::pow(mass, (Real)0.0752575f); // 10000x mass -> 2x radius
-    Real tint = (Real)1.0f - (std::log10(std::max(mass, (Real)1.0f)) / (Real)10.0f);
-    if (tint < (Real)0) tint = (Real)0;
-    if (tint > (Real)1) tint = (Real)1;
+    float mass = std::max(1e-12f, (float)m);
+    float radius_scale = std::pow(mass, 0.0752575f); // 10000x mass -> 2x radius
+    float tint = 1.0f - (std::log10(std::max(mass, 1.0f)) / 10.0f);
+    if (tint < 0.0f) tint = 0.0f;
+    if (tint > 1.0f) tint = 1.0f;
 
-    Vector3 pos{x[0], x[1], x[2]};
-    Color color = ColorLerp(BLACK, BLUE, (float)tint);
+    const vec3f pos = {(float)x.x, (float)x.y, (float)x.z};
+    Color color = ColorLerp(BLACK, BLUE, tint);
     DrawPoint3D(pos, color);
-    DrawSphere(pos, 0.5f * (float)radius_scale, color);
+    DrawSphere(pos, 0.5f * radius_scale, color);
 }
 
 inline void draw_timing_info(flecs::iter& it) {
-    const auto& wall_time = state::wall_time.get<Real>();
-    const auto& sim_time = state::sim_time.get<Real>();
-    const auto& sim_dt = props::dt.get<Real>();
-    const auto& frame_count = state::frame_count.get<int>();
+    const float wall_time = (float)state::wall_time.get<Real>();
+    const float sim_time = (float)state::sim_time.get<Real>();
+    const float sim_dt = (float)props::dt.get<Real>();
+    const int frame_count = state::frame_count.get<int>();
     const Solver* solver = it.world().try_get<Solver>();
 
-    const Real display_dt = (Real)it.delta_time();
-    Real realtime_speed = display_dt > Real(1e-9) ? sim_dt / display_dt : Real(0);
+    const float display_dt = it.delta_time();
+    float realtime_speed = display_dt > 1e-9f ? sim_dt / display_dt : 0.0f;
 
     Font font = graphics::get_font();
     float font_size = (float)font.baseSize;
     char buf[512];
     const char* cg_prefix = solver ? "" : "N/A ";
-    int cg_iterations = solver ? solver->cg_iterations : 0;
-    Real cg_error = solver ? solver->cg_error : Real(0);
-    int cg_max_iter = solver ? it.world().lookup("Config::Solver::cg_max_iter").get<int>() : 0;
-    Real cg_tolerance = solver ? it.world().lookup("Config::Solver::cg_tolerance").get<Real>() : Real(0);
+    const int cg_iterations = solver ? solver->cg_iterations : 0;
+    const float cg_error = solver ? (float)solver->cg_error : 0.0f;
+    const int cg_max_iter = solver ? it.world().lookup("Config::Solver::cg_max_iter").get<int>() : 0;
+    const float cg_tolerance = solver ? (float)it.world().lookup("Config::Solver::cg_tolerance").get<Real>() : 0.0f;
 
     snprintf(buf, sizeof(buf),
         "Wall time: %.2fs  |  Sim time: %.2fs  (dt=%.4f)\n"

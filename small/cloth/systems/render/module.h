@@ -69,14 +69,19 @@ inline void install_render_systems(flecs::world& ecs) {
         .disable(0);
 
     ecs.system("graphics::DragParticlesKinematic")
-        .kind(flecs::OnLoad)
+        .kind(graphics::PreRender)
         .run(interaction::drag_particles_kinematic)
         .disable();
 
     ecs.system("graphics::DragParticlesSpring")
-        .kind(flecs::OnLoad)
+        .kind(graphics::PreRender)
         .run(interaction::drag_particles_spring)
         .disable();
+
+    ecs.system("graphics::DrawDragPlane")
+        .kind(graphics::OnRender)
+        .run(interaction::draw_drag_plane_debug)
+        .disable(0);
 }
 
 } // namespace systems
