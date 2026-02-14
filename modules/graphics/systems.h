@@ -39,7 +39,7 @@ inline void install_pipeline_systems(flecs::world& ecs) {
             }
 
             BeginDrawing();
-            ClearBackground(graphics::to_color(props::background_color.get<ColorRGBA>()));
+            ClearBackground(graphics::to_color(props::background_color.get<color4f>()));
 
             if (is_lighting_enabled()) {
                 update_lighting_camera_pos(detail::raylib_camera.position);

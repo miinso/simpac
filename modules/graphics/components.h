@@ -1,27 +1,47 @@
 #pragma once
 
 #include <flecs.h>
-#include "camera.h"
+#include <raylib.h>
+
+#include "types.h"
 #include "tags.h"
 
 namespace graphics {
 
-struct ColorRGBA {
-    float r = 1.0f;
-    float g = 1.0f;
-    float b = 1.0f;
-    float a = 1.0f;
+struct Camera {
+    vec3f target = {0.0f, 0.0f, 0.0f};
+    vec3f up = {0.0f, 1.0f, 0.0f};
+    float fovy = 60.0f;
+    int projection = 0;  // 0 = CAMERA_PERSPECTIVE, 1 = CAMERA_ORTHOGRAPHIC
+
+    float move_speed = 0.1f;
+    float rotation_speed = 0.2f;
+    float zoom_speed = 1.0f;
+};
+
+struct Position : vec3<Position, scalar_real> {
+    Position() : vec3<Position, scalar_real>((scalar_real)5.0, (scalar_real)5.0, (scalar_real)5.0) {}
+    using vec3<Position, scalar_real>::vec3;
+};
+
+struct ActiveCamera {};
+
+struct color4f : vec4<color4f, scalar_real> {
+    color4f() : vec4<color4f, scalar_real>((scalar_real)1.0, (scalar_real)1.0, (scalar_real)1.0, (scalar_real)1.0) {}
+    color4f(float r_, float g_, float b_, float a_)
+        : vec4<color4f, scalar_real>((scalar_real)r_, (scalar_real)g_, (scalar_real)b_, (scalar_real)a_) {}
+    using vec4<color4f, scalar_real>::vec4;
 
     static inline void meta(flecs::world& ecs) {
-        ecs.component<ColorRGBA>()
-            .member("r", &ColorRGBA::r)
-            .member("g", &ColorRGBA::g)
-            .member("b", &ColorRGBA::b)
-            .member("a", &ColorRGBA::a);
+        ecs.component<color4f>("color4f")
+            .member("r", &color4f::x)
+            .member("g", &color4f::y)
+            .member("b", &color4f::z)
+            .member("a", &color4f::w);
     }
 };
 
-[[nodiscard]] inline ColorRGBA to_rgba(Color color) {
+[[nodiscard]] inline color4f to_rgba(Color color) {
     return {
         color.r / 255.0f,
         color.g / 255.0f,
@@ -30,19 +50,34 @@ struct ColorRGBA {
     };
 }
 
-[[nodiscard]] inline Color to_color(const ColorRGBA& color) {
-    auto to_byte = [](float v) -> unsigned char {
-        float clamped = v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v);
+[[nodiscard]] inline Color to_color(const color4f& color) {
+    auto to_byte = [](scalar_real v) -> unsigned char {
+        scalar_real clamped = v < (scalar_real)0 ? (scalar_real)0 : (v > (scalar_real)1 ? (scalar_real)1 : v);
         return (unsigned char)(clamped * 255.0f);
     };
-    return {to_byte(color.r), to_byte(color.g), to_byte(color.b), to_byte(color.a)};
+    return {to_byte(color.x), to_byte(color.y), to_byte(color.z), to_byte(color.w)};
 }
 
 namespace components {
 
+inline void register_camera_components(flecs::world& ecs) {
+    register_vec3_component<vec3f>(ecs, "vec3f");
+    register_vec3_component<Position>(ecs);
+
+    ecs.component<Camera>()
+        .member<vec3f>("target")
+        .member<vec3f>("up")
+        .member<float>("fovy")
+        .member<int>("projection")
+        .member<float>("move_speed")
+        .member<float>("rotation_speed")
+        .member<float>("zoom_speed");
+
+    ecs.component<ActiveCamera>();
+}
+
 inline void register_components(flecs::world& world) {
-    register_camera_components(world);
-    ColorRGBA::meta(world);
+    color4f::meta(world);
     world.component<Configurable>();
 }
 

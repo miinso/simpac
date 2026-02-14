@@ -27,7 +27,7 @@ inline void seed(flecs::world& world) {
         .set<float>(10.0f / 12.0f)
         .add<Configurable>();
     props::background_color = world.entity("Config::graphics::backgroundColor")
-        .set<ColorRGBA>({1.0f, 1.0f, 1.0f, 1.0f})
+        .set<color4f>({1.0f, 1.0f, 1.0f, 1.0f})
         .add<Configurable>();
 }
 } // namespace props

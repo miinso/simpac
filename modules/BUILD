@@ -13,6 +13,7 @@ cc_library(
         "//conditions:default": ["graphics/graphics_platform_native.cpp"],
     }),
     hdrs = [
+        "graphics/types.h",
         "graphics/camera.h",
         "graphics/components.h",
         "graphics/fonts.h",

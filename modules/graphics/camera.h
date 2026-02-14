@@ -3,10 +3,8 @@
 #include <flecs.h>
 #include <raylib.h>
 #include <raymath.h>
-#include <Eigen/Dense>
 
-#include <cstddef>
-
+#include "components.h"
 #include "input.h"
 
 namespace graphics {
@@ -14,54 +12,6 @@ namespace graphics {
 // ============================================================================
 // Camera Component - state + controls in one
 // ============================================================================
-
-template <typename Derived>
-struct vec3 {
-    float x = 0.0f;
-    float y = 0.0f;
-    float z = 0.0f;
-
-    vec3() = default;
-    vec3(float x_, float y_, float z_) : x(x_), y(y_), z(z_) {}
-
-    float* data() { return &x; }
-    const float* data() const { return &x; }
-
-    float& operator[](size_t i) { return data()[i]; }
-    const float& operator[](size_t i) const { return data()[i]; }
-};
-
-struct vec3f : vec3<vec3f> {
-    using vec3<vec3f>::vec3;
-};
-
-struct Camera {
-    // state
-    // float position[3] = {5.0f, 5.0f, 5.0f};
-    vec3f target = {0.0f, 0.0f, 0.0f};
-    vec3f up = {0.0f, 1.0f, 0.0f};
-    float fovy = 60.0f;
-    int projection = 0;  // 0 = CAMERA_PERSPECTIVE, 1 = CAMERA_ORTHOGRAPHIC
-
-    // controls
-    float move_speed = 0.1f;
-    float rotation_speed = 0.2f;
-    float zoom_speed = 1.0f;
-    // bool controls_enabled = true;
-};
-
-// TODO: we could make a slot for (optional) target entity so that
-// camera picks up `Position` component of the target (if exists)
-
-// position component for camera entities
-struct Position : vec3<Position> {
-    Position() : vec3<Position>(5.0f, 5.0f, 5.0f) {}
-    using vec3<Position>::vec3;
-};
-
-// Tag: which camera is used for rendering
-struct ActiveCamera {};
-
 // ============================================================================
 // Internal state - raylib Camera3D synced from active Camera component
 // ============================================================================
@@ -69,39 +19,6 @@ struct ActiveCamera {};
 namespace detail {
     inline Camera3D raylib_camera{};
 }
-
-// ============================================================================
-// Component registration with reflection (for REST API)
-// ============================================================================
-
-namespace components {
-
-template <typename T>
-inline void register_vec3f(flecs::world& ecs) {
-    ecs.component<T>()
-        .template member<float>("x")
-        .template member<float>("y")
-        .template member<float>("z");
-}
-
-inline void register_camera_components(flecs::world& ecs) {
-    register_vec3f<vec3f>(ecs);
-    register_vec3f<Position>(ecs);
-
-    ecs.component<Camera>()
-        .member<vec3f>("target")
-        .member<vec3f>("up")
-        .member<float>("fovy")
-        .member<int>("projection")
-        .member<float>("move_speed")
-        .member<float>("rotation_speed")
-        .member<float>("zoom_speed");
-        // .member<bool>("controls_enabled");
-
-    ecs.component<ActiveCamera>();
-}
-
-} // namespace components
 
 // ============================================================================
 // Conversion helpers

@@ -80,6 +80,7 @@ void init(flecs::world& world) {
     progress_func = nullptr;
     install_app_loop();
 
+    components::register_camera_components(world);
     components::register_components(world);
     props::seed(world);
     PreRender = world.entity("graphics::PreRender")
@@ -116,7 +117,7 @@ void init_window(const WindowConfig& config) {
     detail::platform_after_init_window(config, canvas_size);
     if (runtime_world) {
         flecs::world ecs(runtime_world);
-        props::background_color.set<ColorRGBA>(to_rgba(config.clear_color));
+        props::background_color.set<color4f>(to_rgba(config.clear_color));
     }
 
     // create default camera entity if none exists
