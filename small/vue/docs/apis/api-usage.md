@@ -1,67 +1,78 @@
 ---
-title: Usage
+title: API Usage
 ---
 
 <script setup>
-import { ref } from 'vue';
+import { onBeforeUnmount, ref } from 'vue';
 
 const appRef = ref(null);
-const fovY = ref(60);
+const status = ref('booting');
+const systemCount = ref(0);
 let conn = null;
 
-function onReady() {
-  conn = window.flecs.connect(appRef.value);
-  conn.get('MainCamera', { component: 'graphics.Camera', values: true }).then((reply) => {
-    const value = reply?.value || reply?.Camera || reply;
-    if (value && typeof value.fovy === 'number') fovY.value = value.fovy;
+async function refreshSystemCount() {
+  if (!conn) return;
+  const reply = await conn.query('flecs.system.System, !ChildOf($this|up, flecs)', {
+    full_paths: true,
+    values: false,
   });
+  systemCount.value = (reply?.results || []).length;
 }
 
-function onInput() {
-  if (!conn) return;
-  conn.set('MainCamera', 'graphics.Camera', { fovy: fovY.value }).catch(console.error);
+async function onReady() {
+  conn = window.flecs.connect(appRef.value);
+  status.value = 'ready';
+  await refreshSystemCount();
 }
+
+function onError(message) {
+  status.value = String(message);
+}
+
+onBeforeUnmount(() => {
+  conn?.disconnect?.();
+  conn = null;
+});
 </script>
 
-# Usage
+# API Usage
 
-Drop your WASM build into `docs/.vitepress/public/worker/` as `main.js` (and `main.wasm` if split).
-The Flecs client is globally injected as `window.flecs`.
+Use this page as a quick entry point. For full examples, open each API page.
+
+Status: `{{ status }}`
+
+Systems: `{{ systemCount }}`
 
 <Simpac
   ref="appRef"
   src="/bazel-bin/small/cloth/webapp/main.js"
-  :debug="true"
+  aspect-ratio="16:9"
   :cwrap="['flecs_explorer_request']"
   @ready="onReady"
-  @error="console.error($event)"
+  @error="onError"
 />
 
-<label>
-  Camera fovy: {{ fovY.toFixed(2) }}
-  <br>
-  <input type="range" min="0" max="120" step="0.1" v-model.number="fovY" @input="onInput" />
-</label>
+<p>
+  <button @click="refreshSystemCount">Refresh System Count</button>
+</p>
 
-Camera position lives in `graphics.Position` and serializes as `{ x, y, z }`:
+## Jump
+
+- [Config API](/apis/config-api)
+- [System API](/apis/system-api)
+- [Scripting API](/apis/scripting-api)
+- [Toggle API](/apis/toggle-api)
+- [Gizmo API](/apis/gizmo-api)
+- [FS API](/apis/fs-api)
+
+## Minimal connection pattern
 
 ```js
-conn.set('MainCamera', 'graphics.Position', { x: 5, y: 5, z: 5 });
-```
+const conn = window.flecs.connect(appRef.value);
 
-## Remote API surface
-
-```js
-// global helper
-const { flecs } = window;
-const conn = flecs.connect(appRef.value); // or flecs.connect('localhost')
-
-flecs.escapePath('Parent.Child');
-flecs.trimQuery('Position, Velocity');
-
-// core requests
-await conn.query('Position, Velocity', { values: true });
-await conn.get('MainCamera', 'graphics.Camera');
-await conn.set('MainCamera', 'graphics.Camera', { fovy: 75 });
-await conn.scriptUpdate('main', 'Tag {}');
+const systems = await conn.query('flecs.system.System, !ChildOf($this|up, flecs)', {
+  full_paths: true,
+  values: false,
+});
+console.log(systems?.results?.length);
 ```

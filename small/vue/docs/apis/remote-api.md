@@ -110,9 +110,9 @@ Returned object includes no-op compatibility methods:
 Reply handling:
 
 - `null`/`undefined` -> `null`
-- non-string -> 그대로 반환
-- string starting with `{` or `[` -> `JSON.parse` 시도
-- parse 실패 -> 원문 string 반환
+- non-string -> returned as-is
+- string starting with `{` or `[` -> `JSON.parse` attempted
+- parse failure -> original string returned
 
 ## Path Handling Rules
 
@@ -133,7 +133,7 @@ flecs.escapePath('A\\.B.C');        // A.B/C
 
 `query(expr, ...)`:
 
-- `expr == null`이면 throw (`flecs.query: invalid query parameter`)
+- `expr == null` throws (`flecs.query: invalid query parameter`)
 - newlines -> spaces
 - repeated spaces collapse
 - `', '` -> `','`
