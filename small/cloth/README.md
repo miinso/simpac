@@ -1,3 +1,5 @@
+![thumbnail](thumbnail.png)
+
 # small/cloth benchmark
 
 this package includes a headless implicit-euler benchmark
