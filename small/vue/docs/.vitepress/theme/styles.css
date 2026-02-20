@@ -1,3 +1,13 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.peep-emoji {
+  display: inline-block;
+  width: auto;
+  height: auto;
+  margin: 0 0.08em;
+  vertical-align: -0.2em;
+  max-width: none;
+  image-rendering: pixelated;
+}

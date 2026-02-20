@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitepress';
 import basicSsl from '@vitejs/plugin-basic-ssl';
 import { katex } from '@mdit/plugin-katex';
+import { rctEmojiPlugin } from './plugins/rctEmoji.js';
 
 const isVercelDev = process.env.VERCEL_DEV === '1';
 
@@ -38,6 +39,7 @@ export default defineConfig({
           '\\p': '\\htmlData{param=#1}{#2}',
         },
       });
+      md.use(rctEmojiPlugin);
     },
   },
   themeConfig: {
