@@ -1,0 +1,53 @@
+Config.Scene {
+  dt { f32: { 1 / 60 } }
+  gravity { vec3r: { x: 0, y: -9.81, z: 0 } }
+  paused { bool: { false } }
+}
+
+Config.Solver {
+  cg_max_iter { i32: { 80 } }
+  cg_tolerance { f32: { 0.0001 } }
+}
+
+p0 {
+  Position: { x: -0.8, y: 2.0, z: 0.0 }
+  Velocity: { x: 0.0, y: 0.0, z: 0.0 }
+  Mass: { 1.0 }
+  ParticleIndex: { 0 }
+  Particle
+  IsPinned
+}
+
+p1 {
+  Position: { x: 0.8, y: 2.0, z: 0.0 }
+  Velocity: { x: 0.0, y: 0.0, z: 0.0 }
+  Mass: { 1.0 }
+  ParticleIndex: { 1 }
+  Particle
+}
+
+s0 {
+  Spring: {
+    e1: "p0",
+    e2: "p1",
+    rest_length: 1.6,
+    k_s: 800.0,
+    k_d: 0.08
+  }
+}
+
+DefaultCamera {
+  graphics.Position: { x: 0, y: 1.8, z: 8 }
+  graphics.Camera: {
+    target: { x: 0, y: 1.2, z: 0 }
+    fovy: 50
+    projection: 0
+    move_speed: 0.1
+    rotation_speed: 0.2
+    zoom_speed: 1.0
+  }
+}
+
+graphics.ActiveCameraSource {
+  (graphics.ActiveCamera, DefaultCamera)
+}

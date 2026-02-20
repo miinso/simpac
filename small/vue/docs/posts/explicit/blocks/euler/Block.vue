@@ -1,5 +1,5 @@
 <script setup>
-import BlockEulerMath from './BlockEulerMath.md';
+import BlockEulerMath from './math.md';
 </script>
 
 <template>

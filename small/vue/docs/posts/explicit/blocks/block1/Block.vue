@@ -1,9 +1,8 @@
 <script setup>
 import { onBeforeUnmount, onMounted, ref } from 'vue';
-import Simpac from '../../.vitepress/theme/components/Simpac.vue';
-import Block1Math from './Block1Math.md';
-import block1Script from './block1script.flecs?raw';
-import { useEngineBlock } from '../../.vitepress/theme/lib/index.js';
+import Block1Math from './math.md';
+import block1Script from './scene.flecs?raw';
+import { useEngineBlock } from '../../../../.vitepress/theme/lib/index.js';
 
 const title = 'Block1: Explicit Step';
 const wasmSrc = '/bazel-bin/small/cloth/webapp/main.js';

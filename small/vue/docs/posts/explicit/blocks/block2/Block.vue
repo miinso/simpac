@@ -1,6 +1,5 @@
 <script setup>
-import Simpac from '../../.vitepress/theme/components/Simpac.vue';
-import Block2Math from './Block2Math.md';
+import Block2Math from './math.md';
 
 const title = 'Block2: Force Decomposition';
 const wasmSrc = '/bazel-bin/small/cloth/webapp/main.js';
