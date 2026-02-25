@@ -22,6 +22,9 @@ struct Camera {
 struct Position : vec3<Position, scalar_real> {
     Position() : vec3<Position, scalar_real>((scalar_real)5.0, (scalar_real)5.0, (scalar_real)5.0) {}
     using vec3<Position, scalar_real>::vec3;
+    Position(const Vector3& v)
+        : vec3<Position, scalar_real>((scalar_real)v.x, (scalar_real)v.y, (scalar_real)v.z) {}
+    operator Vector3() const { return Vector3{(float)x, (float)y, (float)z}; }
 };
 
 struct ActiveCamera {};
@@ -58,6 +61,17 @@ struct color4f : vec4<color4f, scalar_real> {
     return {to_byte(color.x), to_byte(color.y), to_byte(color.z), to_byte(color.w)};
 }
 
+// renderable model reference — attach to entities for query-based rendering
+// NOTE: requires Position component for rendering/shadow queries
+struct ModelRef {
+    Model* model = nullptr;
+    float scale = 1.0f;
+    float tiling[2] = {0.5f, 0.5f};
+};
+
+// tag: entity casts shadows (used as filter on shadow pass queries)
+struct ShadowCaster {};
+
 namespace components {
 
 inline void register_camera_components(flecs::world& ecs) {
@@ -81,6 +95,9 @@ inline void register_camera_components(flecs::world& ecs) {
 inline void register_components(flecs::world& world) {
     color4f::meta(world);
     world.component<Configurable>();
+    world.component<ModelRef>()
+        .member<float>("scale");
+    world.component<ShadowCaster>();
 }
 
 } // namespace components

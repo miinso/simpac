@@ -178,4 +178,19 @@ struct vec4r : vec4<vec4r, scalar_real> {
     operator Vector4() const { return Vector4{(float)x, (float)y, (float)z, (float)w}; }
 };
 
+// f32 quaternion with eigen quaternion interop
+struct quatf : vec4<quatf, float> {
+    using vec4<quatf, float>::vec4;
+    quatf(const Vector4& v)
+        : vec4<quatf, float>(v.x, v.y, v.z, v.w) {}
+
+    // eigen quaternion handle (xyzw layout matches eigen's internal order)
+    Eigen::Map<Eigen::Quaternion<float>, Eigen::DontAlign> map() {
+        return Eigen::Map<Eigen::Quaternion<float>, Eigen::DontAlign>(data());
+    }
+    Eigen::Map<const Eigen::Quaternion<float>, Eigen::DontAlign> map() const {
+        return Eigen::Map<const Eigen::Quaternion<float>, Eigen::DontAlign>(data());
+    }
+};
+
 } // namespace graphics

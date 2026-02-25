@@ -20,6 +20,7 @@ cc_library(
         "graphics/graphics.h",
         "graphics/input.h",
         "graphics/lighting.h",
+        "graphics/materials.h",
         "graphics/pipelines.h",
         "graphics/resources.h",
         "graphics/systems.h",
