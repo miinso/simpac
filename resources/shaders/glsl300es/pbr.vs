@@ -14,12 +14,16 @@ uniform mat4 matModel;
 uniform mat4 matNormal;
 uniform vec3 lightPos;
 uniform vec4 difColor;
+uniform mat4 lightVP;
+uniform mat4 lightVPSpot;
 
 // Output vertex attributes (to fragment shader)
 out vec3 fragPosition;
 out vec2 fragTexCoord;
 out vec4 fragColor;
 out vec3 fragNormal;
+out vec4 shadowPos;
+out vec4 shadowPosSpot;
 out mat3 TBN;
 
 const float normalOffset = 0.1;
@@ -43,6 +47,10 @@ void main()
     fragBinormal = cross(fragNormal, fragTangent);
 
     TBN = transpose(mat3(fragTangent, fragBinormal, fragNormal));
+
+    // shadow coords from light perspectives
+    shadowPos = lightVP * matModel * vec4(vertexPosition, 1.0);
+    shadowPosSpot = lightVPSpot * matModel * vec4(vertexPosition, 1.0);
 
     // Calculate final vertex position
     gl_Position = mvp*vec4(vertexPosition, 1.0);

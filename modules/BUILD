@@ -24,6 +24,7 @@ cc_library(
         "graphics/materials.h",
         "graphics/pipelines.h",
         "graphics/resources.h",
+        "graphics/shadows.h",
         "graphics/systems.h",
         "graphics/tags.h",
         "graphics/vars.h",

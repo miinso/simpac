@@ -22,6 +22,7 @@ inline constexpr const char* GLSL_VERSION = "300es";
 #include "lights.h"
 #include "lighting.h"
 #include "materials.h"
+#include "shadows.h"
 #include "pipelines.h"
 #include "systems.h"
 #include "vars.h"

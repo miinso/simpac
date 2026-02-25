@@ -144,6 +144,63 @@ void init(flecs::world& world) {
             }
         });
 
+    // NOTE: requires LightRenderer set first; silently skips if missing
+    world.component<ShadowRenderer>()
+        .on_set([](flecs::entity e, ShadowRenderer& sr) {
+            auto* lr = e.world().try_get<LightRenderer>();
+            if (!lr || !lr->shader.id) return;
+
+            // directional shadow FBO
+            sr.fbo = rlLoadFramebuffer();
+            if (!sr.fbo) return;
+            sr.depth_tex = rlLoadTextureDepth(sr.resolution, sr.resolution, false);
+            rlFramebufferAttach(sr.fbo, sr.depth_tex, RL_ATTACHMENT_DEPTH, RL_ATTACHMENT_TEXTURE2D, 0);
+            if (!rlFramebufferComplete(sr.fbo)) {
+                rlUnloadFramebuffer(sr.fbo);
+                rlUnloadTexture(sr.depth_tex);
+                sr.fbo = 0; sr.depth_tex = 0;
+                return;
+            }
+
+            sr.depth_shader = LoadShader(
+                npath(TextFormat("resources/shaders/glsl%s/depth.vs", GLSL_VERSION)).c_str(),
+                npath(TextFormat("resources/shaders/glsl%s/depth.fs", GLSL_VERSION)).c_str());
+            sr.depth_mvp_loc = GetShaderLocation(sr.depth_shader, "mvp");
+            sr.depth_shader.locs[SHADER_LOC_MATRIX_MVP] = sr.depth_mvp_loc;
+            sr.shadow_map_loc  = GetShaderLocation(lr->shader, "shadowMap");
+            sr.light_vp_loc    = GetShaderLocation(lr->shader, "lightVP");
+            sr.shadow_bias_loc = GetShaderLocation(lr->shader, "shadowBias");
+
+            // spot shadow FBO
+            sr.spot_fbo = rlLoadFramebuffer();
+            if (!sr.spot_fbo) return;
+            sr.spot_depth_tex = rlLoadTextureDepth(sr.spot_resolution, sr.spot_resolution, false);
+            rlFramebufferAttach(sr.spot_fbo, sr.spot_depth_tex, RL_ATTACHMENT_DEPTH, RL_ATTACHMENT_TEXTURE2D, 0);
+            if (!rlFramebufferComplete(sr.spot_fbo)) {
+                rlUnloadFramebuffer(sr.spot_fbo);
+                rlUnloadTexture(sr.spot_depth_tex);
+                sr.spot_fbo = 0; sr.spot_depth_tex = 0;
+                return;
+            }
+            sr.spot_shadow_map_loc  = GetShaderLocation(lr->shader, "shadowMapSpot");
+            sr.spot_light_vp_loc    = GetShaderLocation(lr->shader, "lightVPSpot");
+            sr.spot_shadow_bias_loc = GetShaderLocation(lr->shader, "shadowBiasSpot");
+        })
+        .on_remove([](flecs::entity, ShadowRenderer& sr) {
+            if (sr.spot_fbo) {
+                rlUnloadFramebuffer(sr.spot_fbo);
+                rlUnloadTexture(sr.spot_depth_tex);
+                sr.spot_fbo = 0; sr.spot_depth_tex = 0;
+            }
+            if (sr.fbo) {
+                UnloadShader(sr.depth_shader);
+                rlUnloadFramebuffer(sr.fbo);
+                rlUnloadTexture(sr.depth_tex);
+                sr.depth_shader = {};
+                sr.fbo = 0; sr.depth_tex = 0;
+            }
+        });
+
     props::seed(world);
     PreRender = world.entity("graphics::PreRender")
         .add(flecs::Phase)

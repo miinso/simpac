@@ -41,6 +41,8 @@ cc_binary(
             "-sEXPORTED_FUNCTIONS=['_main','_emscripten_shutdown','_emscripten_resize']",
             "--embed-file resources/shaders/glsl300es/pbr.fs@resources/shaders/glsl300es/pbr.fs",
             "--embed-file resources/shaders/glsl300es/pbr.vs@resources/shaders/glsl300es/pbr.vs",
+            "--embed-file resources/shaders/glsl300es/depth.fs@resources/shaders/glsl300es/depth.fs",
+            "--embed-file resources/shaders/glsl300es/depth.vs@resources/shaders/glsl300es/depth.vs",
             "--embed-file resources/models/plane.glb@resources/models/plane.glb",
         ],
         "//conditions:default": [],
@@ -48,7 +50,6 @@ cc_binary(
     deps = [
         "//modules:graphics2",
         "//modules:raylib-gizmo",
-        "//modules:rlights",
         "@eigen",
         "@flecs",
         "@raylib-latest",
