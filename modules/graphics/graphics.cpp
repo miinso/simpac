@@ -45,6 +45,33 @@ namespace {
         ecs_app_set_run_action(app_run_action);
     }
 
+    void init_window(const WindowConfig& config) {
+        detail::CanvasSize canvas_size;
+        detail::platform_before_init_window(config, canvas_size);
+
+    #if defined(__EMSCRIPTEN__)
+        SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT | FLAG_MSAA_4X_HINT);
+    #else
+        SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT);
+    #endif
+        InitWindow(config.width, config.height, config.title);
+
+        detail::platform_after_init_window(config, canvas_size);
+        if (runtime_world) {
+            flecs::world ecs(runtime_world);
+            props::background_color.set<color4f>(to_rgba(config.clear_color));
+
+            auto default_camera = ecs.entity("DefaultCamera")
+                .set<Camera>({})
+                .set<Position>({});
+            camera::active_camera_source(ecs).add<ActiveCamera>(default_camera.id());
+        }
+
+        fonts::load_from_resources();
+
+        detail::platform_set_target_fps(config);
+    }
+
 } // anonymous namespace
 
 namespace detail {
@@ -82,16 +109,57 @@ void init(flecs::world& world) {
 
     components::register_camera_components(world);
     components::register_components(world);
+    components::register_light_components(world);
+    components::register_material_components(world);
+    queries::seed(world);
+
+    // renderer lifecycle hooks — init GPU resources on set, cleanup on remove
+    world.component<LightRenderer>()
+        .on_set([](flecs::entity, LightRenderer& lr) {
+            lr.shader = LoadShader(lr.vs_path, lr.fs_path);
+            lr.view_pos_loc = GetShaderLocation(lr.shader, "viewPos");
+            lr.shader.locs[SHADER_LOC_VECTOR_VIEW] = lr.view_pos_loc;
+            lr.ambient_color_loc = GetShaderLocation(lr.shader, "ambientColor");
+            lr.ambient_intensity_loc = GetShaderLocation(lr.shader, "ambient");
+            lr.num_lights_loc = GetShaderLocation(lr.shader, "numOfLights");
+            for (int i = 0; i < MAX_LIGHTS; ++i) {
+                auto& loc = lr.light_locs[i];
+                loc.enabled   = GetShaderLocation(lr.shader, TextFormat("lights[%i].enabled", i));
+                loc.type      = GetShaderLocation(lr.shader, TextFormat("lights[%i].type", i));
+                loc.position  = GetShaderLocation(lr.shader, TextFormat("lights[%i].position", i));
+                loc.direction = GetShaderLocation(lr.shader, TextFormat("lights[%i].direction", i));
+                loc.color     = GetShaderLocation(lr.shader, TextFormat("lights[%i].color", i));
+                loc.intensity = GetShaderLocation(lr.shader, TextFormat("lights[%i].intensity", i));
+                loc.range     = GetShaderLocation(lr.shader, TextFormat("lights[%i].range", i));
+                loc.falloff   = GetShaderLocation(lr.shader, TextFormat("lights[%i].falloff", i));
+                loc.cos_inner = GetShaderLocation(lr.shader, TextFormat("lights[%i].cosInner", i));
+                loc.cos_outer = GetShaderLocation(lr.shader, TextFormat("lights[%i].cosOuter", i));
+            }
+            lr.mat_locs = MaterialLocs::cache(lr.shader);
+        })
+        .on_remove([](flecs::entity, LightRenderer& lr) {
+            if (lr.shader.id) {
+                UnloadShader(lr.shader);
+                lr.shader = {};
+            }
+        });
+
     props::seed(world);
     PreRender = world.entity("graphics::PreRender")
         .add(flecs::Phase)
         .depends_on(flecs::PostUpdate);
-    OnRender = world.entity("graphics::OnRender")
+    OnShadowPass = world.entity("graphics::OnShadowPass")
         .add(flecs::Phase)
         .depends_on(PreRender);
-    PostRender = world.entity("graphics::PostRender")
+    OnRender = world.entity("graphics::OnRender")
+        .add(flecs::Phase)
+        .depends_on(OnShadowPass);
+    OnRenderOverlay = world.entity("graphics::OnRenderOverlay")
         .add(flecs::Phase)
         .depends_on(OnRender);
+    PostRender = world.entity("graphics::PostRender")
+        .add(flecs::Phase)
+        .depends_on(OnRenderOverlay);
     OnPresent = world.entity("graphics::OnPresent")
         .add(flecs::Phase)
         .depends_on(PostRender);
@@ -103,33 +171,6 @@ void init(flecs::world& world, const WindowConfig& config) {
     init_window(config);
 }
 
-void init_window(const WindowConfig& config) {
-    detail::CanvasSize canvas_size;
-    detail::platform_before_init_window(config, canvas_size);
-
-#if defined(__EMSCRIPTEN__)
-    SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT | FLAG_MSAA_4X_HINT);
-#else
-    SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_VSYNC_HINT);
-#endif
-    InitWindow(config.width, config.height, config.title);
-
-    detail::platform_after_init_window(config, canvas_size);
-    if (runtime_world) {
-        flecs::world ecs(runtime_world);
-        props::background_color.set<color4f>(to_rgba(config.clear_color));
-
-        auto default_camera = ecs.entity("DefaultCamera")
-            .set<Camera>({})
-            .set<Position>({});
-        camera::active_camera_source(ecs).add<ActiveCamera>(default_camera.id());
-    }
-
-    fonts::load_from_resources();
-
-    detail::platform_set_target_fps(config);
-}
-
 bool window_should_close() {
     return WindowShouldClose();
 }
@@ -138,9 +179,6 @@ void close_window() {
     const bool window_ready = IsWindowReady();
     if (window_ready) {
         detail::platform_pre_close_window();
-
-        // cleanup lighting if enabled
-        disable_lighting();
 
         fonts::unload();
 

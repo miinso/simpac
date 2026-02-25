@@ -10,12 +10,7 @@
 #endif
 
 
-// platform-specific GLSL version
-#if defined(PLATFORM_DESKTOP)
-inline constexpr int GLSL_VERSION = 330;
-#else // PLATFORM_WEB, PLATFORM_ANDROID
-inline constexpr int GLSL_VERSION = 100;
-#endif
+inline constexpr const char* GLSL_VERSION = "300es";
 
 #include "input.h"
 
@@ -23,9 +18,11 @@ inline constexpr int GLSL_VERSION = 100;
 #include "camera.h"
 #include "components.h"
 #include "fonts.h"
-#include "lighting.h"
-#include "pipelines.h"
 #include "resources.h"
+#include "lights.h"
+#include "lighting.h"
+#include "materials.h"
+#include "pipelines.h"
 #include "systems.h"
 #include "vars.h"
 
@@ -79,14 +76,6 @@ namespace detail {
 // sets up rendering phases and core systems
 void init(flecs::world& world);
 void init(flecs::world& world, const WindowConfig& config);
-
-// initialize window with config
-void init_window(const WindowConfig& config);
-
-// convenience overload
-inline void init_window(int width, int height, const char* title) {
-    init_window({width, height, title});
-}
 
 // run the main loop.
 void run_loop();

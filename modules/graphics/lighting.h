@@ -1,144 +1,170 @@
 #pragma once
 
 #include <raylib.h>
+#include <flecs.h>
+#include <cmath>
+
+#include "lights.h"
+#include "materials.h"
 
 namespace graphics {
 
-// Maximum lights supported by shader (matches rlights.h)
-inline constexpr int MAX_LIGHTS = 4;
+// singleton managing shader + uniform loc cache
+struct LightRenderer {
+    Shader shader = {};
+    int view_pos_loc = -1;
+    int ambient_color_loc = -1;
+    int ambient_intensity_loc = -1;
+    int num_lights_loc = -1;
 
-// Light types
-enum LightType {
-    LIGHT_DIRECTIONAL = 0,
-    LIGHT_POINT = 1
-};
-
-// Light data structure
-struct Light {
-    int type = LIGHT_POINT;
-    bool enabled = true;
-    Vector3 position = {0.0f, 0.0f, 0.0f};
-    Vector3 target = {0.0f, 0.0f, 0.0f};
-    Color color = WHITE;
-    float attenuation = 1.0f;
-
-    // Shader uniform locations (set by create_light)
-    int enabled_loc = -1;
-    int type_loc = -1;
-    int position_loc = -1;
-    int target_loc = -1;
-    int color_loc = -1;
-    int attenuation_loc = -1;
-};
-
-// Internal state
-namespace detail {
-    inline Shader lighting_shader{};
-    inline int lights_count = 0;
-    inline bool lighting_enabled = false;
-}
-
-// Check if lighting is currently enabled
-[[nodiscard]] inline bool is_lighting_enabled() {
-    return detail::lighting_enabled;
-}
-
-// Get the lighting shader (for advanced use)
-[[nodiscard]] inline Shader& get_lighting_shader() {
-    return detail::lighting_shader;
-}
-
-// Enable lighting with custom shaders
-// vs_path: vertex shader path (e.g., "resources/shaders/glsl330/lighting.vs")
-// fs_path: fragment shader path (e.g., "resources/shaders/glsl330/lighting.fs")
-inline void enable_lighting(const char* vs_path, const char* fs_path) {
-    detail::lighting_shader = LoadShader(vs_path, fs_path);
-    detail::lighting_shader.locs[SHADER_LOC_VECTOR_VIEW] =
-        GetShaderLocation(detail::lighting_shader, "viewPos");
-    detail::lighting_enabled = true;
-    detail::lights_count = 0;
-}
-
-// Set ambient light level
-inline void set_ambient_light(float r, float g, float b, float a = 1.0f) {
-    if (!detail::lighting_enabled) return;
-
-    int ambient_loc = GetShaderLocation(detail::lighting_shader, "ambient");
-    float ambient[4] = {r, g, b, a};
-    SetShaderValue(detail::lighting_shader, ambient_loc, ambient, SHADER_UNIFORM_VEC4);
-}
-
-// Create a new light and register it with the shader
-// Returns the created light (with shader locations set)
-[[nodiscard]] inline Light create_light(LightType type, Vector3 position, Vector3 target, Color color) {
-    Light light{};
-
-    if (!detail::lighting_enabled || detail::lights_count >= MAX_LIGHTS) {
-        return light;
-    }
-
-    light.enabled = true;
-    light.type = type;
-    light.position = position;
-    light.target = target;
-    light.color = color;
-
-    // Get shader locations for this light index
-    int idx = detail::lights_count;
-    Shader& shader = detail::lighting_shader;
-
-    light.enabled_loc = GetShaderLocation(shader, TextFormat("lights[%i].enabled", idx));
-    light.type_loc = GetShaderLocation(shader, TextFormat("lights[%i].type", idx));
-    light.position_loc = GetShaderLocation(shader, TextFormat("lights[%i].position", idx));
-    light.target_loc = GetShaderLocation(shader, TextFormat("lights[%i].target", idx));
-    light.color_loc = GetShaderLocation(shader, TextFormat("lights[%i].color", idx));
-
-    detail::lights_count++;
-
-    return light;
-}
-
-// Update light values in shader (call after modifying light properties)
-inline void update_light(const Light& light) {
-    if (!detail::lighting_enabled) return;
-
-    Shader& shader = detail::lighting_shader;
-
-    SetShaderValue(shader, light.enabled_loc, &light.enabled, SHADER_UNIFORM_INT);
-    SetShaderValue(shader, light.type_loc, &light.type, SHADER_UNIFORM_INT);
-
-    float position[3] = {light.position.x, light.position.y, light.position.z};
-    SetShaderValue(shader, light.position_loc, position, SHADER_UNIFORM_VEC3);
-
-    float target[3] = {light.target.x, light.target.y, light.target.z};
-    SetShaderValue(shader, light.target_loc, target, SHADER_UNIFORM_VEC3);
-
-    float color[4] = {
-        static_cast<float>(light.color.r) / 255.0f,
-        static_cast<float>(light.color.g) / 255.0f,
-        static_cast<float>(light.color.b) / 255.0f,
-        static_cast<float>(light.color.a) / 255.0f
+    // per-light uniform loc cache
+    struct LightLocs {
+        int enabled = -1, type = -1, position = -1;
+        int direction = -1, color = -1, intensity = -1;
+        int range = -1, falloff = -1;
+        int cos_inner = -1, cos_outer = -1;
     };
-    SetShaderValue(shader, light.color_loc, color, SHADER_UNIFORM_VEC4);
-}
+    LightLocs light_locs[MAX_LIGHTS] = {};
 
-// Update shader with camera position (call each frame when lighting is enabled)
-inline void update_lighting_camera_pos(const Vector3& camera_pos) {
-    if (!detail::lighting_enabled) return;
+    // cached material uniform locs
+    MaterialLocs mat_locs = {};
 
-    float pos[3] = {camera_pos.x, camera_pos.y, camera_pos.z};
-    SetShaderValue(detail::lighting_shader,
-                   detail::lighting_shader.locs[SHADER_LOC_VECTOR_VIEW],
-                   pos, SHADER_UNIFORM_VEC3);
-}
+    // shader source paths (null = use default)
+    const char* vs_path = nullptr;
+    const char* fs_path = nullptr;
 
-// Cleanup lighting resources
-inline void disable_lighting() {
-    if (detail::lighting_enabled) {
-        UnloadShader(detail::lighting_shader);
-        detail::lighting_enabled = false;
-        detail::lights_count = 0;
+    void upload_camera_pos(const vec3f& cam_pos) const {
+        if (!shader.id) return;
+        float pos[3] = {cam_pos.x, cam_pos.y, cam_pos.z};
+        SetShaderValue(shader, view_pos_loc, pos, SHADER_UNIFORM_VEC3);
     }
+
+    void upload_light_count(int count) const {
+        if (!shader.id) return;
+        SetShaderValue(shader, num_lights_loc, &count, SHADER_UNIFORM_INT);
+    }
+};
+
+// --- light upload definitions (declared in lights.h) ---
+
+inline void AmbientLight::upload(const LightRenderer& lr) const {
+    if (!lr.shader.id) return;
+    float col[3] = {color.x, color.y, color.z};
+    SetShaderValue(lr.shader, lr.ambient_color_loc, col, SHADER_UNIFORM_VEC3);
+    SetShaderValue(lr.shader, lr.ambient_intensity_loc, &intensity, SHADER_UNIFORM_FLOAT);
 }
+
+inline void DirectionalLight::upload(const LightRenderer& lr, int index) const {
+    if (!lr.shader.id || index < 0 || index >= MAX_LIGHTS) return;
+    const auto& loc = lr.light_locs[index];
+
+    int en = enabled ? 1 : 0;
+    int tp = LIGHT_DIRECTIONAL;
+    SetShaderValue(lr.shader, loc.enabled, &en, SHADER_UNIFORM_INT);
+    SetShaderValue(lr.shader, loc.type, &tp, SHADER_UNIFORM_INT);
+
+    float pos[3] = {0, 0, 0};
+    SetShaderValue(lr.shader, loc.position, pos, SHADER_UNIFORM_VEC3);
+
+    float dir[3] = {direction.x, direction.y, direction.z};
+    SetShaderValue(lr.shader, loc.direction, dir, SHADER_UNIFORM_VEC3);
+
+    float col[4] = {color.x, color.y, color.z, color.w};
+    SetShaderValue(lr.shader, loc.color, col, SHADER_UNIFORM_VEC4);
+    SetShaderValue(lr.shader, loc.intensity, &intensity, SHADER_UNIFORM_FLOAT);
+
+    float zero = 0.0f;
+    SetShaderValue(lr.shader, loc.range, &zero, SHADER_UNIFORM_FLOAT);
+    SetShaderValue(lr.shader, loc.falloff, &zero, SHADER_UNIFORM_FLOAT);
+    SetShaderValue(lr.shader, loc.cos_inner, &zero, SHADER_UNIFORM_FLOAT);
+    SetShaderValue(lr.shader, loc.cos_outer, &zero, SHADER_UNIFORM_FLOAT);
+}
+
+inline void PointLight::upload(const LightRenderer& lr, int index, const Position& pos) const {
+    if (!lr.shader.id || index < 0 || index >= MAX_LIGHTS) return;
+    const auto& loc = lr.light_locs[index];
+
+    int en = enabled ? 1 : 0;
+    int tp = LIGHT_POINT;
+    SetShaderValue(lr.shader, loc.enabled, &en, SHADER_UNIFORM_INT);
+    SetShaderValue(lr.shader, loc.type, &tp, SHADER_UNIFORM_INT);
+
+    float p[3] = {pos.x, pos.y, pos.z};
+    SetShaderValue(lr.shader, loc.position, p, SHADER_UNIFORM_VEC3);
+
+    float dir[3] = {0, 0, 0};
+    SetShaderValue(lr.shader, loc.direction, dir, SHADER_UNIFORM_VEC3);
+
+    float col[4] = {color.x, color.y, color.z, color.w};
+    SetShaderValue(lr.shader, loc.color, col, SHADER_UNIFORM_VEC4);
+    SetShaderValue(lr.shader, loc.intensity, &intensity, SHADER_UNIFORM_FLOAT);
+    SetShaderValue(lr.shader, loc.range, &range, SHADER_UNIFORM_FLOAT);
+    SetShaderValue(lr.shader, loc.falloff, &falloff, SHADER_UNIFORM_FLOAT);
+
+    float zero = 0.0f;
+    SetShaderValue(lr.shader, loc.cos_inner, &zero, SHADER_UNIFORM_FLOAT);
+    SetShaderValue(lr.shader, loc.cos_outer, &zero, SHADER_UNIFORM_FLOAT);
+}
+
+inline void SpotLight::upload(const LightRenderer& lr, int index, const Position& pos) const {
+    if (!lr.shader.id || index < 0 || index >= MAX_LIGHTS) return;
+    const auto& loc = lr.light_locs[index];
+
+    int en = enabled ? 1 : 0;
+    int tp = LIGHT_SPOT;
+    SetShaderValue(lr.shader, loc.enabled, &en, SHADER_UNIFORM_INT);
+    SetShaderValue(lr.shader, loc.type, &tp, SHADER_UNIFORM_INT);
+
+    float p[3] = {pos.x, pos.y, pos.z};
+    SetShaderValue(lr.shader, loc.position, p, SHADER_UNIFORM_VEC3);
+
+    float dir[3] = {direction.x, direction.y, direction.z};
+    SetShaderValue(lr.shader, loc.direction, dir, SHADER_UNIFORM_VEC3);
+
+    float col[4] = {color.x, color.y, color.z, color.w};
+    SetShaderValue(lr.shader, loc.color, col, SHADER_UNIFORM_VEC4);
+    SetShaderValue(lr.shader, loc.intensity, &intensity, SHADER_UNIFORM_FLOAT);
+    SetShaderValue(lr.shader, loc.range, &range, SHADER_UNIFORM_FLOAT);
+    SetShaderValue(lr.shader, loc.falloff, &falloff, SHADER_UNIFORM_FLOAT);
+
+    float ci = cosf(inner_angle * 3.14159265f / 180.0f);
+    float co = cosf(outer_angle * 3.14159265f / 180.0f);
+    SetShaderValue(lr.shader, loc.cos_inner, &ci, SHADER_UNIFORM_FLOAT);
+    SetShaderValue(lr.shader, loc.cos_outer, &co, SHADER_UNIFORM_FLOAT);
+}
+
+namespace queries {
+
+inline flecs::query<const AmbientLight> ambient;
+inline flecs::query<const DirectionalLight> directional;
+// NOTE: point/spot queries require Position — entities without it are silently excluded
+inline flecs::query<const PointLight, const Position> point;
+inline flecs::query<const SpotLight, const Position> spot;
+inline flecs::query<const ModelRef, const Position> renderables;
+inline flecs::query<const ModelRef, const Position> shadow_casters;
+
+inline void seed(flecs::world& ecs) {
+    ambient = ecs.query_builder<const AmbientLight>()
+        .cached()
+        .build();
+    directional = ecs.query_builder<const DirectionalLight>()
+        .cached()
+        .build();
+    point = ecs.query_builder<const PointLight, const Position>()
+        .cached()
+        .build();
+    spot = ecs.query_builder<const SpotLight, const Position>()
+        .cached()
+        .build();
+    renderables = ecs.query_builder<const ModelRef, const Position>()
+        .cached()
+        .build();
+    shadow_casters = ecs.query_builder<const ModelRef, const Position>()
+        .with<ShadowCaster>()
+        .cached()
+        .build();
+}
+
+} // namespace queries
 
 } // namespace graphics
