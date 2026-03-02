@@ -287,6 +287,18 @@ bazel_dep(name = "cpuinfo", version = "0.0.0-20250925-877328f")
 bazel_dep(name = "osqp", version = "1.0.0.bcr.1")
 bazel_dep(name = "osqp-eigen", version = "0.10.3")
 
+##
+# rules_cuda
+##
+bazel_dep(name = "rules_cuda", version = "0.2.5")
+
+cuda = use_extension("@rules_cuda//cuda:extensions.bzl", "toolchain")
+cuda.local_toolchain(
+    name = "local_cuda",
+    toolkit_path = "",
+)
+use_repo(cuda, "local_cuda")
+
 
 ##
 # Boost
