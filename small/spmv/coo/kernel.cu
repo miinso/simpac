@@ -2,7 +2,7 @@
 // Izzat El Hajj, CMPS 224/396AA GPU Computing
 
 #include "common.h"
-#include "timer.h"
+#include "small/spmv/timer.h"
 
 __global__ void spmv_coo_kernel(COOMatrix cooMatrix, float* inVector, float* outVector) {
     unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -10,7 +10,7 @@ __global__ void spmv_coo_kernel(COOMatrix cooMatrix, float* inVector, float* out
         unsigned int row = cooMatrix.rowIdxs[i];
         unsigned int col = cooMatrix.colIdxs[i];
         float value = cooMatrix.values[i];
-        atomicAdd(&outVector[row], inVector[col] * value);
+        atomicAdd(&outVector[row], inVector[col] * value); // eww
     }
 }
 
