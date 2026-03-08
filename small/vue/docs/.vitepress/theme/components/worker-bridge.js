@@ -626,13 +626,18 @@ export class SimpacWorker {
 
         const getPos = (e) => {
             const r = c.getBoundingClientRect();
-            return { x: e.clientX - r.left, y: e.clientY - r.top };
+            const sx = c.width / r.width;
+            const sy = c.height / r.height;
+            return { x: (e.clientX - r.left) * sx, y: (e.clientY - r.top) * sy };
         };
 
         this._addListener(c, 'mousemove', e => {
             const p = getPos(e);
             if (!this.worker) return;
-            this.worker.postMessage({ type: 'mousemove', x: p.x, y: p.y, dx: e.movementX, dy: e.movementY });
+            const r = c.getBoundingClientRect();
+            const sx = c.width / r.width;
+            const sy = c.height / r.height;
+            this.worker.postMessage({ type: 'mousemove', x: p.x, y: p.y, dx: e.movementX * sx, dy: e.movementY * sy });
         });
 
         this._addListener(c, 'mousedown', e => {
@@ -680,20 +685,43 @@ export class SimpacWorker {
             this.worker.postMessage({ type: 'keyup', key: e.keyCode });
         });
 
-        // Touch
-        const handleTouch = (e) => {
+        // Touch — synthesize mouse events from first touch (replaces raylib's
+        // built-in touch-to-mouse that was lost when moving to offscreen worker)
+        let lastTouchX = 0, lastTouchY = 0;
+        const touchToMouse = (e) => {
             e.preventDefault();
+            if (!this.worker) return;
             const r = c.getBoundingClientRect();
+            const sx = c.width / r.width;
+            const sy = c.height / r.height;
             const touches = [];
             for (let i = 0; i < e.touches.length; i++) {
                 const t = e.touches[i];
-                touches.push({ x: t.clientX - r.left, y: t.clientY - r.top });
+                touches.push({ x: (t.clientX - r.left) * sx, y: (t.clientY - r.top) * sy });
             }
             this.worker.postMessage({ type: 'touch', payload: touches });
+
+            // synthesize mouse from first touch
+            if (e.type === 'touchstart' && e.touches.length > 0) {
+                const t = touches[0];
+                lastTouchX = t.x;
+                lastTouchY = t.y;
+                this.worker.postMessage({ type: 'mousemove', x: t.x, y: t.y, dx: 0, dy: 0 });
+                this.worker.postMessage({ type: 'mousedown', x: t.x, y: t.y, button: 0 });
+            } else if (e.type === 'touchmove' && e.touches.length > 0) {
+                const t = touches[0];
+                const dx = t.x - lastTouchX;
+                const dy = t.y - lastTouchY;
+                lastTouchX = t.x;
+                lastTouchY = t.y;
+                this.worker.postMessage({ type: 'mousemove', x: t.x, y: t.y, dx, dy });
+            } else if (e.type === 'touchend' || e.type === 'touchcancel') {
+                this.worker.postMessage({ type: 'mouseup', x: lastTouchX, y: lastTouchY, button: 0 });
+            }
         };
-        this._addListener(c, 'touchstart', handleTouch, { passive: false });
-        this._addListener(c, 'touchmove', handleTouch, { passive: false });
-        this._addListener(c, 'touchend', handleTouch, { passive: false });
-        this._addListener(c, 'touchcancel', handleTouch, { passive: false });
+        this._addListener(c, 'touchstart', touchToMouse, { passive: false });
+        this._addListener(c, 'touchmove', touchToMouse, { passive: false });
+        this._addListener(c, 'touchend', touchToMouse, { passive: false });
+        this._addListener(c, 'touchcancel', touchToMouse, { passive: false });
     }
 }

@@ -45,7 +45,7 @@ Systems: `{{ systemCount }}`
 
 <Simpac
   ref="appRef"
-  src="/bazel-bin/small/cloth/webapp/main.js"
+  src="/cloth/main.js"
   aspect-ratio="16:9"
   :cwrap="['flecs_explorer_request']"
   @ready="onReady"
