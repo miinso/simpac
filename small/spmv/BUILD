@@ -39,3 +39,27 @@ cuda_binary(
     srcs = ["csr/main.cu"],
     deps = [":csr_kernel", ":utils"],
 )
+
+##
+# ell
+##
+cuda_library(
+    name = "ell_kernel",
+    srcs = ["ell/kernel.cu"],
+    hdrs = ["ell/common.h"],
+    deps = [":utils"],
+)
+
+cuda_binary(
+    name = "ell",
+    srcs = ["ell/main.cu"],
+    deps = [":ell_kernel", ":utils"],
+)
+# rules_cuda offers:
+# @cuda//:cublas
+# @cuda//:cusparse
+# @cuda//:cusolver
+# @cuda//:cufft
+# @cuda//:curand
+# @cuda//:cudart
+# @cuda//:cupti
