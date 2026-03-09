@@ -23,7 +23,25 @@
 export const WORKER_BOOTSTRAP_CODE = `
 let canvas = null;
 const noop = () => {};
-const dummyRect = { left: 0, top: 0, width: 0, height: 0 };
+
+// dom polyfill: event listener storage + dispatch for offscreen canvas
+let _cachedRect = { left: 0, top: 0, width: 0, height: 0, right: 0, bottom: 0, x: 0, y: 0 };
+const _canvasL = {};
+const _windowL = {};
+function _addL(map, type, handler) {
+  if (!map[type]) map[type] = [];
+  map[type].push(handler);
+}
+function _removeL(map, type, handler) {
+  if (!map[type]) return;
+  map[type] = map[type].filter(h => h !== handler);
+}
+function _dispatchL(map, type, event) {
+  const list = map[type];
+  if (!list) return;
+  for (let i = 0; i < list.length; i++) list[i](event);
+}
+
 const dummyStyle = {
   removeProperty: noop,
   setProperty: noop
@@ -32,7 +50,7 @@ const dummyElement = {
   style: dummyStyle,
   addEventListener: noop,
   removeEventListener: noop,
-  getBoundingClientRect: () => dummyRect,
+  getBoundingClientRect: () => _cachedRect,
   getContext: () => null
 };
 
@@ -97,10 +115,11 @@ if (!self.window.matchMedia) {
     removeEventListener: () => {}
   });
 }
-if (!self.window.addEventListener) {
-  self.window.addEventListener = () => {};
-  self.window.removeEventListener = () => {};
-}
+// window event polyfill: keyboard events are registered on window by GLFW
+self.window.addEventListener = (type, handler) => _addL(_windowL, type, handler);
+self.window.removeEventListener = (type, handler) => _removeL(_windowL, type, handler);
+self.scrollX = 0;
+self.scrollY = 0;
 
 let moduleInstance = null;
 let allowedExports = null;
@@ -268,14 +287,24 @@ function handleFsWrite(payload) {
 async function init(scriptUrl, wasmUrl, offscreenCanvas, exportsList, cwrapList, webglContextAttributes) {
   canvas = offscreenCanvas || null;
   if (canvas) {
+    // OffscreenCanvas has no .id -- emscripten's SetCanvasIdJs does "#" + Module.canvas.id
+    // without this, findEventTarget("#undefined") silently fails and touch callbacks never register
+    if (!canvas.id) canvas.id = 'canvas';
     if (!canvas.style) canvas.style = { removeProperty: noop, setProperty: noop };
     if (typeof canvas.style.removeProperty !== 'function') canvas.style.removeProperty = noop;
     if (typeof canvas.style.setProperty !== 'function') canvas.style.setProperty = noop;
-    if (typeof canvas.addEventListener !== 'function') canvas.addEventListener = noop;
-    if (typeof canvas.removeEventListener !== 'function') canvas.removeEventListener = noop;
-    if (typeof canvas.getBoundingClientRect !== 'function') {
-      canvas.getBoundingClientRect = () => dummyRect;
-    }
+    // dom polyfill: real event listener storage on canvas
+    canvas.addEventListener = (type, handler) => _addL(_canvasL, type, handler);
+    canvas.removeEventListener = (type, handler) => _removeL(_canvasL, type, handler);
+    canvas.dispatchEvent = (event) => _dispatchL(_canvasL, event.type, event);
+    canvas.getBoundingClientRect = () => _cachedRect;
+    canvas.focus = noop;
+    canvas.setPointerCapture = noop;
+    canvas.releasePointerCapture = noop;
+    try {
+      Object.defineProperty(canvas, 'clientWidth', { get: () => _cachedRect.width, configurable: true });
+      Object.defineProperty(canvas, 'clientHeight', { get: () => _cachedRect.height, configurable: true });
+    } catch(e) {}
   }
   setAllowedExports(exportsList);
   setAllowedCwrap(cwrapList);
@@ -346,11 +375,6 @@ async function init(scriptUrl, wasmUrl, offscreenCanvas, exportsList, cwrapList,
   }
 }
 
-function callEngine(name, ...args) {
-  const fn = moduleInstance && moduleInstance[name];
-  if (typeof fn === 'function') fn(...args);
-}
-
 onmessage = (event) => {
   const data = event.data || {};
   const { type, payload } = data;
@@ -408,43 +432,32 @@ onmessage = (event) => {
     return;
   }
 
-  if (!moduleInstance) return;
+  // dom polyfill: dispatch forwarded events to stored GLFW/emscripten listeners
+  if (type === 'input') {
+    const { target, data: evData } = payload || {};
+    if (!evData) return;
+    evData.preventDefault = noop;
+    evData.stopPropagation = noop;
+    evData.stopImmediatePropagation = noop;
+    if (target === 'window') {
+      _dispatchL(_windowL, evData.type, evData);
+    } else {
+      evData.target = canvas;
+      _dispatchL(_canvasL, evData.type, evData);
+    }
+    return;
+  }
 
-  // Input Bridge
-  switch (type) {
-    case 'mousemove':
-      callEngine('_engine_mouse_move', data.x, data.y, data.dx, data.dy);
-      break;
-    case 'mousedown':
-      callEngine('_engine_mouse_down', data.button, data.x, data.y);
-      break;
-    case 'mouseup':
-      callEngine('_engine_mouse_up', data.button, data.x, data.y);
-      break;
-    case 'wheel':
-      callEngine('_engine_mouse_wheel', data.dx, data.dy);
-      break;
-    case 'mouseenter':
-      callEngine('_engine_mouse_enter', 1);
-      break;
-    case 'mouseleave':
-      callEngine('_engine_mouse_enter', 0);
-      break;
-    case 'keydown':
-      callEngine('_engine_key_down', data.key);
-      break;
-    case 'keyup':
-      callEngine('_engine_key_up', data.key);
-      break;
-    case 'touch':
-      const list = Array.isArray(payload) ? payload : [];
-      if (moduleInstance && typeof moduleInstance._engine_set_touch_count === 'function') {
-        moduleInstance._engine_set_touch_count(list.length);
-        for (let i = 0; i < list.length; i++) {
-          moduleInstance._engine_set_touch(i, list[i].x, list[i].y);
-        }
-      }
-      break;
+  if (type === 'size') {
+    const { left, top, width, height } = payload || {};
+    _cachedRect = {
+      left: left || 0, top: top || 0,
+      width: width || 0, height: height || 0,
+      right: (left || 0) + (width || 0),
+      bottom: (top || 0) + (height || 0),
+      x: left || 0, y: top || 0
+    };
+    return;
   }
 };
 `;
@@ -616,6 +629,7 @@ export class SimpacWorker {
 
     _removeListeners() {
         for (const entry of this._listeners) {
+            if (!entry.target) { entry.handler(); continue; }
             entry.target.removeEventListener(entry.type, entry.handler, entry.options);
         }
         this._listeners = [];
@@ -624,104 +638,125 @@ export class SimpacWorker {
     _attachInputListeners() {
         const c = this.canvas;
 
-        const getPos = (e) => {
-            const r = c.getBoundingClientRect();
-            const sx = c.width / r.width;
-            const sy = c.height / r.height;
-            return { x: (e.clientX - r.left) * sx, y: (e.clientY - r.top) * sy };
+        // send canvas rect so worker polyfill can serve getBoundingClientRect
+        const sendSize = () => {
+            if (!this.worker) return;
+            const rect = c.getBoundingClientRect();
+            this.worker.postMessage({ type: 'size', payload: {
+                left: rect.left, top: rect.top,
+                width: c.clientWidth, height: c.clientHeight
+            }});
+        };
+        sendSize();
+
+        // helpers: serialize raw DOM event properties and forward to worker
+        const sendCanvas = (e, props) => {
+            if (!this.worker) return;
+            const data = { type: e.type };
+            for (const p of props) data[p] = e[p];
+            this.worker.postMessage({ type: 'input', payload: { target: 'canvas', data } });
+        };
+        const sendWindow = (e, props) => {
+            if (!this.worker) return;
+            const data = { type: e.type };
+            for (const p of props) data[p] = e[p];
+            this.worker.postMessage({ type: 'input', payload: { target: 'window', data } });
         };
 
-        this._addListener(c, 'mousemove', e => {
-            const p = getPos(e);
-            if (!this.worker) return;
-            const r = c.getBoundingClientRect();
-            const sx = c.width / r.width;
-            const sy = c.height / r.height;
-            this.worker.postMessage({ type: 'mousemove', x: p.x, y: p.y, dx: e.movementX * sx, dy: e.movementY * sy });
-        });
+        // mouse -> canvas (GLFW registers mouse handlers on canvas)
+        const mouseProps = [
+            'pageX', 'pageY', 'clientX', 'clientY', 'screenX', 'screenY',
+            'movementX', 'movementY', 'button', 'buttons', 'offsetX', 'offsetY'
+        ];
+        for (const evt of ['mousemove', 'mousedown', 'mouseup', 'mouseenter', 'mouseleave', 'click']) {
+            this._addListener(c, evt, e => sendCanvas(e, mouseProps));
+        }
 
-        this._addListener(c, 'mousedown', e => {
-            const p = getPos(e); // Mouse updates pos too
-            if (!this.worker) return;
-            this.worker.postMessage({ type: 'mousedown', x: p.x, y: p.y, button: e.button });
-        });
-
-        this._addListener(c, 'mouseup', e => {
-            const p = getPos(e);
-            if (!this.worker) return;
-            this.worker.postMessage({ type: 'mouseup', x: p.x, y: p.y, button: e.button });
-        });
-
+        // wheel -> canvas
+        const wheelProps = [
+            'deltaX', 'deltaY', 'deltaMode',
+            'wheelDelta', 'wheelDeltaX', 'wheelDeltaY',
+            'pageX', 'pageY', 'clientX', 'clientY'
+        ];
         this._addListener(c, 'wheel', e => {
             e.preventDefault();
-            if (!this.worker) return;
-            this.worker.postMessage({ type: 'wheel', dx: e.deltaX, dy: e.deltaY });
+            sendCanvas(e, wheelProps);
         }, { passive: false });
 
-        this._addListener(c, 'mouseenter', () => {
-            if (!this.worker) return;
-            this.worker.postMessage({ type: 'mouseenter' });
-        });
-        this._addListener(c, 'mouseleave', () => {
-            if (!this.worker) return;
-            this.worker.postMessage({ type: 'mouseleave' });
-        });
+        // touch -> canvas (GLFW + emscripten register touch handlers on canvas)
+        const serializeTouches = (tl) => {
+            if (!tl) return [];
+            const arr = [];
+            for (let i = 0; i < tl.length; i++) {
+                const t = tl[i];
+                arr.push({
+                    identifier: t.identifier,
+                    pageX: t.pageX, pageY: t.pageY,
+                    clientX: t.clientX, clientY: t.clientY,
+                    screenX: t.screenX, screenY: t.screenY
+                });
+            }
+            return arr;
+        };
+        for (const evt of ['touchstart', 'touchmove', 'touchend', 'touchcancel']) {
+            this._addListener(c, evt, e => {
+                e.preventDefault();
+                if (!this.worker) return;
+                const mods = { ctrlKey: e.ctrlKey, shiftKey: e.shiftKey, altKey: e.altKey, metaKey: e.metaKey };
+                const active = serializeTouches(e.touches);
+                const changed = serializeTouches(e.changedTouches);
+                const sendTouch = (touches, changedTouches, targetTouches) => {
+                    this.worker.postMessage({ type: 'input', payload: { target: 'canvas', data: {
+                        type: e.type, touches, changedTouches, targetTouches, ...mods
+                    }}});
+                };
+                // raylib's touchend handler has `break` after removing one isChanged
+                // touch, so multi-finger lift in one event leaves stale pointCount.
+                // split into individual events so each has exactly one changed touch.
+                if ((e.type === 'touchend' || e.type === 'touchcancel') && changed.length > 1) {
+                    for (let k = 0; k < changed.length; k++) {
+                        const remaining = active.concat(changed.slice(k + 1));
+                        sendTouch(remaining, [changed[k]], remaining);
+                    }
+                } else {
+                    sendTouch(active, changed, serializeTouches(e.targetTouches));
+                }
+            }, { passive: false });
+        }
 
-        // Context menu prevent (opt-in)
+        // keyboard -> window (GLFW registers keyboard handlers on window)
+        const keyProps = [
+            'keyCode', 'key', 'code', 'charCode', 'which',
+            'ctrlKey', 'metaKey', 'shiftKey', 'altKey', 'repeat'
+        ];
+        c.tabIndex = 0;
+        c.style.outline = 'none';
+        for (const evt of ['keydown', 'keyup', 'keypress']) {
+            this._addListener(c, evt, e => {
+                if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
+                    e.preventDefault();
+                }
+                sendWindow(e, keyProps);
+            });
+        }
+
+        // context menu
         if (!this.options.allowContextMenu) {
             this._addListener(c, 'contextmenu', e => e.preventDefault());
         }
 
-        // Keyboard
-        c.tabIndex = 0;
-        c.style.outline = 'none';
-        this._addListener(c, 'keydown', e => {
-            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) e.preventDefault();
-            if (!this.worker) return;
-            this.worker.postMessage({ type: 'keydown', key: e.keyCode });
-        });
-        this._addListener(c, 'keyup', e => {
-            if (!this.worker) return;
-            this.worker.postMessage({ type: 'keyup', key: e.keyCode });
-        });
+        // focus/blur -> canvas
+        this._addListener(c, 'focus', e => sendCanvas(e, []));
+        this._addListener(c, 'blur', e => sendCanvas(e, []));
 
-        // Touch — synthesize mouse events from first touch (replaces raylib's
-        // built-in touch-to-mouse that was lost when moving to offscreen worker)
-        let lastTouchX = 0, lastTouchY = 0;
-        const touchToMouse = (e) => {
-            e.preventDefault();
-            if (!this.worker) return;
-            const r = c.getBoundingClientRect();
-            const sx = c.width / r.width;
-            const sy = c.height / r.height;
-            const touches = [];
-            for (let i = 0; i < e.touches.length; i++) {
-                const t = e.touches[i];
-                touches.push({ x: (t.clientX - r.left) * sx, y: (t.clientY - r.top) * sy });
-            }
-            this.worker.postMessage({ type: 'touch', payload: touches });
-
-            // synthesize mouse from first touch
-            if (e.type === 'touchstart' && e.touches.length > 0) {
-                const t = touches[0];
-                lastTouchX = t.x;
-                lastTouchY = t.y;
-                this.worker.postMessage({ type: 'mousemove', x: t.x, y: t.y, dx: 0, dy: 0 });
-                this.worker.postMessage({ type: 'mousedown', x: t.x, y: t.y, button: 0 });
-            } else if (e.type === 'touchmove' && e.touches.length > 0) {
-                const t = touches[0];
-                const dx = t.x - lastTouchX;
-                const dy = t.y - lastTouchY;
-                lastTouchX = t.x;
-                lastTouchY = t.y;
-                this.worker.postMessage({ type: 'mousemove', x: t.x, y: t.y, dx, dy });
-            } else if (e.type === 'touchend' || e.type === 'touchcancel') {
-                this.worker.postMessage({ type: 'mouseup', x: lastTouchX, y: lastTouchY, button: 0 });
-            }
-        };
-        this._addListener(c, 'touchstart', touchToMouse, { passive: false });
-        this._addListener(c, 'touchmove', touchToMouse, { passive: false });
-        this._addListener(c, 'touchend', touchToMouse, { passive: false });
-        this._addListener(c, 'touchcancel', touchToMouse, { passive: false });
+        // resize -> update cached rect in worker
+        // ResizeObserver is most reliable: fires after layout settles (orientation change, CSS resize, etc.)
+        if (typeof ResizeObserver !== 'undefined') {
+            const ro = new ResizeObserver(() => sendSize());
+            ro.observe(c);
+            this._listeners.push({ target: null, type: 'resizeobserver', handler: () => ro.disconnect() });
+        }
+        this._addListener(window, 'resize', sendSize);
+        this._addListener(window, 'scroll', sendSize, { passive: true });
     }
 }

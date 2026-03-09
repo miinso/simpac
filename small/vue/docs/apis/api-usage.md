@@ -4,7 +4,7 @@ title: API Usage
 
 <script setup>
 import { onBeforeUnmount, ref } from 'vue';
-
+import appSrc from '/cloth/main.js?url';
 const appRef = ref(null);
 const status = ref('booting');
 const systemCount = ref(0);
@@ -45,7 +45,7 @@ Systems: `{{ systemCount }}`
 
 <Simpac
   ref="appRef"
-  src="/cloth/main.js"
+  :src="appSrc"
   aspect-ratio="16:9"
   :cwrap="['flecs_explorer_request']"
   @ready="onReady"

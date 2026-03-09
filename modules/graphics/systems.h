@@ -70,8 +70,6 @@ inline void install_pipeline_systems(flecs::world& ecs) {
     ecs.system("graphics::begin")
         .kind(PreRender)
         .run([](flecs::iter& it) {
-            graphics::shim::update();
-
             if (IsWindowResized()) {
                 SetWindowSize(GetScreenWidth(), GetScreenHeight());
             }

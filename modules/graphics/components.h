@@ -17,6 +17,11 @@ struct Camera {
     float move_speed = 0.1f;
     float rotation_speed = 0.2f;
     float zoom_speed = 1.0f;
+
+    // runtime touch tracking (not serialized)
+    float prev_touch_x = 0, prev_touch_y = 0;
+    int prev_touch_count = 0;
+    bool was_touching = false;
 };
 
 struct Position : vec3<Position, scalar_real> {
