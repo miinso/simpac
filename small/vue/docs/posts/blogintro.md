@@ -2,16 +2,18 @@
 title: Blog Intro
 ---
 
-# Blog Intro
+# Blog Int2ro
 
 
 <script setup>
 import { nextTick, ref, watch } from 'vue';
 import { Repl as ReplEditor, useStore } from '@vue/repl';
+import { useEngineBlock } from '@simpac/lib';
 
 const appRef = ref(null);
 const scriptText = ref('');
 const scriptName = 'SceneScript';
+const engine = useEngineBlock(appRef);
 let conn = null;
 
 // repl
@@ -33,10 +35,14 @@ watch(
   }
 );
 
-function onReady() {
-  conn = window.flecs.connect(appRef.value);
+async function onReady() {
+  await engine.connect();
+  conn = engine.state.conn;
 
-  // print the entire world (serialized)
+  // enable kinematic dragging
+  await engine.systems.setEnabled('graphics.PickParticles', true).catch(() => {});
+  await engine.systems.setEnabled('graphics.DragParticlesKinematic', true).catch(() => {});
+
   conn.world((world) => { console.log(world) });
 
   // get entity with full table info,

@@ -2,7 +2,7 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 import Block1Math from './math.md';
 import block1Script from './scene.flecs?raw';
-import { useEngineBlock } from '../../../../.vitepress/theme/lib/index.js';
+import { useEngineBlock } from '@simpac/lib';
 
 const title = 'Block1: Explicit Step';
 const wasmSrc = '/bazel-bin/small/cloth/webapp/main.js';

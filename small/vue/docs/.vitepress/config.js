@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitepress';
 import basicSsl from '@vitejs/plugin-basic-ssl';
 import { katex } from '@mdit/plugin-katex';
@@ -7,6 +8,11 @@ const isVercelDev = process.env.VERCEL_DEV === '1';
 
 export default defineConfig({
   vite: {
+    resolve: {
+      alias: {
+        '@simpac': fileURLToPath(new URL('./theme', import.meta.url)),
+      },
+    },
     plugins: isVercelDev ? [] : [basicSsl()],
     server: {
       https: false, // enable if needed for cross-origin isolation

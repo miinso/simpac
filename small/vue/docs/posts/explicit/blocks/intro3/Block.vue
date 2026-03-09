@@ -2,7 +2,7 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 import IntroMath from './math.md';
 import sceneCode from './scene.flecs?raw';
-import { useEngineBlock } from '../../../../.vitepress/theme/lib/index.js';
+import { useEngineBlock } from '@simpac/lib';
 
 const title = 'Intro 3: Pinned + Spring';
 const wasmSrc = '/bazel-bin/small/cloth/webapp/main.js';

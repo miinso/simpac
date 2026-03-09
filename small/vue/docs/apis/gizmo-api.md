@@ -4,7 +4,7 @@ title: Gizmo API
 
 <script setup>
 import { onBeforeUnmount, reactive, ref } from 'vue';
-import { useEngineBlock } from '../.vitepress/theme/lib/index.js';
+import { useEngineBlock } from '@simpac/lib';
 
 const appRef = ref(null);
 const status = ref('booting');
