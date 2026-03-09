@@ -65,7 +65,7 @@ inline void update_camera_controls(Position& pos, Camera& cam) {
         if (!cam.was_touching || cam.prev_touch_count != touch_count) {
             cam.prev_touch_x = tp.x;
             cam.prev_touch_y = tp.y;
-        } else if (touch_count == 1) {
+        } else if (touch_count == 1 && !input::capture_mouse_left) {
             float dx = tp.x - cam.prev_touch_x;
             float dy = tp.y - cam.prev_touch_y;
             CameraYaw(&rc, -dx * cam.rotation_speed * DEG2RAD, true);

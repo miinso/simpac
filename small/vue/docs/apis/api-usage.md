@@ -23,6 +23,7 @@ async function onReady() {
   conn = window.flecs.connect(appRef.value);
   status.value = 'ready';
   await refreshSystemCount();
+  await conn.remove('graphics.DragParticlesKinematic', 'flecs.core.Disabled');
 }
 
 function onError(message) {
