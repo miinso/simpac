@@ -449,7 +449,7 @@ onmessage = (event) => {
   }
 
   if (type === 'size') {
-    const { left, top, width, height } = payload || {};
+    const { left, top, width, height, scrollX, scrollY } = payload || {};
     _cachedRect = {
       left: left || 0, top: top || 0,
       width: width || 0, height: height || 0,
@@ -457,6 +457,8 @@ onmessage = (event) => {
       bottom: (top || 0) + (height || 0),
       x: left || 0, y: top || 0
     };
+    self.scrollX = self.pageXOffset = scrollX || 0;
+    self.scrollY = self.pageYOffset = scrollY || 0;
     return;
   }
 };
@@ -644,7 +646,8 @@ export class SimpacWorker {
             const rect = c.getBoundingClientRect();
             this.worker.postMessage({ type: 'size', payload: {
                 left: rect.left, top: rect.top,
-                width: c.clientWidth, height: c.clientHeight
+                width: c.clientWidth, height: c.clientHeight,
+                scrollX: window.scrollX, scrollY: window.scrollY
             }});
         };
         sendSize();
@@ -652,6 +655,7 @@ export class SimpacWorker {
         // helpers: serialize raw DOM event properties and forward to worker
         const sendCanvas = (e, props) => {
             if (!this.worker) return;
+            sendSize();
             const data = { type: e.type };
             for (const p of props) data[p] = e[p];
             this.worker.postMessage({ type: 'input', payload: { target: 'canvas', data } });
@@ -757,6 +761,7 @@ export class SimpacWorker {
             this._listeners.push({ target: null, type: 'resizeobserver', handler: () => ro.disconnect() });
         }
         this._addListener(window, 'resize', sendSize);
-        this._addListener(window, 'scroll', sendSize, { passive: true });
+        // capture: true catches scroll on any ancestor (vitepress scrolls a container, not window)
+        this._addListener(document, 'scroll', sendSize, { capture: true, passive: true });
     }
 }
