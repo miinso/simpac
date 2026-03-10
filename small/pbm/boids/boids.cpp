@@ -96,8 +96,7 @@ int main() {
     });
 
     // Init graphics
-    graphics::init(ecs);
-    graphics::init_window(CANVAS_WIDTH, CANVAS_HEIGHT, "Boid Simulator");
+    graphics::init(ecs, {CANVAS_WIDTH, CANVAS_HEIGHT, "Boid Simulator"});
 
     // Create initial boids
     const auto& scene_bounds = ecs.get<Scene>();
@@ -298,7 +297,7 @@ int main() {
         });
 
     // Main loop - parent system runs in pipeline via progress()
-    graphics::run_loop();
+    ecs.app().run();
 
     std::cout << "Simulation ended." << std::endl;
     return 0;

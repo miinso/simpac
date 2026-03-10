@@ -54,8 +54,7 @@ int main() {
     });
 
     // Initialize graphics
-    graphics::init(ecs);
-    graphics::init_window(800, 600, "PBD Mass-Spring");
+    graphics::init(ecs, {800, 600, "PBD Mass-Spring"});
 
     // Create initial particles with random masses
     auto p1 = add_particle(ecs, Vector3r(0, 4, 0), 1.0);
@@ -188,7 +187,7 @@ int main() {
     // Main loop
     // =========================================================================
 
-    graphics::run_loop();
+    ecs.app().run();
 
     printf("Simulation ended.\n");
     return 0;

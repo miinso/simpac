@@ -272,13 +272,6 @@ single_version_override(
 ##
 # cpu_features
 ##
-# bazel_dep(name = "cpu_features")
-# git_override(
-#     module_name = "cpu_features",
-#     remote = "https://github.com/google/cpu_features.git",
-#     commit = "d3b2440fcfc25fe8e6d0d4a85f06d68e98312f5b",
-# )
-
 bazel_dep(name = "cpuinfo", version = "0.0.0-20250925-877328f")
 
 ##
@@ -298,24 +291,3 @@ cuda.local_toolchain(
     toolkit_path = "",
 )
 use_repo(cuda, "local_cuda")
-
-
-##
-# Boost
-# Famous C++ library that has given rise to many new additions to the C++ Standard Library
-# Makes @boost available for use: For example, add `@boost//:algorithm` to your deps.
-# For more, see https://github.com/nelhage/rules_boost and https://www.boost.org
-# bazel_dep(name = "rules_boost", repo_name = "com_github_nelhage_rules_boost")
-# archive_override(
-#     module_name = "rules_boost",
-#     urls = "https://github.com/nelhage/rules_boost/archive/refs/heads/master.tar.gz",
-#     strip_prefix = "rules_boost-master",
-#     # It is recommended to edit the above URL and the below sha256 to point to a specific version of this repository.
-#     # integrity = "sha256-...",
-# )
-
-# non_module_boost_repositories = use_extension("@com_github_nelhage_rules_boost//:boost/repositories.bzl", "non_module_dependencies")
-# use_repo(
-#     non_module_boost_repositories,
-#     "boost",
-# )

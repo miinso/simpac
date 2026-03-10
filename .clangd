@@ -1,2 +1,10 @@
 CompileFlags:
-  Add: [-std=c++17, -Wno-c++17-extensions, -D_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH]
+  Add:
+    - -std=c++17
+    - -Wno-c++17-extensions
+    - -D_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH
+    # - --cuda-gpu-arch=sm_60
+    # - -xcuda
+    # - --cuda-path=C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.6
+  Remove:
+    - -arch=*

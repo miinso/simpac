@@ -5,7 +5,7 @@ namespace components {
     struct Velocity { Vector3r value; };
     struct Force { Vector3r value; };
     struct Mass { float value; };
-    // ... 기타 기본 컴포넌트들
+    // ... more usuals
 }
 
 // components/collider.hpp 
@@ -16,7 +16,7 @@ namespace components {
         std::unique_ptr<Discregrid::CubicLagrangeDiscreteGrid> sdf;
         Vector3r scale{1.0f, 1.0f, 1.0f};
         
-        // 팩토리 메서드로 생성을 단순화
+        // factory make things simpler
         static CollisionShape CreateFromMesh(const Mesh& mesh);
         static CollisionShape CreateBox(const Vector3r& size);
     };

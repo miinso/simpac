@@ -95,7 +95,7 @@ inline void draw_particle(const Position& x, const Mass& m) {
 inline void draw_mass_info(const Position& x, const Mass& m) {
     Vector3 textPos = toRay3(x.value);
     textPos.y += 0.2f;
-    Vector2 screenPos = GetWorldToScreen(textPos, graphics::detail::camera);
+    Vector2 screenPos = GetWorldToScreen(textPos, graphics::get_raylib_camera_const());
 
     char buffer[32];
     snprintf(buffer, sizeof(buffer), "%0.2f", m.value);
@@ -108,7 +108,7 @@ inline void draw_constraint_lambda(DistanceConstraint& c) {
     Vector3r midpoint = (x1 + x2) / 2.0;
 
     Vector3 textPos = toRay3(midpoint);
-    Vector2 screenPos = GetWorldToScreen(textPos, graphics::detail::camera);
+    Vector2 screenPos = GetWorldToScreen(textPos, graphics::get_raylib_camera_const());
 
     char buffer[32];
     snprintf(buffer, sizeof(buffer), "%0.6f", c.lambda);
