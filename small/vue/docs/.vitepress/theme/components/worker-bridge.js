@@ -668,10 +668,20 @@ export class SimpacWorker {
         };
 
         // mouse -> canvas (GLFW registers mouse handlers on canvas)
+        // pointer capture ensures mousemove/mouseup keep firing outside canvas during drag
+        // only capture mouse pointers -- capturing touch interferes with browser gestures
         const mouseProps = [
             'pageX', 'pageY', 'clientX', 'clientY', 'screenX', 'screenY',
             'movementX', 'movementY', 'button', 'buttons', 'offsetX', 'offsetY'
         ];
+        this._addListener(c, 'pointerdown', e => {
+            if (e.pointerType === 'mouse') c.setPointerCapture(e.pointerId);
+        });
+        for (const evt of ['pointerup', 'pointercancel']) {
+            this._addListener(c, evt, e => {
+                if (c.hasPointerCapture(e.pointerId)) c.releasePointerCapture(e.pointerId);
+            });
+        }
         for (const evt of ['mousemove', 'mousedown', 'mouseup', 'mouseenter', 'mouseleave', 'click']) {
             this._addListener(c, evt, e => sendCanvas(e, mouseProps));
         }
@@ -706,6 +716,7 @@ export class SimpacWorker {
             this._addListener(c, evt, e => {
                 e.preventDefault();
                 if (!this.worker) return;
+                sendSize();
                 const mods = { ctrlKey: e.ctrlKey, shiftKey: e.shiftKey, altKey: e.altKey, metaKey: e.metaKey };
                 const active = serializeTouches(e.touches);
                 const changed = serializeTouches(e.changedTouches);
@@ -752,6 +763,16 @@ export class SimpacWorker {
         // focus/blur -> canvas
         this._addListener(c, 'focus', e => sendCanvas(e, []));
         this._addListener(c, 'blur', e => sendCanvas(e, []));
+
+        // visibility change: synthesize mouseup to unstick button state on tab switch
+        this._addListener(document, 'visibilitychange', () => {
+            if (document.hidden && this.worker) {
+                sendCanvas({ type: 'mouseup', button: 0, buttons: 0,
+                    pageX: 0, pageY: 0, clientX: 0, clientY: 0,
+                    screenX: 0, screenY: 0, movementX: 0, movementY: 0,
+                    offsetX: 0, offsetY: 0 }, mouseProps);
+            }
+        });
 
         // resize -> update cached rect in worker
         // ResizeObserver is most reliable: fires after layout settles (orientation change, CSS resize, etc.)
