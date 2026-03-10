@@ -55,6 +55,19 @@ cuda_binary(
     srcs = ["ell/main.cu"],
     deps = [":ell_kernel", ":utils"],
 )
+
+cuda_binary(
+    name = "bench",
+    srcs = ["bench.cu"],
+    deps = [
+        ":coo_kernel",
+        ":csr_kernel",
+        ":ell_kernel",
+        ":utils",
+        "@google_benchmark//:benchmark_main",
+    ],
+)
+
 # rules_cuda offers:
 # @cuda//:cublas
 # @cuda//:cusparse
