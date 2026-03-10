@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1773137804781,
+  "lastUpdate": 1773137974546,
   "repoUrl": "https://github.com/miinso/simpac",
   "entries": {
     "cloth-implicit-euler": [
@@ -84,6 +84,48 @@ window.BENCHMARK_DATA = {
             "value": 197.0595359802246,
             "unit": "ms/iter",
             "extra": "iterations: 10\ncpu: 197.03825690000016 ms\nthreads: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "minseo.park.cs@gmail.com",
+            "name": "Minseo Park",
+            "username": "miinso"
+          },
+          "committer": {
+            "email": "minseo.park.cs@gmail.com",
+            "name": "Minseo Park",
+            "username": "miinso"
+          },
+          "distinct": true,
+          "id": "30b79fe2bd777a73d007ee19d1964e28ffb1306b",
+          "message": "chore: update changelog",
+          "timestamp": "2026-03-10T19:18:22+09:00",
+          "tree_id": "fc5ab180045eed340dd81b62d8a73b7a84d443d2",
+          "url": "https://github.com/miinso/simpac/commit/30b79fe2bd777a73d007ee19d1964e28ffb1306b"
+        },
+        "date": 1773137973590,
+        "tool": "googlecpp",
+        "benches": [
+          {
+            "name": "BM_ClothImplicit/50/real_time",
+            "value": 11.127261405295513,
+            "unit": "ms/iter",
+            "extra": "iterations: 188\ncpu: 11.125959021276598 ms\nthreads: 1"
+          },
+          {
+            "name": "BM_ClothImplicit/100/real_time",
+            "value": 47.59084636514837,
+            "unit": "ms/iter",
+            "extra": "iterations: 44\ncpu: 47.58538695454545 ms\nthreads: 1"
+          },
+          {
+            "name": "BM_ClothImplicit/200/real_time",
+            "value": 198.56536388397217,
+            "unit": "ms/iter",
+            "extra": "iterations: 10\ncpu: 198.54471670000004 ms\nthreads: 1"
           }
         ]
       }
