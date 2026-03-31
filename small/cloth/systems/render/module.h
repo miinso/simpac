@@ -71,7 +71,7 @@ inline void install_render_systems(flecs::world& ecs) {
     ecs.system("graphics::DragParticlesKinematic")
         .kind(graphics::PreRender)
         .run(interaction::drag_particles_kinematic)
-        .disable();
+        .disable(0);
 
     ecs.system("graphics::DragParticlesSpring")
         .kind(graphics::PreRender)

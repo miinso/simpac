@@ -49,11 +49,7 @@ struct SpringRenderer {
     float strain_scale = 10.0f;
     int allocated_springs = 0;
 
-    flecs::query<const Position, const ParticleIndex> position_query;
-
     std::vector<float> staging_buffer;
-    std::vector<int> spring_particle_indices;
-    std::vector<float> rest_lengths;
 };
 
 struct ParticleRenderer {
@@ -77,7 +73,7 @@ struct ParticleRenderer {
 
     int allocated_particles = 0;
 
-    flecs::query<const Position, const ParticleIndex, const Mass, const ParticleState> position_query;
+    flecs::query<const Position, const Mass, const ParticleState> position_query;
     std::vector<float> staging_buffer;
 };
 
@@ -132,10 +128,6 @@ inline void generate_icosphere(std::vector<float>& vertices, std::vector<unsigne
 namespace detail {
 
 inline void init_spring_renderer(flecs::world world, SpringRenderer& gpu) {
-    gpu.position_query = world.query_builder<const Position, const ParticleIndex>()
-        .cached()
-        .build();
-
     Shader shader = LoadShader(
         graphics::npath("resources/shaders/glsl300es/spring.vs").c_str(),
         graphics::npath("resources/shaders/glsl300es/spring.fs").c_str()
@@ -154,7 +146,7 @@ inline void shutdown_spring_renderer(SpringRenderer& gpu) {
 }
 
 inline void init_particle_renderer(flecs::world world, ParticleRenderer& gpu) {
-    gpu.position_query = world.query_builder<const Position, const ParticleIndex, const Mass, const ParticleState>()
+    gpu.position_query = world.query_builder<const Position, const Mass, const ParticleState>()
         .with<Particle>()
         .term_at<ParticleState>().optional()
         .cached()

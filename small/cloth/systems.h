@@ -31,21 +31,6 @@ inline void install_scene_systems(flecs::world& ecs) {
             frame_count += 1;
         });
 
-    ecs.system("Scene::ReindexParticles")
-        .kind(flecs::PreUpdate)
-        .run([](flecs::iter& it) {
-            if (!state::dirty.get<bool>()) return;
-            int new_idx = 0;
-            queries::particle_query.each([&](flecs::entity e, const Position&) {
-                e.set<ParticleIndex>(new_idx++);
-            });
-        });
-
-    ecs.system("Scene::ClearDirty")
-        .kind(flecs::PostUpdate)
-        .run([](flecs::iter& it) {
-            state::dirty.get_mut<bool>() = false;
-        });
 }
 
 } // namespace systems

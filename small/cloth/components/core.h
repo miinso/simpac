@@ -1,25 +1,13 @@
 #pragma once
 
-#include <Eigen/Dense>
 #include <Eigen/Sparse>
 #include <flecs.h>
 #include "types.h"
+#include "real.h"
 
 #include <cstdint>
 #include <cstddef>
 #include <type_traits>
-
-using Real = graphics::scalar_real;
-
-namespace Eigen {
-using Vector3r = Matrix<Real, 3, 1, DontAlign>;
-using Vector4r = Matrix<Real, 4, 1, DontAlign>;
-using Matrix2r = Matrix<Real, 2, 2>;
-using Matrix3r = Matrix<Real, 3, 3>;
-using VectorXr = Matrix<Real, Dynamic, 1>;
-using ArrayXr = Array<Real, Dynamic, 1>;
-using MatrixXr = Matrix<Real, Dynamic, Dynamic>;
-} // namespace Eigen
 
 template <typename Derived>
 using vec3 = graphics::vec3<Derived, Real>;
@@ -79,6 +67,7 @@ struct InverseMass : scalar<InverseMass, Real> {
     using scalar<InverseMass, Real>::scalar;
 };
 
+// auto-assigned by Bridge::build(), indexes into Model/State arrays
 struct ParticleIndex : scalar<ParticleIndex, int> {
     using scalar<ParticleIndex, int>::scalar;
 };
@@ -174,6 +163,10 @@ inline void register_core_components(flecs::world& ecs) {
     graphics::register_scalar_component<Mass>(ecs, real_meta);
     graphics::register_scalar_component<InverseMass>(ecs, real_meta);
     graphics::register_scalar_component<ParticleIndex>(ecs, flecs::I32);
+
+    ecs.component<Particle>();
+    ecs.component<IsPinned>();
+    ecs.component<Constraint>();
 
     ParticleState::meta(ecs);
     Spring::meta(ecs);
