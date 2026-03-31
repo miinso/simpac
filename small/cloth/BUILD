@@ -23,8 +23,11 @@ cc_library(
         "components/render.h",
         "components/solver.h",
         "physics.h",
+        "physics/bridge.h",
         "physics/integration.h",
+        "physics/model.h",
         "physics/spring.h",
+        "physics/state.h",
         "queries.h",
         "vars.h",
         "systems.h",
@@ -71,7 +74,6 @@ cc_library(
 cc_binary(
     name = "bench",
     srcs = [
-        "bench/bench.h",
         "bench/bench.cpp",
     ],
     data = [

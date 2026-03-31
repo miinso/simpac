@@ -4,7 +4,6 @@ p1 {
   Position: { x: 0, y: 0, z: 0 }
   Velocity: { x: 0, y: 0, z: 0 }
   Mass: { 1.0 }
-  ParticleIndex: { 0 }
   Particle
   IsPinned
 }
@@ -13,7 +12,6 @@ p2 {
   Position: { x: 1, y: 0, z: 0 }
   Velocity: { x: 0, y: 0, z: 0 }
   Mass: { 1.0 }
-  ParticleIndex: { 1 }
   Particle
 }
 

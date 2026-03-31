@@ -25,7 +25,6 @@ for y in 0..$height {
       Position: { x: $start_x + $x * $spacing, y: $start_y, z: $start_z - $y * $spacing }
       Velocity: { x: 0, y: 0, z: 0 }
       Mass: { $mass }
-      ParticleIndex: { $y * $width + $x }
       Particle
     }
   }

@@ -14,6 +14,7 @@ cc_library(
     }),
     hdrs = [
         "graphics/types.h",
+        "graphics/real.h",
         "graphics/camera.h",
         "graphics/components.h",
         "graphics/fonts.h",

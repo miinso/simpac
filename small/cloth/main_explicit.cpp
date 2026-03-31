@@ -17,13 +17,17 @@ inline void clear_force(flecs::iter& it, size_t, Force& f) {
 }
 
 inline void apply_spring_force(Spring& spring, Real k_s, Real k_d) {
-    physics::spring::Sample sample;
-    Eigen::Vector3r force_a = Eigen::Vector3r::Zero();
-    Eigen::Vector3r force_b = Eigen::Vector3r::Zero();
-    if (!physics::spring::force(spring, k_s, k_d, sample, force_a, force_b)) return;
+    const auto x_a = spring.e1.get<Position>().map();
+    const auto x_b = spring.e2.get<Position>().map();
+    const auto v_a = spring.e1.get<Velocity>().map();
+    const auto v_b = spring.e2.get<Velocity>().map();
 
-    if (!sample.a_pinned) sample.a.get_mut<Force>().map() += force_a;
-    if (!sample.b_pinned) sample.b.get_mut<Force>().map() += force_b;
+    physics::spring::Eval e;
+    if (!physics::spring::eval(x_a, x_b, v_a, v_b, spring.rest_length, e)) return;
+
+    const auto g = physics::spring::grad(k_s, k_d, e);
+    if (!spring.e1.has<IsPinned>()) spring.e1.get_mut<Force>().map() -= g;
+    if (!spring.e2.has<IsPinned>()) spring.e2.get_mut<Force>().map() += g;
 }
 
 inline void apply_spring_elastic_force(flecs::iter& it, size_t, Spring& spring) {
