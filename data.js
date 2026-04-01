@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1773137974546,
+  "lastUpdate": 1775037980076,
   "repoUrl": "https://github.com/miinso/simpac",
   "entries": {
     "cloth-implicit-euler": [
@@ -126,6 +126,48 @@ window.BENCHMARK_DATA = {
             "value": 198.56536388397217,
             "unit": "ms/iter",
             "extra": "iterations: 10\ncpu: 198.54471670000004 ms\nthreads: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "minseo.park.cs@gmail.com",
+            "name": "Minseo Park",
+            "username": "miinso"
+          },
+          "committer": {
+            "email": "minseo.park.cs@gmail.com",
+            "name": "Minseo Park",
+            "username": "miinso"
+          },
+          "distinct": true,
+          "id": "fb5d0000935c5f2117a012d5d444e646b0400a02",
+          "message": "refactor(cloth): extract shared sim infra into setup.h\n\n~92 lines of duplicated boilerplate (sim:: globals, rebuild/gather/scatter,\ncomponent registration, observers, scene loading) extracted from\nmain_implicit.cpp and main_symplectic.cpp into setup.h. solver files\nnow only contain algorithm-specific code.\n\nalso reorganizes directory structure: components/core.h split into\nparticle.h + constraint.h, physics/ moved to sim/ + math/, systems/render/\nmoved to render/.",
+          "timestamp": "2026-04-01T19:04:27+09:00",
+          "tree_id": "0db8e4077e802aa58ab356ee28a73ce2fb938a60",
+          "url": "https://github.com/miinso/simpac/commit/fb5d0000935c5f2117a012d5d444e646b0400a02"
+        },
+        "date": 1775037979163,
+        "tool": "googlecpp",
+        "benches": [
+          {
+            "name": "BM_ClothImplicit/50/real_time",
+            "value": 8.697965193767937,
+            "unit": "ms/iter",
+            "extra": "iterations: 245\ncpu: 8.696758808163265 ms\nthreads: 1"
+          },
+          {
+            "name": "BM_ClothImplicit/100/real_time",
+            "value": 36.373201169465716,
+            "unit": "ms/iter",
+            "extra": "iterations: 57\ncpu: 36.36778803508771 ms\nthreads: 1"
+          },
+          {
+            "name": "BM_ClothImplicit/200/real_time",
+            "value": 153.77889360700334,
+            "unit": "ms/iter",
+            "extra": "iterations: 14\ncpu: 153.7554867142857 ms\nthreads: 1"
           }
         ]
       }
