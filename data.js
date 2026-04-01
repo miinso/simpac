@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1775037980076,
+  "lastUpdate": 1775037989018,
   "repoUrl": "https://github.com/miinso/simpac",
   "entries": {
     "cloth-implicit-euler": [
@@ -168,6 +168,48 @@ window.BENCHMARK_DATA = {
             "value": 153.77889360700334,
             "unit": "ms/iter",
             "extra": "iterations: 14\ncpu: 153.7554867142857 ms\nthreads: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "minseo.park.cs@gmail.com",
+            "name": "Minseo Park",
+            "username": "miinso"
+          },
+          "committer": {
+            "email": "minseo.park.cs@gmail.com",
+            "name": "Minseo Park",
+            "username": "miinso"
+          },
+          "distinct": true,
+          "id": "ce2598e1728da3003857916d2598260e4d064dda",
+          "message": "feat(cloth): add state buffers",
+          "timestamp": "2026-03-31T19:09:39+09:00",
+          "tree_id": "a840294afd07faf929b9f162eea8e58f5bb49ce6",
+          "url": "https://github.com/miinso/simpac/commit/ce2598e1728da3003857916d2598260e4d064dda"
+        },
+        "date": 1775037988413,
+        "tool": "googlecpp",
+        "benches": [
+          {
+            "name": "BM_ClothImplicit/50/real_time",
+            "value": 8.43847370147705,
+            "unit": "ms/iter",
+            "extra": "iterations: 250\ncpu: 8.437708248 ms\nthreads: 1"
+          },
+          {
+            "name": "BM_ClothImplicit/100/real_time",
+            "value": 35.57236719939668,
+            "unit": "ms/iter",
+            "extra": "iterations: 59\ncpu: 35.56839281355933 ms\nthreads: 1"
+          },
+          {
+            "name": "BM_ClothImplicit/200/real_time",
+            "value": 157.6227774986854,
+            "unit": "ms/iter",
+            "extra": "iterations: 13\ncpu: 157.59828776923067 ms\nthreads: 1"
           }
         ]
       }
