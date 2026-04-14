@@ -1,8 +1,8 @@
 #include <benchmark/benchmark.h>
 
 #include "../components.h"
-#include "../physics/bridge.h"
-#include "../physics/spring.h"
+#include "../sim/bridge.h"
+#include "../math/spring.h"
 #include "../queries.h"
 #include "../vars.h"
 
@@ -143,8 +143,9 @@ bool load_scene_script(BenchContext& ctx, int size, std::string& error) {
 }
 
 bool setup_context(BenchContext& ctx, int size, std::string& error) {
-    components::register_core_components(ctx.ecs);
-    components::register_solver_component(ctx.ecs);
+    components::register_particle_components(ctx.ecs);
+    components::register_constraint_components(ctx.ecs);
+    components::register_solver_stats(ctx.ecs);
 
     queries::seed(ctx.ecs);
     props::seed(ctx.ecs);
