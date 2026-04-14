@@ -19,22 +19,21 @@ cc_library(
     name = "sim",
     srcs = [
         "components.h",
-        "components/core.h",
+        "components/particle.h",
+        "components/constraint.h",
         "components/render.h",
-        "components/solver.h",
-        "physics.h",
-        "physics/bridge.h",
-        "physics/integration.h",
-        "physics/model.h",
-        "physics/spring.h",
-        "physics/state.h",
+        "sim/model.h",
+        "sim/state.h",
+        "sim/bridge.h",
+        "math/spring.h",
         "queries.h",
         "vars.h",
         "systems.h",
-        "systems/render/module.h",
-        "systems/render/draw.h",
-        "systems/render/gpu.h",
-        "systems/render/interaction.h",
+        "setup.h",
+        "render/systems.h",
+        "render/draw.h",
+        "render/gpu.h",
+        "render/interaction.h",
     ],
     copts = select({
         "@platforms//os:emscripten": [
@@ -82,6 +81,25 @@ cc_binary(
     deps = [
         ":sim",
         "@google_benchmark//:benchmark",
+    ],
+)
+
+cc_binary(
+    name = "symplectic",
+    srcs = [
+        "main_symplectic.cpp",
+    ],
+    data = [
+        ":assets",
+        "//:resources",
+    ] + assets_files,
+    additional_linker_inputs = ["//:resources"] + assets_files,
+    linkopts = select({
+        "@platforms//os:emscripten": [],
+        "//conditions:default": [],
+    }),
+    deps = [
+        ":sim",
     ],
 )
 

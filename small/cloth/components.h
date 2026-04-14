@@ -1,5 +1,5 @@
 #pragma once
 
-#include "components/core.h"
+#include "components/particle.h"
+#include "components/constraint.h"
 #include "components/render.h"
-#include "components/solver.h"

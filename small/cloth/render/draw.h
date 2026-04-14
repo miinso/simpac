@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../../components.h"
-#include "../../queries.h"
-#include "../../vars.h"
+#include "../components.h"
+#include "../queries.h"
+#include "../vars.h"
 #include "graphics.h"
 #include "flecs.h"
 

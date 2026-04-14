@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../components/render.h"
+#include "../components/render.h"
 #include "graphics.h"
 #include "draw.h"
 #include "gpu.h"
