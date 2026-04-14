@@ -25,6 +25,7 @@ struct Model {
     Eigen::VectorXr particle_mass;       // [n]
     Eigen::VectorXr particle_inv_mass;   // [n]
     std::vector<uint32_t> particle_flags; // [n], PARTICLE_FLAG_ACTIVE etc.
+    std::vector<int> free_particles;     // indices of non-pinned particles (inv_mass > 0)
 
     // springs
     std::vector<int> spring_indices;     // [spring_count * 2]
@@ -96,7 +97,7 @@ struct ModelBuilder {
 
     // rest_length computed from positions unless specified
     void add_spring(int i, int j, Real stiffness, Real damping,
-                    Real rest_length = Real(-1)) {
+                    Real rest_length = -1) {
         assert(i >= 0 && i < (int)particle_q.size());
         assert(j >= 0 && j < (int)particle_q.size());
         spring_indices.push_back(i);
@@ -110,7 +111,7 @@ struct ModelBuilder {
     // computes dm_inv + area from rest positions
     void add_triangle(int i, int j, int k,
                       Real mu, Real lam,
-                      Real thickness = Real(1)) {
+                      Real thickness = 1) {
         assert(i >= 0 && i < (int)particle_q.size());
         assert(j >= 0 && j < (int)particle_q.size());
         assert(k >= 0 && k < (int)particle_q.size());
@@ -122,7 +123,7 @@ struct ModelBuilder {
         Eigen::Vector3r e1 = x1 - x0;
         Eigen::Vector3r e2 = x2 - x0;
 
-        Real area = Real(0.5) * e1.cross(e2).norm();
+        Real area = 0.5f * e1.cross(e2).norm();
 
         // local 2D frame for material coordinates
         Eigen::Vector3r t1 = e1.normalized();
@@ -141,7 +142,7 @@ struct ModelBuilder {
     void add_triangle(int i, int j, int k,
                       const Eigen::Matrix2r& dm_inv, Real area,
                       Real mu, Real lam,
-                      Real thickness = Real(1)) {
+                      Real thickness = 1) {
         tri_indices.push_back(i);
         tri_indices.push_back(j);
         tri_indices.push_back(k);
@@ -154,7 +155,7 @@ struct ModelBuilder {
 
     void add_edge(int o0, int o1, int v1, int v2,
                   Real rest_angle, Real stiffness,
-                  Real damping = Real(0)) {
+                  Real damping = 0) {
         edge_indices.push_back(o0);
         edge_indices.push_back(o1);
         edge_indices.push_back(v1);
@@ -187,8 +188,10 @@ struct ModelBuilder {
         m.particle_mass = Eigen::Map<const Eigen::VectorXr>(particle_mass.data(), n);
         m.particle_inv_mass.resize(n);
         for (int i = 0; i < n; i++) {
-            m.particle_inv_mass[i] = particle_mass[i] > Real(0)
-                ? Real(1) / particle_mass[i] : Real(0);
+            m.particle_inv_mass[i] = particle_mass[i] > 0
+                ? 1 / particle_mass[i] : 0;
+            if (m.particle_inv_mass[i] > 0)
+                m.free_particles.push_back(i);
         }
         m.particle_flags = particle_flags;
 

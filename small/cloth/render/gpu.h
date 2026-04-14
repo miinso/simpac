@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../../components.h"
-#include "../../queries.h"
+#include "../components.h"
+#include "../queries.h"
 #include "graphics.h"
 
 #include <raylib.h>

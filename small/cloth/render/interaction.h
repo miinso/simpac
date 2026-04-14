@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../../components/render.h"
-#include "../../queries.h"
-#include "../../vars.h"
+#include "../components/render.h"
+#include "../queries.h"
+#include "../vars.h"
 #include "graphics.h"
 
 #include <raylib.h>

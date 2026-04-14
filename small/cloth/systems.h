@@ -1,14 +1,8 @@
 #pragma once
 
-// convenience header - includes all system implementations
 #include "vars.h"
 #include "queries.h"
-#include "systems/render/module.h"
-
-// verb convention:
-// register_* : register types/components/meta only.
-// seed*      : create runtime entities and default values.
-// install_*  : define/install systems.
+#include "render/systems.h"
 
 namespace systems {
 
@@ -30,10 +24,6 @@ inline void install_scene_systems(flecs::world& ecs) {
             sim_time += dt;
             frame_count += 1;
         });
-
 }
 
 } // namespace systems
-
-// TODO: put application/engine-specific ecs setup and glue code here
-
