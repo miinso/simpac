@@ -45,11 +45,21 @@ struct Triangle {
     flecs::entity e1;
     flecs::entity e2;
     flecs::entity e3;
-    Eigen::Matrix2r dm_inv = Eigen::Matrix2r::Zero();
-    Real area = 0;
+    Eigen::Matrix2r dm_inv = Eigen::Matrix2r::Zero(); // computed by Bridge if zero
+    Real area = 0;                                     // computed by Bridge if zero
     Real thickness = 1;
     Real mu = 0;
     Real lambda = 0;
+
+    static void meta(flecs::world& ecs) {
+        ecs.component<Triangle>()
+            .member("e1", &Triangle::e1)
+            .member("e2", &Triangle::e2)
+            .member("e3", &Triangle::e3)
+            .member("thickness", &Triangle::thickness)
+            .member("mu", &Triangle::mu)
+            .member("lambda", &Triangle::lambda);
+    }
 };
 
 namespace components {
@@ -58,7 +68,7 @@ inline void register_constraint_components(flecs::world& ecs) {
     ecs.component<Constraint>();
     Spring::meta(ecs);
     DistanceConstraint::meta(ecs);
-    ecs.component<Triangle>();
+    Triangle::meta(ecs);
 }
 
 } // namespace components

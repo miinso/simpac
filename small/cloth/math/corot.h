@@ -1,9 +1,9 @@
 #pragma once
 
-#include "../components.h"
+#include "real.h"
 #include <Eigen/SVD>
 
-namespace physics::corot_tri {
+namespace physics::corot {
 
 struct Eval {
     Eigen::Matrix<Real, 3, 2> F;
@@ -97,4 +97,4 @@ inline void hess(const Eval& eval,
     // TODO: double check with kugelstadt2018's
 }
 
-} // namespace physics::corot_tri
+} // namespace physics::corot
