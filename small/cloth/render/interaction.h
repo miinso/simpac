@@ -49,7 +49,8 @@ inline void apply_virtual_spring(const flecs::entity& e, const Eigen::Vector3f& 
     vel.map() += (dt / mass) * force;
 }
 
-inline bool update_drag_plane_normal_from_camera(ParticleInteractionState& pick, const Camera3D& cam) {
+template<typename T>
+inline bool update_drag_plane_normal_from_camera(T& pick, const Camera3D& cam) {
     const vec3f cam_pos = vec3f(cam.position);
     vec3f cam_to_plane;
     cam_to_plane.map() = pick.drag_plane_point.map() - cam_pos.map();
@@ -63,12 +64,26 @@ inline void release_drag_pin(ParticleInteractionState& pick) {
     if (!pick.drag_added_pin) return;
     if (pick.pressed.is_alive()) {
         set_velocity_zero(pick.pressed);
-        // remove only the pin we added for kinematic dragging
         if (pick.pressed.has<IsPinned>()) {
             pick.pressed.remove<IsPinned>();
         }
     }
     pick.drag_added_pin = false;
+}
+
+inline void release_drag_pins_tri(TriangleInteractionState& pick) {
+    if (!pick.drag_added_pins) return;
+    if (pick.pressed.is_alive() && pick.pressed.has<Triangle>()) {
+        const auto& tri = pick.pressed.get<Triangle>();
+        flecs::entity verts[3] = {tri.e1, tri.e2, tri.e3};
+        for (auto& v : verts) {
+            if (v.is_alive()) {
+                set_velocity_zero(v);
+                if (v.has<IsPinned>()) v.remove<IsPinned>();
+            }
+        }
+    }
+    pick.drag_added_pins = false;
 }
 
 } // namespace detail
@@ -258,6 +273,228 @@ inline void drag_particles_spring(flecs::iter& it) {
 // - draws current drag plane and normal while dragging
 inline void draw_drag_plane_debug(flecs::iter& it) {
     const ParticleInteractionState& pick = it.world().get<ParticleInteractionState>();
+    if (!pick.dragging || !pick.pressed.is_alive()) return;
+
+    const Eigen::Vector3f c = pick.drag_plane_point.map();
+
+    const Camera3D& cam = graphics::get_raylib_camera_const();
+    const vec3f cam_pos = vec3f(cam.position);
+    Eigen::Vector3f n = c - cam_pos.map();
+    float n_len2 = n.squaredNorm();
+    if (n_len2 >= 1e-12f) {
+        n /= std::sqrt(n_len2);
+    } else {
+        n = pick.drag_plane_normal.map();
+        n_len2 = n.squaredNorm();
+        if (n_len2 < 1e-12f) return;
+        n /= std::sqrt(n_len2);
+    }
+
+    const Eigen::Vector3f axis = (std::fabs(n.y()) < 0.9f)
+        ? Eigen::Vector3f(0.0f, 1.0f, 0.0f)
+        : Eigen::Vector3f(1.0f, 0.0f, 0.0f);
+    const Eigen::Vector3f t0 = n.cross(axis).normalized();
+    const Eigen::Vector3f t1 = n.cross(t0).normalized();
+
+    constexpr float half = 1.5f;
+    vec3f p0, p1, p2, p3, tip;
+    p0.map() = c + (-t0 - t1) * half;
+    p1.map() = c + ( t0 - t1) * half;
+    p2.map() = c + ( t0 + t1) * half;
+    p3.map() = c + (-t0 + t1) * half;
+    tip.map() = c + n * 0.7f;
+    const Color plane_color = ColorAlpha(ORANGE, 0.75f);
+    DrawLine3D(p0, p1, plane_color);
+    DrawLine3D(p1, p2, plane_color);
+    DrawLine3D(p2, p3, plane_color);
+    DrawLine3D(p3, p0, plane_color);
+    DrawLine3D(pick.drag_plane_point, tip, RED);
+}
+
+// ---- triangle interaction ----
+
+inline void pick_triangles(flecs::iter& it) {
+    TriangleInteractionState& pick = it.world().get_mut<TriangleInteractionState>();
+    const auto& particle_pick = it.world().get<ParticleInteractionState>();
+    bool particle_active = particle_pick.pointer_down && particle_pick.pressed.is_alive();
+    if (!particle_active)
+        graphics::input::capture_mouse_left = false;
+    const Vector2 mouse = GetMousePosition();
+    const bool mouse_down = IsMouseButtonDown(MOUSE_LEFT_BUTTON);
+    pick.pointer_pressed = IsMouseButtonPressed(MOUSE_LEFT_BUTTON);
+    pick.pointer_released = IsMouseButtonReleased(MOUSE_LEFT_BUTTON);
+
+    const Ray ray = GetMouseRay(mouse, graphics::get_raylib_camera_const());
+    float closest = std::numeric_limits<float>::max();
+    flecs::entity hovered = flecs::entity::null();
+
+    queries::triangle_query.each([&](flecs::entity e, const Triangle& tri) {
+        if (!tri.e1.is_alive() || !tri.e2.is_alive() || !tri.e3.is_alive()) return;
+        const vec3f v0 = vec3f(tri.e1.get<Position>().map());
+        const vec3f v1 = vec3f(tri.e2.get<Position>().map());
+        const vec3f v2 = vec3f(tri.e3.get<Position>().map());
+
+        // test both winding orders (two-sided cloth)
+        RayCollision hit = GetRayCollisionTriangle(ray, v0, v1, v2);
+        if (!hit.hit) hit = GetRayCollisionTriangle(ray, v0, v2, v1);
+
+        if (hit.hit && hit.distance < closest) {
+            closest = hit.distance;
+            hovered = e;
+        }
+    });
+
+    pick.hovered = hovered;
+
+    if (pick.pointer_pressed && !particle_active) {
+        detail::release_drag_pins_tri(pick);
+        pick.pointer_down = true;
+        pick.dragging = false;
+        pick.drag_added_pins = false;
+        pick.pressed = flecs::entity::null();
+        pick.press_x = mouse.x;
+        pick.press_y = mouse.y;
+        pick.last_x = mouse.x;
+        pick.last_y = mouse.y;
+
+        if (hovered.is_alive()) {
+            const auto& tri = hovered.get<Triangle>();
+            // skip if any vertex is pinned
+            bool any_pinned = (tri.e1.has<IsPinned>() || tri.e2.has<IsPinned>() || tri.e3.has<IsPinned>());
+            if (!any_pinned) {
+                pick.pressed = hovered;
+
+                const auto& p0 = tri.e1.get<Position>();
+                const auto& p1 = tri.e2.get<Position>();
+                const auto& p2 = tri.e3.get<Position>();
+                Eigen::Vector3f centroid = (p0.map() + p1.map() + p2.map()) / 3.0f;
+                pick.drag_plane_point.map() = centroid;
+                pick.drag_vertex_offsets[0].map() = p0.map() - centroid;
+                pick.drag_vertex_offsets[1].map() = p1.map() - centroid;
+                pick.drag_vertex_offsets[2].map() = p2.map() - centroid;
+
+                const vec3f normal = vec3f(ray.direction);
+                const float normal_len2 = normal.map().squaredNorm();
+                if (normal_len2 < 1e-12f) {
+                    pick.drag_plane_normal = {0.0f, 1.0f, 0.0f};
+                } else {
+                    pick.drag_plane_normal.map() = normal.map() / std::sqrt(normal_len2);
+                }
+
+                vec3f press_hit;
+                if (detail::ray_plane_intersection(ray, pick.drag_plane_point, pick.drag_plane_normal, press_hit)) {
+                    pick.drag_offset.map() = centroid - press_hit.map();
+                } else {
+                    pick.drag_offset.map().setZero();
+                }
+            }
+        }
+    }
+
+    if (pick.pointer_down && mouse_down) {
+        float dx = mouse.x - pick.press_x;
+        float dy = mouse.y - pick.press_y;
+        float threshold2 = pick.drag_threshold_px * pick.drag_threshold_px;
+        if (!pick.dragging
+            && pick.pressed.is_alive()
+            && (dx * dx + dy * dy) >= threshold2) {
+            pick.dragging = true;
+        }
+
+        if (pick.dragging && pick.pressed.is_alive()) {
+            const Camera3D& cam = graphics::get_raylib_camera_const();
+            detail::update_drag_plane_normal_from_camera(pick, cam);
+        }
+
+        pick.last_x = mouse.x;
+        pick.last_y = mouse.y;
+    }
+
+    const bool canceled = pick.pointer_down && !mouse_down && !pick.pointer_released;
+    if (pick.pointer_released || canceled) {
+        if (pick.pointer_released && !pick.dragging) {
+            flecs::entity click_target = pick.pressed.is_alive() ? pick.pressed : hovered;
+            if (click_target.is_alive()) {
+                pick.selected = (pick.selected == click_target)
+                    ? flecs::entity::null()
+                    : click_target;
+            } else {
+                pick.selected = flecs::entity::null();
+            }
+        }
+        detail::release_drag_pins_tri(pick);
+        pick.pointer_down = false;
+        pick.dragging = false;
+        pick.pressed = flecs::entity::null();
+    }
+
+    if (!particle_active)
+        graphics::input::capture_mouse_left = pick.pointer_down && pick.pressed.is_alive();
+}
+
+inline void drag_triangles_kinematic(flecs::iter& it) {
+    TriangleInteractionState& pick = it.world().get_mut<TriangleInteractionState>();
+    if (!pick.dragging || !pick.pressed.is_alive()) return;
+
+    const auto& tri = pick.pressed.get<Triangle>();
+    flecs::entity verts[3] = {tri.e1, tri.e2, tri.e3};
+
+    if (!pick.drag_added_pins) {
+        for (auto& v : verts) {
+            if (v.is_alive() && !v.has<IsPinned>()) v.add<IsPinned>();
+        }
+        pick.drag_added_pins = true;
+    }
+
+    const Camera3D& cam = graphics::get_raylib_camera_const();
+    detail::update_drag_plane_normal_from_camera(pick, cam);
+
+    const Vector2 mouse = GetMousePosition();
+    const Ray ray = GetMouseRay(mouse, cam);
+    vec3f hit;
+    if (!detail::ray_plane_intersection(ray, pick.drag_plane_point, pick.drag_plane_normal, hit)) return;
+
+    Eigen::Vector3f new_centroid = hit.map() + pick.drag_offset.map();
+    for (int i = 0; i < 3; i++) {
+        if (verts[i].is_alive() && verts[i].has<Position>()) {
+            verts[i].get_mut<Position>().map() = new_centroid + pick.drag_vertex_offsets[i].map();
+            detail::set_velocity_zero(verts[i]);
+        }
+    }
+}
+
+inline void drag_triangles_spring(flecs::iter& it) {
+    TriangleInteractionState& pick = it.world().get_mut<TriangleInteractionState>();
+    if (!pick.dragging || !pick.pressed.is_alive()) return;
+
+    if (pick.drag_added_pins) {
+        detail::release_drag_pins_tri(pick);
+    }
+
+    const Camera3D& cam = graphics::get_raylib_camera_const();
+    detail::update_drag_plane_normal_from_camera(pick, cam);
+
+    const Vector2 mouse = GetMousePosition();
+    const Ray ray = GetMouseRay(mouse, cam);
+    vec3f hit;
+    if (!detail::ray_plane_intersection(ray, pick.drag_plane_point, pick.drag_plane_normal, hit)) return;
+
+    Eigen::Vector3f new_centroid = hit.map() + pick.drag_offset.map();
+    const auto& tri = pick.pressed.get<Triangle>();
+    flecs::entity verts[3] = {tri.e1, tri.e2, tri.e3};
+    for (int i = 0; i < 3; i++) {
+        Eigen::Vector3f target = new_centroid + pick.drag_vertex_offsets[i].map();
+        detail::apply_virtual_spring(
+            verts[i], target,
+            (float)props::dt.get<Real>(),
+            pick.virtual_spring_k,
+            pick.virtual_spring_d
+        );
+    }
+}
+
+inline void draw_drag_plane_debug_tri(flecs::iter& it) {
+    const TriangleInteractionState& pick = it.world().get<TriangleInteractionState>();
     if (!pick.dragging || !pick.pressed.is_alive()) return;
 
     const Eigen::Vector3f c = pick.drag_plane_point.map();

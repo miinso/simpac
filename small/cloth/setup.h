@@ -69,6 +69,7 @@ inline void init(flecs::world& ecs, InitConfig cfg) {
 
     ecs.ensure<Solver>();
     ecs.set<ParticleInteractionState>({});
+    ecs.set<TriangleInteractionState>({});
 
     graphics::init(ecs, {cfg.width, cfg.height, cfg.title});
     ecs.set<SpringRenderer>({});

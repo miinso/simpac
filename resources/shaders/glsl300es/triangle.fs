@@ -3,6 +3,7 @@ precision mediump float;
 
 in vec3 v_normal;
 in float v_strain;
+flat in float v_flags;
 uniform float u_strain_scale;
 out vec4 fragColor;
 
@@ -22,5 +23,16 @@ void main() {
         color = mix(vec3(0.0, 1.0, 0.0), vec3(0.0, 0.475, 0.945), t);
     }
 
-    fragColor = vec4(color * lighting, 1.0);
+    color *= lighting;
+
+    int flags = int(v_flags);
+    bool is_hovered = (flags & 1) != 0;
+    bool is_selected = (flags & 2) != 0;
+    if (is_selected) {
+        color = mix(color, vec3(1.0, 0.5, 0.0), 0.4);
+    } else if (is_hovered) {
+        color *= 1.3;
+    }
+
+    fragColor = vec4(color, 1.0);
 }

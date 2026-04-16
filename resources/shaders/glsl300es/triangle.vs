@@ -6,11 +6,13 @@ in vec3 a_p0;
 in vec3 a_p1;
 in vec3 a_p2;
 in float a_rest_area;
+in float a_flags;
 
 uniform mat4 u_viewproj;
 
 out vec3 v_normal;
 out float v_strain;
+flat out float v_flags;
 
 void main() {
     vec3 pos = (gl_VertexID == 0) ? a_p0 : (gl_VertexID == 1) ? a_p1 : a_p2;
@@ -22,6 +24,7 @@ void main() {
 
     float current_area = length(n) * 0.5;
     v_strain = (a_rest_area > 0.0) ? (current_area / a_rest_area - 1.0) : 0.0;
+    v_flags = a_flags;
 
     gl_Position = u_viewproj * vec4(pos, 1.0);
 }
