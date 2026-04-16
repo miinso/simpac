@@ -37,7 +37,8 @@ inline void seed_phases(flecs::world& ecs) {
 // generic rebuild -- no solver-specific buffer resets
 inline void rebuild(flecs::iter& it) {
     if (!model_dirty) return;
-    model = bridge.build(it.world());
+    auto world = it.world();
+    model = bridge.build(world);
     state_0 = model.state();
     model_dirty = false;
     printf("[Solver] rebuilt: %d particles, %d springs\n",

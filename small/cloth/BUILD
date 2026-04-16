@@ -107,7 +107,7 @@ cc_binary(
 cc_binary(
     name = "main",
     srcs = [
-        "b/implicit.cpp",
+        "b/corot.cpp",
     ],
     data = [
         ":assets",
@@ -135,6 +135,10 @@ cc_binary(
             "--embed-file resources/shaders/glsl300es/spring.vs@resources/shaders/glsl300es/spring.vs",
             "--embed-file resources/shaders/glsl300es/particle.fs@resources/shaders/glsl300es/particle.fs",
             "--embed-file resources/shaders/glsl300es/particle.vs@resources/shaders/glsl300es/particle.vs",
+            "--embed-file resources/shaders/glsl300es/triangle.fs@resources/shaders/glsl300es/triangle.fs",
+            "--embed-file resources/shaders/glsl300es/triangle.vs@resources/shaders/glsl300es/triangle.vs",
+            "--embed-file resources/shaders/glsl300es/triangle_wireframe.fs@resources/shaders/glsl300es/triangle_wireframe.fs",
+            "--embed-file resources/shaders/glsl300es/triangle_wireframe.vs@resources/shaders/glsl300es/triangle_wireframe.vs",
             "--embed-file resources/fonts/generic.fnt@resources/fonts/generic.fnt",
             "--embed-file resources/fonts/generic.png@resources/fonts/generic.png",
             "--embed-file resources/fonts/tiny.png@resources/fonts/tiny.png",
