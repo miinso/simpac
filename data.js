@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1776165799467,
+  "lastUpdate": 1776330665891,
   "repoUrl": "https://github.com/miinso/simpac",
   "entries": {
     "cloth-implicit-euler": [
@@ -294,6 +294,48 @@ window.BENCHMARK_DATA = {
             "value": 155.70335728781563,
             "unit": "ms/iter",
             "extra": "iterations: 14\ncpu: 155.68705142857158 ms\nthreads: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "minseo.park.cs@gmail.com",
+            "name": "Minseo Park",
+            "username": "miinso"
+          },
+          "committer": {
+            "email": "minseo.park.cs@gmail.com",
+            "name": "Minseo Park",
+            "username": "miinso"
+          },
+          "distinct": true,
+          "id": "e7242b4cc4935e3576669b65c38f95b03f28426d",
+          "message": "feat(cloth): add triangle renderer",
+          "timestamp": "2026-04-16T18:08:02+09:00",
+          "tree_id": "86a232228f3ffaa29ee42ee30abf9274747f92b5",
+          "url": "https://github.com/miinso/simpac/commit/e7242b4cc4935e3576669b65c38f95b03f28426d"
+        },
+        "date": 1776330664845,
+        "tool": "googlecpp",
+        "benches": [
+          {
+            "name": "BM_ClothImplicit/50/real_time",
+            "value": 8.206908767287796,
+            "unit": "ms/iter",
+            "extra": "iterations: 259\ncpu: 8.206261482625482 ms\nthreads: 1"
+          },
+          {
+            "name": "BM_ClothImplicit/100/real_time",
+            "value": 33.887032539613784,
+            "unit": "ms/iter",
+            "extra": "iterations: 62\ncpu: 33.88264282258065 ms\nthreads: 1"
+          },
+          {
+            "name": "BM_ClothImplicit/200/real_time",
+            "value": 151.0910987854004,
+            "unit": "ms/iter",
+            "extra": "iterations: 14\ncpu: 151.0725489285714 ms\nthreads: 1"
           }
         ]
       }
