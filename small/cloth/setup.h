@@ -73,6 +73,7 @@ inline void init(flecs::world& ecs, InitConfig cfg) {
     graphics::init(ecs, {cfg.width, cfg.height, cfg.title});
     ecs.set<SpringRenderer>({});
     ecs.set<ParticleRenderer>({});
+    ecs.set<TriangleRenderer>({});
 
     systems::install_scene_systems(ecs);
     systems::install_render_systems(ecs);

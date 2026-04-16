@@ -58,6 +58,20 @@ inline void install_render_systems(flecs::world& ecs) {
             render::draw_particles_gpu(ctx);
         }).disable(0);
 
+    ecs.system("graphics::UploadTrianglePositions")
+        .kind(graphics::PreRender)
+        .run([](flecs::iter& it) {
+            auto& ctx = it.world().get_mut<TriangleRenderer>();
+            render::upload_triangle_positions_to_gpu(it.world(), ctx);
+        }).disable(0);
+
+    ecs.system("graphics::DrawTrianglesGPU")
+        .kind(graphics::OnRender)
+        .run([](flecs::iter& it) {
+            auto& ctx = it.world().get_mut<TriangleRenderer>();
+            render::draw_triangles_gpu(ctx);
+        }).disable(0);
+
     ecs.system("graphics::DrawTimingInfo")
         .kind(graphics::PostRender)
         .run(render::draw_timing_info)
