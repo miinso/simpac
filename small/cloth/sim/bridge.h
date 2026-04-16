@@ -53,9 +53,13 @@ struct Bridge {
                     it1 == entity_to_index.end() ||
                     it2 == entity_to_index.end()) return;
 
-                mb.add_triangle(it0->second, it1->second, it2->second,
-                                tri.dm_inv, tri.area,
-                                tri.mu, tri.lambda, tri.thickness);
+                if (tri.dm_inv.isZero())
+                    mb.add_triangle(it0->second, it1->second, it2->second,
+                                    tri.mu, tri.lambda, tri.thickness);
+                else
+                    mb.add_triangle(it0->second, it1->second, it2->second,
+                                    tri.dm_inv, tri.area,
+                                    tri.mu, tri.lambda, tri.thickness);
             });
 
         return mb.finalize();

@@ -25,6 +25,7 @@ cc_library(
         "sim/model.h",
         "sim/state.h",
         "sim/bridge.h",
+        "math/corot.h",
         "math/spring.h",
         "queries.h",
         "vars.h",
