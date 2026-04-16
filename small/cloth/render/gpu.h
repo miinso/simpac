@@ -196,7 +196,7 @@ inline void draw_particles_gpu(const ParticleRenderer& gpu) {
     rlDisableShader();
 }
 
-inline void upload_triangle_positions_to_gpu(const flecs::world&, TriangleRenderer& gpu) {
+inline void upload_triangle_positions_to_gpu(const flecs::world& ecs, TriangleRenderer& gpu) {
     if (gpu.shader_id == 0) return;
 
     int num_triangles = queries::triangle_query.count();
@@ -230,6 +230,10 @@ inline void upload_triangle_positions_to_gpu(const flecs::world&, TriangleRender
         rlEnableVertexAttribute(3);
         rlSetVertexAttribute(3, 1, RL_FLOAT, false, stride, 9 * sizeof(float));
         rlSetVertexAttributeDivisor(3, 1);
+        // a_flags (location 4)
+        rlEnableVertexAttribute(4);
+        rlSetVertexAttribute(4, 1, RL_FLOAT, false, stride, 10 * sizeof(float));
+        rlSetVertexAttributeDivisor(4, 1);
 
         rlDisableVertexArray();
 
@@ -248,9 +252,12 @@ inline void upload_triangle_positions_to_gpu(const flecs::world&, TriangleRender
 
     if (num_triangles == 0) return;
 
+    const auto* tri_pick = ecs.has<TriangleInteractionState>()
+        ? &ecs.get<TriangleInteractionState>() : nullptr;
+
     int inst = 0;
     int tidx = 0;
-    queries::triangle_query.each([&](const Triangle& tri) {
+    queries::triangle_query.each([&](flecs::entity e, const Triangle& tri) {
         const auto& p0 = tri.e1.get<Position>();
         const auto& p1 = tri.e2.get<Position>();
         const auto& p2 = tri.e3.get<Position>();
@@ -264,6 +271,14 @@ inline void upload_triangle_positions_to_gpu(const flecs::world&, TriangleRender
         gpu.staging_buffer[inst++] = p2.y;
         gpu.staging_buffer[inst++] = p2.z;
         gpu.staging_buffer[inst++] = gpu.rest_areas[tidx];
+
+        float flags = 0.0f;
+        if (tri_pick) {
+            if (tri_pick->hovered == e) flags += 1.0f;
+            if (tri_pick->selected == e) flags += 2.0f;
+        }
+        gpu.staging_buffer[inst++] = flags;
+
         tidx++;
     });
 

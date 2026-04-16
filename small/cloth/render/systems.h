@@ -96,6 +96,26 @@ inline void install_render_systems(flecs::world& ecs) {
         .kind(graphics::OnRender)
         .run(interaction::draw_drag_plane_debug)
         .disable(0);
+
+    ecs.system("graphics::PickTriangles")
+        .kind(flecs::OnLoad)
+        .run(interaction::pick_triangles)
+        .disable(0);
+
+    ecs.system("graphics::DragTrianglesKinematic")
+        .kind(graphics::PreRender)
+        .run(interaction::drag_triangles_kinematic)
+        .disable(0);
+
+    ecs.system("graphics::DragTrianglesSpring")
+        .kind(graphics::PreRender)
+        .run(interaction::drag_triangles_spring)
+        .disable();
+
+    ecs.system("graphics::DrawDragPlaneTri")
+        .kind(graphics::OnRender)
+        .run(interaction::draw_drag_plane_debug_tri)
+        .disable(0);
 }
 
 } // namespace systems

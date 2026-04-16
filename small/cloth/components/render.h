@@ -35,6 +35,34 @@ struct ParticleInteractionState {
     float pick_radius_scale = 1.2f;
 };
 
+struct TriangleInteractionState {
+    flecs::entity hovered;
+    flecs::entity selected;
+    flecs::entity pressed;
+
+    bool pointer_down = false;
+    bool pointer_pressed = false;
+    bool pointer_released = false;
+    bool dragging = false;
+
+    float press_x = 0.0f;
+    float press_y = 0.0f;
+    float last_x = 0.0f;
+    float last_y = 0.0f;
+
+    vec3f drag_plane_point = {0.0f, 0.0f, 0.0f};
+    vec3f drag_plane_normal = {0.0f, 1.0f, 0.0f};
+    vec3f drag_offset = {0.0f, 0.0f, 0.0f};
+
+    // vertex offsets from centroid at press time
+    vec3f drag_vertex_offsets[3] = {};
+    bool drag_added_pins = false;
+
+    float virtual_spring_k = 800.0f;
+    float virtual_spring_d = 24.0f;
+    float drag_threshold_px = 3.0f;
+};
+
 struct SpringRenderer {
     static constexpr int FLOATS_PER_INSTANCE = 7;
     static constexpr int VERTICES_PER_INSTANCE = 2;
@@ -78,7 +106,7 @@ struct ParticleRenderer {
 };
 
 struct TriangleRenderer {
-    static constexpr int FLOATS_PER_INSTANCE = 10; // p0(3) + p1(3) + p2(3) + rest_area(1)
+    static constexpr int FLOATS_PER_INSTANCE = 11; // p0(3) + p1(3) + p2(3) + rest_area(1) + flags(1)
     static constexpr int VERTICES_PER_INSTANCE = 3;
 
     unsigned int vao = 0;
@@ -257,6 +285,9 @@ namespace components {
 
 inline void register_render_components(flecs::world& ecs) {
     ecs.component<ParticleInteractionState>()
+        .add(flecs::Singleton);
+
+    ecs.component<TriangleInteractionState>()
         .add(flecs::Singleton);
 
     ecs.component<SpringRenderer>()
