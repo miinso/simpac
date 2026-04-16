@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1776330665891,
+  "lastUpdate": 1776338252897,
   "repoUrl": "https://github.com/miinso/simpac",
   "entries": {
     "cloth-implicit-euler": [
@@ -336,6 +336,48 @@ window.BENCHMARK_DATA = {
             "value": 151.0910987854004,
             "unit": "ms/iter",
             "extra": "iterations: 14\ncpu: 151.0725489285714 ms\nthreads: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "minseo.park.cs@gmail.com",
+            "name": "Minseo Park",
+            "username": "miinso"
+          },
+          "committer": {
+            "email": "minseo.park.cs@gmail.com",
+            "name": "Minseo Park",
+            "username": "miinso"
+          },
+          "distinct": true,
+          "id": "b3deb1fc5b5ff9a727b69658151a3974b28674d4",
+          "message": "feat(cloth): add triangle interaction\n\npick/drag/hover for triangles mirroring particle interaction.",
+          "timestamp": "2026-04-16T20:15:22+09:00",
+          "tree_id": "ba1944492b385def4911caf9cdbea9ad507328fb",
+          "url": "https://github.com/miinso/simpac/commit/b3deb1fc5b5ff9a727b69658151a3974b28674d4"
+        },
+        "date": 1776338252068,
+        "tool": "googlecpp",
+        "benches": [
+          {
+            "name": "BM_ClothImplicit/50/real_time",
+            "value": 6.5733061073729715,
+            "unit": "ms/iter",
+            "extra": "iterations: 322\ncpu: 6.57259950931677 ms\nthreads: 1"
+          },
+          {
+            "name": "BM_ClothImplicit/100/real_time",
+            "value": 28.393634378093562,
+            "unit": "ms/iter",
+            "extra": "iterations: 73\ncpu: 28.3885045890411 ms\nthreads: 1"
+          },
+          {
+            "name": "BM_ClothImplicit/200/real_time",
+            "value": 129.71928715705872,
+            "unit": "ms/iter",
+            "extra": "iterations: 16\ncpu: 129.6992600625 ms\nthreads: 1"
           }
         ]
       }
