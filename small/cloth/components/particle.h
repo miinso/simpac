@@ -1,25 +1,13 @@
 #pragma once
 
-#include <Eigen/Dense>
 #include <Eigen/Sparse>
 #include <flecs.h>
 #include "types.h"
+#include "real.h"
 
 #include <cstdint>
 #include <cstddef>
 #include <type_traits>
-
-using Real = graphics::scalar_real;
-
-namespace Eigen {
-using Vector3r = Matrix<Real, 3, 1, DontAlign>;
-using Vector4r = Matrix<Real, 4, 1, DontAlign>;
-using Matrix2r = Matrix<Real, 2, 2>;
-using Matrix3r = Matrix<Real, 3, 3>;
-using VectorXr = Matrix<Real, Dynamic, 1>;
-using ArrayXr = Array<Real, Dynamic, 1>;
-using MatrixXr = Matrix<Real, Dynamic, Dynamic>;
-} // namespace Eigen
 
 template <typename Derived>
 using vec3 = graphics::vec3<Derived, Real>;
@@ -79,10 +67,6 @@ struct InverseMass : scalar<InverseMass, Real> {
     using scalar<InverseMass, Real>::scalar;
 };
 
-struct ParticleIndex : scalar<ParticleIndex, int> {
-    using scalar<ParticleIndex, int>::scalar;
-};
-
 struct ParticleState {
     enum Flag {
         None = 0,
@@ -105,62 +89,12 @@ struct ParticleState {
     }
 };
 
-// Tags
 struct IsPinned {};
 struct Particle {};
-struct Constraint {};
-
-struct DistanceConstraint {
-    flecs::entity e1;
-    flecs::entity e2;
-    Real rest_distance;
-    Real stiffness;
-    Real lambda = 0;
-
-    static void meta(flecs::world& ecs) {
-        ecs.component<DistanceConstraint>()
-            .member("e1", &DistanceConstraint::e1)
-            .member("e2", &DistanceConstraint::e2)
-            .member("rest_distance", &DistanceConstraint::rest_distance)
-            .member("stiffness", &DistanceConstraint::stiffness)
-            .member("lambda", &DistanceConstraint::lambda);
-    }
-};
-
-struct Spring {
-    flecs::entity e1;
-    flecs::entity e2;
-    Real rest_length = 0;
-    Real k_s = 0;
-    Real k_d = 0;
-
-    static void meta(flecs::world& ecs) {
-        ecs.component<Spring>()
-            .member("e1", &Spring::e1)
-            .member("e2", &Spring::e2)
-            .member("rest_length", &Spring::rest_length)
-                .range(0.0, 10.0)
-            .member("k_s", &Spring::k_s)
-                .range(0.0, 200000.0)
-            .member("k_d", &Spring::k_d)
-                .range(0.0, 10.0);
-    }
-};
-
-struct Triangle {
-    flecs::entity e1;
-    flecs::entity e2;
-    flecs::entity e3;
-    Eigen::Matrix2r dm_inv = Eigen::Matrix2r::Zero();
-    Real area = 0;
-    Real thickness = 1;
-    Real mu = 0;
-    Real lambda = 0;
-};
 
 namespace components {
 
-inline void register_core_components(flecs::world& ecs) {
+inline void register_particle_components(flecs::world& ecs) {
     graphics::register_vec3_component<vec3f>(ecs, "vec3f");
     graphics::register_vec3_component<vec3d>(ecs, "vec3d");
     graphics::register_vec3_component<vec3r>(ecs, "vec3r");
@@ -173,12 +107,11 @@ inline void register_core_components(flecs::world& ecs) {
     const flecs::entity_t real_meta = std::is_same_v<Real, double> ? flecs::F64 : flecs::F32;
     graphics::register_scalar_component<Mass>(ecs, real_meta);
     graphics::register_scalar_component<InverseMass>(ecs, real_meta);
-    graphics::register_scalar_component<ParticleIndex>(ecs, flecs::I32);
+
+    ecs.component<Particle>();
+    ecs.component<IsPinned>();
 
     ParticleState::meta(ecs);
-    Spring::meta(ecs);
-    DistanceConstraint::meta(ecs);
-    ecs.component<Triangle>();
 }
 
 } // namespace components

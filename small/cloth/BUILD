@@ -19,19 +19,22 @@ cc_library(
     name = "sim",
     srcs = [
         "components.h",
-        "components/core.h",
+        "components/particle.h",
+        "components/constraint.h",
         "components/render.h",
-        "components/solver.h",
-        "physics.h",
-        "physics/integration.h",
-        "physics/spring.h",
+        "sim/model.h",
+        "sim/state.h",
+        "sim/bridge.h",
+        "math/corot.h",
+        "math/spring.h",
         "queries.h",
         "vars.h",
         "systems.h",
-        "systems/render/module.h",
-        "systems/render/draw.h",
-        "systems/render/gpu.h",
-        "systems/render/interaction.h",
+        "setup.h",
+        "render/systems.h",
+        "render/draw.h",
+        "render/gpu.h",
+        "render/interaction.h",
     ],
     copts = select({
         "@platforms//os:emscripten": [
@@ -71,7 +74,6 @@ cc_library(
 cc_binary(
     name = "bench",
     srcs = [
-        "bench/bench.h",
         "bench/bench.cpp",
     ],
     data = [
@@ -83,43 +85,49 @@ cc_binary(
     ],
 )
 
+# a/** -- per-entity ecs pattern
+[cc_binary(
+    name = "a_" + f.replace("a/", "").replace(".cpp", ""),
+    srcs = [f],
+    data = [":assets", "//:resources"] + assets_files,
+    additional_linker_inputs = ["//:resources"] + assets_files,
+    deps = [":sim"],
+) for f in glob(["a/*.cpp"])]
+
+# b/** -- staging buffer pattern
+[cc_binary(
+    name = "b_" + f.replace("b/", "").replace(".cpp", ""),
+    srcs = [f],
+    data = [":assets", "//:resources"] + assets_files,
+    additional_linker_inputs = ["//:resources"] + assets_files,
+    deps = [":sim"],
+) for f in glob(["b/*.cpp"])]
+
 ### wasm
 cc_binary(
     name = "main",
     srcs = [
-        "main_implicit.cpp",
+        "b/corot.cpp",
     ],
     data = [
-        ":assets",  # per-directory assets
-        "//:resources",  # root assets
+        ":assets",
+        "//:resources",
     ] + assets_files,
     additional_linker_inputs = ["//:resources"] + assets_files,
     linkopts = select({
         "@platforms//os:emscripten": [
-            # with known memory usage and expected size
-            # "-sALLOW_MEMORY_GROWTH=0",  # sometimes it's a good idea to clamp it
-            # "-sSTACK_SIZE=16mb",
-            # "-sINITIAL_MEMORY=100mb",
-            # "-sINITIAL_HEAP=4mb",
-            # with no picture of memory footprint
             "-sALLOW_MEMORY_GROWTH=1",
             "-sSTACK_SIZE=16mb",
             "-sINITIAL_HEAP=16mb",
-            "-sMAXIMUM_MEMORY=1024mb", # paired with allow_memory_growth
-            # ---
+            "-sMAXIMUM_MEMORY=1024mb",
             "-sSINGLE_FILE",
             "-sWASMFS",
-            # "-sASSERTIONS=2",
-            "-sEXIT_RUNTIME=0",  # include shutdown code for proper cleanup
-            # "-pthread", # this introduces the SharedArrayBuffer
+            "-sEXIT_RUNTIME=0",
             "-O2",
-            # "-g0",
             "-sMODULARIZE=1",
             "-sEXPORT_NAME=createModule",
             "-sMIN_WEBGL_VERSION=2",
             "-sMAX_WEBGL_VERSION=2",
-            # "-sFULL_ES3=1",
-            # "-sUSE_GLFW=3",
             "-sENVIRONMENT=web,worker",
             "-sEXPORTED_RUNTIME_METHODS=['ccall','cwrap','wasmMemory']",
             "-sEXPORTED_FUNCTIONS=['_main','_emscripten_shutdown','_emscripten_resize','_flecs_explorer_request']",
@@ -127,10 +135,13 @@ cc_binary(
             "--embed-file resources/shaders/glsl300es/spring.vs@resources/shaders/glsl300es/spring.vs",
             "--embed-file resources/shaders/glsl300es/particle.fs@resources/shaders/glsl300es/particle.fs",
             "--embed-file resources/shaders/glsl300es/particle.vs@resources/shaders/glsl300es/particle.vs",
+            "--embed-file resources/shaders/glsl300es/triangle.fs@resources/shaders/glsl300es/triangle.fs",
+            "--embed-file resources/shaders/glsl300es/triangle.vs@resources/shaders/glsl300es/triangle.vs",
+            "--embed-file resources/shaders/glsl300es/triangle_wireframe.fs@resources/shaders/glsl300es/triangle_wireframe.fs",
+            "--embed-file resources/shaders/glsl300es/triangle_wireframe.vs@resources/shaders/glsl300es/triangle_wireframe.vs",
             "--embed-file resources/fonts/generic.fnt@resources/fonts/generic.fnt",
             "--embed-file resources/fonts/generic.png@resources/fonts/generic.png",
             "--embed-file resources/fonts/tiny.png@resources/fonts/tiny.png",
-            # "--embed-file small/cloth/scenes/default.flecs@small/cloth/scenes/default.flecs",
         ] + assets_embed_linkopts,
         "//conditions:default": [],
     }),
@@ -142,16 +153,7 @@ cc_binary(
 wasm_cc_binary(
     name = "webapp",
     cc_target = ":main",
-    # backend = "emscripten",
-    outputs = [
-        # "mass-spring.js",
-        # "index.wasm",
-        # "app1.data",
-        # "index.html",
-    ],
-    # simd = True,
-    # standalone = True, # i don't want this. it's a wasi thing
+    outputs = [],
     tags = ["wasm"],
     threads = "off",
-    # threads = ["_default", "emscripten", "off"],
 )

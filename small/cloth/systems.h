@@ -1,14 +1,8 @@
 #pragma once
 
-// convenience header - includes all system implementations
 #include "vars.h"
 #include "queries.h"
-#include "systems/render/module.h"
-
-// verb convention:
-// register_* : register types/components/meta only.
-// seed*      : create runtime entities and default values.
-// install_*  : define/install systems.
+#include "render/systems.h"
 
 namespace systems {
 
@@ -30,25 +24,6 @@ inline void install_scene_systems(flecs::world& ecs) {
             sim_time += dt;
             frame_count += 1;
         });
-
-    ecs.system("Scene::ReindexParticles")
-        .kind(flecs::PreUpdate)
-        .run([](flecs::iter& it) {
-            if (!state::dirty.get<bool>()) return;
-            int new_idx = 0;
-            queries::particle_query.each([&](flecs::entity e, const Position&) {
-                e.set<ParticleIndex>(new_idx++);
-            });
-        });
-
-    ecs.system("Scene::ClearDirty")
-        .kind(flecs::PostUpdate)
-        .run([](flecs::iter& it) {
-            state::dirty.get_mut<bool>() = false;
-        });
 }
 
 } // namespace systems
-
-// TODO: put application/engine-specific ecs setup and glue code here
-

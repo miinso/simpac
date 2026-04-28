@@ -1,6 +1,8 @@
+// corotational FEM cloth (triangles for membrane, bending springs for out-of-plane)
+
 Config.Scene {
   dt { f32: { 1 / 60 } }
-  gravity { vec3f: { x: 0, y: -9.81, z: 0 } }
+  gravity { vec3r: { x: 0, y: -9.81, z: 0 } }
   paused { bool: { false } }
 }
 
@@ -9,18 +11,20 @@ Config.Solver {
   cg_tolerance { f32: { 0.00001 } }
 }
 
-const width = __WIDTH__
-const height = __HEIGHT__
+const width = 10
+const height = 5
 const spacing = 0.9
 const mass = 1.0
-const k_struct = 1200.0
-const k_shear = 1200.0
+const mu = 4000.0
+const lam = 4000.0
+const thick = 0.01
 const k_bending = 360.0
 const k_d = 0.12
 const start_x = -($width - 1) * $spacing * 0.5
 const start_y = 3.0
 const start_z = 0.0
 
+// particles (grid)
 for y in 0..$height {
   for x in 0..$width {
     "p_{$y}_{$x}" {
@@ -32,61 +36,38 @@ for y in 0..$height {
   }
 }
 
+// pin top row
 for x in 0..$width {
   "p_0_{$x}" { IsPinned }
 }
 
-for y in 0..$height {
+// triangles (each quad = 2 tris)
+for y in 0..($height - 1) {
   for x in 0..($width - 1) {
-    "s_h_{$y}_{$x}" {
-      Spring: {
+    "t_a_{$y}_{$x}" {
+      Triangle: {
         e1: "p_{$y}_{$x}",
         e2: "p_{$y}_{$x + 1}",
-        rest_length: $spacing,
-        k_s: $k_struct,
-        k_d: $k_d
+        e3: "p_{$y + 1}_{$x}",
+        mu: $mu,
+        lambda: $lam,
+        thickness: $thick
       }
     }
-  }
-}
-
-for y in 0..($height - 1) {
-  for x in 0..$width {
-    "s_v_{$y}_{$x}" {
-      Spring: {
-        e1: "p_{$y}_{$x}",
-        e2: "p_{$y + 1}_{$x}",
-        rest_length: $spacing,
-        k_s: $k_struct,
-        k_d: $k_d
-      }
-    }
-  }
-}
-
-for y in 0..($height - 1) {
-  for x in 0..($width - 1) {
-    "s_d1_{$y}_{$x}" {
-      Spring: {
-        e1: "p_{$y}_{$x}",
+    "t_b_{$y}_{$x}" {
+      Triangle: {
+        e1: "p_{$y}_{$x + 1}",
         e2: "p_{$y + 1}_{$x + 1}",
-        rest_length: $spacing * 1.41421356,
-        k_s: $k_shear,
-        k_d: $k_d
-      }
-    }
-    "s_d2_{$y}_{$x}" {
-      Spring: {
-        e1: "p_{$y + 1}_{$x}",
-        e2: "p_{$y}_{$x + 1}",
-        rest_length: $spacing * 1.41421356,
-        k_s: $k_shear,
-        k_d: $k_d
+        e3: "p_{$y + 1}_{$x}",
+        mu: $mu,
+        lambda: $lam,
+        thickness: $thick
       }
     }
   }
 }
 
+// bending springs (horizontal, skip one)
 for y in 0..$height {
   for x in 0..($width - 2) {
     "s_bh_{$y}_{$x}" {
@@ -101,6 +82,7 @@ for y in 0..$height {
   }
 }
 
+// bending springs (vertical, skip one)
 for y in 0..($height - 2) {
   for x in 0..$width {
     "s_bv_{$y}_{$x}" {
@@ -113,4 +95,20 @@ for y in 0..($height - 2) {
       }
     }
   }
+}
+
+DefaultCamera {
+  graphics.Position: { x: 0, y: 3, z: 10 }
+  graphics.Camera: {
+    target: { x: 0, y: 1.5, z: -2 }
+    fovy: 60
+    projection: 0
+    move_speed: 0.1
+    rotation_speed: 0.2
+    zoom_speed: 1.0
+  }
+}
+
+graphics.ActiveCameraSource {
+  (graphics.ActiveCamera, DefaultCamera)
 }

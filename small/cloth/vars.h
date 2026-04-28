@@ -4,6 +4,9 @@
 #include "tags.h"
 #include "components.h"
 
+#include <deque>
+#include <string>
+
 namespace props {
 inline flecs::entity dt;
 inline flecs::entity gravity;
@@ -35,3 +38,18 @@ inline void seed(flecs::world& ecs) {
     dirty = ecs.entity("Scene::dirty").set<bool>(false);
 }
 } // namespace state
+
+// UI stats singleton -- solver working buffers live in main_*.cpp
+struct Solver {
+    bool exploded = false;
+    int cg_iterations = 0;
+    Real cg_error = 0;
+    std::deque<std::string> cg_history;
+    int cg_history_max_lines = 15;
+};
+
+namespace components {
+inline void register_solver_stats(flecs::world& ecs) {
+    ecs.component<Solver>().add(flecs::Singleton);
+}
+} // namespace components

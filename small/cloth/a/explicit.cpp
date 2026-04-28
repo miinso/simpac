@@ -1,41 +1,45 @@
-// Mass-Spring Simulator Base (explicit euler)
+// Mass-Spring Simulator (explicit euler, per-entity)
 
 #include "flecs.h"
 #include "graphics.h"
 
-#include "components.h"
-#include "physics.h"
-#include "queries.h"
-#include "systems.h"
+#include "../components.h"
+#include "../math/spring.h"
+#include "../queries.h"
+#include "../systems.h"
 #include <cstdio>
 #include <string>
 
 namespace flow {
 
-inline void clear_force(flecs::iter& it, size_t, Force& f) {
-    f.map().setZero(); // .map() give you eigen handle
+inline void clear_force(flecs::iter&, size_t, Force& f) {
+    f.map().setZero();
 }
 
 inline void apply_spring_force(Spring& spring, Real k_s, Real k_d) {
-    physics::spring::Sample sample;
-    Eigen::Vector3r force_a = Eigen::Vector3r::Zero();
-    Eigen::Vector3r force_b = Eigen::Vector3r::Zero();
-    if (!physics::spring::force(spring, k_s, k_d, sample, force_a, force_b)) return;
+    const auto x_a = spring.e1.get<Position>().map();
+    const auto x_b = spring.e2.get<Position>().map();
+    const auto v_a = spring.e1.get<Velocity>().map();
+    const auto v_b = spring.e2.get<Velocity>().map();
 
-    if (!sample.a_pinned) sample.a.get_mut<Force>().map() += force_a;
-    if (!sample.b_pinned) sample.b.get_mut<Force>().map() += force_b;
+    physics::spring::Eval e;
+    if (!physics::spring::eval(x_a, x_b, v_a, v_b, spring.rest_length, e)) return;
+
+    const auto g = physics::spring::grad(k_s, k_d, e);
+    if (!spring.e1.has<IsPinned>()) spring.e1.get_mut<Force>().map() -= g;
+    if (!spring.e2.has<IsPinned>()) spring.e2.get_mut<Force>().map() += g;
 }
 
-inline void apply_spring_elastic_force(flecs::iter& it, size_t, Spring& spring) {
-    apply_spring_force(spring, spring.k_s, Real(0));
+inline void apply_spring_elastic_force(flecs::iter&, size_t, Spring& spring) {
+    apply_spring_force(spring, spring.k_s, 0);
 }
 
-inline void apply_spring_damping_force(flecs::iter& it, size_t, Spring& spring) {
-    apply_spring_force(spring, Real(0), spring.k_d);
+inline void apply_spring_damping_force(flecs::iter&, size_t, Spring& spring) {
+    apply_spring_force(spring, 0, spring.k_d);
 }
 
 inline void integrate_position(flecs::iter& it, size_t, Position& x, const Velocity& v) {
-    physics::integration::update_position(x, v, it.delta_time());
+    x.map() += it.delta_time() * v.map();
 }
 
 inline void integrate_velocity(flecs::iter& it, size_t, Velocity& v, const Force& f, const Mass& m) {
@@ -45,7 +49,7 @@ inline void integrate_velocity(flecs::iter& it, size_t, Velocity& v, const Force
 } // namespace flow
 
 // =========================================================================
-// Main
+// main
 // =========================================================================
 
 int main() {
@@ -53,31 +57,24 @@ int main() {
 
     flecs::world ecs;
 
-    // 1) Types
-    components::register_core_components(ecs);
+    components::register_particle_components(ecs);
+    components::register_constraint_components(ecs);
     components::register_render_components(ecs);
-    queries::seed(ecs);
 
-    // 2) Runtime data
+    queries::seed(ecs);
     props::seed(ecs);
     state::seed(ecs);
 
-    // hint: override core props here
     props::dt.set<Real>(Real(1.0f / 60.0f));
-    props::gravity.set<Gravity>({0.0f, -9.81f, 0.0f});
+    props::gravity.set<vec3r>({0.0f, -9.81f, 0.0f});
     props::paused.set<bool>(false);
 
-    // non-GL singletons
     ecs.set<ParticleInteractionState>({});
 
-    // 3) Services
-    graphics::init(ecs, {800, 600, "Base Simulator"});
-
-    // GL singletons (after graphics::init)
+    graphics::init(ecs, {800, 600, "Explicit Euler"});
     ecs.set<SpringRenderer>({});
     ecs.set<ParticleRenderer>({});
 
-    // 4) Systems
     systems::install_scene_systems(ecs);
     systems::install_render_systems(ecs);
 
@@ -88,40 +85,25 @@ int main() {
             e.add<ParticleState>();
         });
 
-    // mark scene dirty when particles are added/removed
-    ecs.observer<Particle>()
-        .event(flecs::OnAdd)
-        .event(flecs::OnRemove)
-        .run([](flecs::iter& it) {
-            state::dirty.get_mut<bool>() = true;
-        });
-
     // =========================================================================
-    // System handles
+    // simulation pipeline
     // =========================================================================
 
-    flecs::system clear_force;
-    flecs::system apply_gravity;
-    flecs::system apply_spring_elastic_force;
-    flecs::system apply_spring_damping_force;
-    flecs::system integrate_position;
-    flecs::system integrate_velocity;
+    flecs::system clear_force, apply_gravity;
+    flecs::system apply_spring_elastic_force, apply_spring_damping_force;
+    flecs::system integrate_position, integrate_velocity;
 
     auto algorithm = ecs.system("Explicit Euler")
         .kind(flecs::PreUpdate)
-        .run([&](flecs::iter& it) {
-            const auto& dt = props::dt.get<Real>();
-            if (clear_force.enabled()) clear_force.run(dt);
-            if (apply_gravity.enabled()) apply_gravity.run(dt);
-            if (apply_spring_elastic_force.enabled()) apply_spring_elastic_force.run(dt);
-            if (apply_spring_damping_force.enabled()) apply_spring_damping_force.run(dt);
-            if (integrate_position.enabled()) integrate_position.run(dt);
-            if (integrate_velocity.enabled()) integrate_velocity.run(dt);
+        .run([&](flecs::iter&) {
+            const Real dt = props::dt.get<Real>();
+            clear_force.run(dt);
+            apply_gravity.run(dt);
+            apply_spring_elastic_force.run(dt);
+            apply_spring_damping_force.run(dt);
+            integrate_velocity.run(dt);
+            integrate_position.run(dt);
         });
-
-    // =========================================================================
-    // Flow block (order = flow)
-    // =========================================================================
 
     ecs.scope(algorithm, [&] {
         clear_force = ecs.system<Force>("Clear Force")
@@ -146,21 +128,21 @@ int main() {
             .kind(0)
             .each(flow::apply_spring_damping_force);
 
-        integrate_position = ecs.system<Position, const Velocity>("Integrate Position")
-            .with<Particle>()
-            .without<IsPinned>()
-            .kind(0)
-            .each(flow::integrate_position);
-
         integrate_velocity = ecs.system<Velocity, const Force, const Mass>("Integrate Velocity")
             .with<Particle>()
             .without<IsPinned>()
             .kind(0)
             .each(flow::integrate_velocity);
+
+        integrate_position = ecs.system<Position, const Velocity>("Integrate Position")
+            .with<Particle>()
+            .without<IsPinned>()
+            .kind(0)
+            .each(flow::integrate_position);
     });
 
     // =========================================================================
-    // Load scene script
+    // scene
     // =========================================================================
 
     const std::string scene_path = graphics::npath("assets/spring3.flecs");
@@ -174,10 +156,6 @@ int main() {
             std::printf("[Scene] Loaded %s\n", scene_path.c_str());
         }
     }
-
-    // =========================================================================
-    // Main loop
-    // =========================================================================
 
     ecs.app()
         .enable_rest()

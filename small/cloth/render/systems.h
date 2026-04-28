@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../components/render.h"
+#include "../components/render.h"
 #include "graphics.h"
 #include "draw.h"
 #include "gpu.h"
@@ -58,6 +58,20 @@ inline void install_render_systems(flecs::world& ecs) {
             render::draw_particles_gpu(ctx);
         }).disable(0);
 
+    ecs.system("graphics::UploadTrianglePositions")
+        .kind(graphics::PreRender)
+        .run([](flecs::iter& it) {
+            auto& ctx = it.world().get_mut<TriangleRenderer>();
+            render::upload_triangle_positions_to_gpu(it.world(), ctx);
+        }).disable(0);
+
+    ecs.system("graphics::DrawTrianglesGPU")
+        .kind(graphics::OnRender)
+        .run([](flecs::iter& it) {
+            auto& ctx = it.world().get_mut<TriangleRenderer>();
+            render::draw_triangles_gpu(ctx);
+        }).disable(0);
+
     ecs.system("graphics::DrawTimingInfo")
         .kind(graphics::PostRender)
         .run(render::draw_timing_info)
@@ -71,7 +85,7 @@ inline void install_render_systems(flecs::world& ecs) {
     ecs.system("graphics::DragParticlesKinematic")
         .kind(graphics::PreRender)
         .run(interaction::drag_particles_kinematic)
-        .disable();
+        .disable(0);
 
     ecs.system("graphics::DragParticlesSpring")
         .kind(graphics::PreRender)
@@ -81,6 +95,26 @@ inline void install_render_systems(flecs::world& ecs) {
     ecs.system("graphics::DrawDragPlane")
         .kind(graphics::OnRender)
         .run(interaction::draw_drag_plane_debug)
+        .disable(0);
+
+    ecs.system("graphics::PickTriangles")
+        .kind(flecs::OnLoad)
+        .run(interaction::pick_triangles)
+        .disable(0);
+
+    ecs.system("graphics::DragTrianglesKinematic")
+        .kind(graphics::PreRender)
+        .run(interaction::drag_triangles_kinematic)
+        .disable(0);
+
+    ecs.system("graphics::DragTrianglesSpring")
+        .kind(graphics::PreRender)
+        .run(interaction::drag_triangles_spring)
+        .disable();
+
+    ecs.system("graphics::DrawDragPlaneTri")
+        .kind(graphics::OnRender)
+        .run(interaction::draw_drag_plane_debug_tri)
         .disable(0);
 }
 

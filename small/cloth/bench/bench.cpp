@@ -1,11 +1,12 @@
 #include <benchmark/benchmark.h>
 
 #include "../components.h"
+#include "../sim/bridge.h"
+#include "../math/spring.h"
 #include "../queries.h"
-#include "../systems.h"
 #include "../vars.h"
-#include "bench.h"
 
+#include <Eigen/Sparse>
 #include <chrono>
 #include <cstdlib>
 #include <cstdio>
@@ -19,11 +20,74 @@
 
 namespace {
 
+// inline solver for bench (same algorithm as main_implicit.cpp)
+struct ImplicitEuler {
+    Eigen::SparseMatrix<Real> A;
+    Eigen::VectorXr b, x, x_prev;
+    std::vector<Eigen::Triplet<Real>> triplets;
+    Eigen::ConjugateGradient<Eigen::SparseMatrix<Real>> cg;
+    bool exploded = false;
+
+    void reset() { x.setZero(); x_prev.setZero(); exploded = false; }
+
+    void step(const physics::Model& model, physics::State& state, Real dt,
+              const Eigen::Vector3r& gravity, int max_iter, Real tolerance) {
+        const int n = model.particle_count;
+        if (n == 0) return;
+        const int dof = n * 3;
+        if (b.size() != dof) {
+            b.resize(dof); x.resize(dof); x_prev.resize(dof); A.resize(dof, dof);
+            x.setZero(); x_prev.setZero();
+        }
+        if (x.size() > 0 && (!x.allFinite() || !x_prev.allFinite())) exploded = true;
+        if (exploded) reset();
+        b.setZero(); triplets.clear();
+
+        for (int i = 0; i < n; i++) {
+            if (model.particle_inv_mass[i] <= Real(0)) continue;
+            const Real mass = model.particle_mass[i];
+            b.segment<3>(i*3) += mass * state.qd(i) + dt * mass * gravity;
+            for (int d = 0; d < 3; d++) triplets.push_back({i*3+d, i*3+d, mass});
+        }
+        for (int s = 0; s < model.spring_count; s++) {
+            const int i = model.spring_indices[s*2], j = model.spring_indices[s*2+1];
+            physics::spring::Eval e;
+            if (!physics::spring::eval(state.q(i), state.q(j), state.qd(i), state.qd(j),
+                                       model.spring_rest_length[s], e)) continue;
+            const bool fi = model.particle_inv_mass[i] > 0, fj = model.particle_inv_mass[j] > 0;
+            const auto g = physics::spring::grad(model.spring_stiffness[s], model.spring_damping[s], e);
+            if (fi) b.segment<3>(i*3) -= dt * g;
+            if (fj) b.segment<3>(j*3) += dt * g;
+            const auto H = physics::spring::hess(model.spring_stiffness[s], model.spring_rest_length[s], e);
+            const Real h2 = dt * dt;
+            for (int r = 0; r < 3; r++) for (int c = 0; c < 3; c++) {
+                const Real val = h2 * H(r, c);
+                if (fi) triplets.push_back({i*3+r, i*3+c, val});
+                if (fj) triplets.push_back({j*3+r, j*3+c, val});
+                if (fi && fj) { triplets.push_back({i*3+r, j*3+c, -val}); triplets.push_back({j*3+r, i*3+c, -val}); }
+            }
+        }
+        A.setFromTriplets(triplets.begin(), triplets.end());
+        cg.setMaxIterations(max_iter); cg.setTolerance(tolerance); cg.compute(A);
+        x = cg.solveWithGuess(b, x_prev); x_prev = x;
+        if (cg.info() != Eigen::Success || !x.allFinite()) { exploded = true; return; }
+        for (int i = 0; i < n; i++) {
+            if (model.particle_inv_mass[i] <= Real(0)) continue;
+            state.qd(i) = x.segment<3>(i*3); state.q(i) += dt * state.qd(i);
+        }
+    }
+};
+
 struct BenchContext {
-    // one ecs world per benchmark case
     flecs::world ecs;
     flecs::entity cg_max_iter;
     flecs::entity cg_tolerance;
+
+    physics::Bridge bridge;
+    physics::Model model;
+    physics::State sim_state;
+    ImplicitEuler solver;
+    bool model_dirty = true;
 };
 
 std::string script_template_path() {
@@ -79,9 +143,9 @@ bool load_scene_script(BenchContext& ctx, int size, std::string& error) {
 }
 
 bool setup_context(BenchContext& ctx, int size, std::string& error) {
-    // register ecs types then install runtime systems
-    components::register_core_components(ctx.ecs);
-    components::register_solver_component(ctx.ecs);
+    components::register_particle_components(ctx.ecs);
+    components::register_constraint_components(ctx.ecs);
+    components::register_solver_stats(ctx.ecs);
 
     queries::seed(ctx.ecs);
     props::seed(ctx.ecs);
@@ -92,8 +156,47 @@ bool setup_context(BenchContext& ctx, int size, std::string& error) {
 
     ctx.ecs.ensure<Solver>();
 
-    systems::install_scene_systems(ctx.ecs);
-    systems::bench::install(ctx.ecs, ctx.cg_max_iter, ctx.cg_tolerance);
+    // observers for model rebuild
+    ctx.ecs.observer<Particle>()
+        .event(flecs::OnAdd)
+        .event(flecs::OnRemove)
+        .run([&ctx](flecs::iter&) { ctx.model_dirty = true; });
+
+    ctx.ecs.observer<Spring>()
+        .event(flecs::OnSet)
+        .event(flecs::OnAdd)
+        .event(flecs::OnRemove)
+        .each([&ctx](flecs::iter&, size_t, Spring&) { ctx.model_dirty = true; });
+
+    // solver system using Model/State/Bridge
+    ctx.ecs.system("Implicit Euler")
+        .kind(flecs::PreUpdate)
+        .immediate()
+        .run([&ctx](flecs::iter& it) {
+            auto world = it.world();
+
+            if (ctx.model_dirty) {
+                ctx.model = ctx.bridge.build(world);
+                ctx.sim_state = ctx.model.state();
+                ctx.solver.reset();
+                ctx.model_dirty = false;
+            }
+
+            if (ctx.model.particle_count == 0) return;
+
+            world.defer_suspend();
+            ctx.bridge.gather(ctx.sim_state);
+
+            const Real dt = props::dt.get<Real>();
+            const Eigen::Vector3r gravity = props::gravity.get<vec3f>().map();
+            const int max_iter = ctx.cg_max_iter.get<int>();
+            const Real tolerance = ctx.cg_tolerance.get<Real>();
+
+            ctx.solver.step(ctx.model, ctx.sim_state, dt, gravity, max_iter, tolerance);
+
+            ctx.bridge.scatter(ctx.sim_state);
+            world.defer_resume();
+        });
 
     if (!load_scene_script(ctx, size, error)) {
         return false;

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core.h"
+#include "particle.h"
 
 #include <vector>
 
@@ -35,6 +35,34 @@ struct ParticleInteractionState {
     float pick_radius_scale = 1.2f;
 };
 
+struct TriangleInteractionState {
+    flecs::entity hovered;
+    flecs::entity selected;
+    flecs::entity pressed;
+
+    bool pointer_down = false;
+    bool pointer_pressed = false;
+    bool pointer_released = false;
+    bool dragging = false;
+
+    float press_x = 0.0f;
+    float press_y = 0.0f;
+    float last_x = 0.0f;
+    float last_y = 0.0f;
+
+    vec3f drag_plane_point = {0.0f, 0.0f, 0.0f};
+    vec3f drag_plane_normal = {0.0f, 1.0f, 0.0f};
+    vec3f drag_offset = {0.0f, 0.0f, 0.0f};
+
+    // vertex offsets from centroid at press time
+    vec3f drag_vertex_offsets[3] = {};
+    bool drag_added_pins = false;
+
+    float virtual_spring_k = 800.0f;
+    float virtual_spring_d = 24.0f;
+    float drag_threshold_px = 3.0f;
+};
+
 struct SpringRenderer {
     static constexpr int FLOATS_PER_INSTANCE = 7;
     static constexpr int VERTICES_PER_INSTANCE = 2;
@@ -49,11 +77,7 @@ struct SpringRenderer {
     float strain_scale = 10.0f;
     int allocated_springs = 0;
 
-    flecs::query<const Position, const ParticleIndex> position_query;
-
     std::vector<float> staging_buffer;
-    std::vector<int> spring_particle_indices;
-    std::vector<float> rest_lengths;
 };
 
 struct ParticleRenderer {
@@ -72,13 +96,38 @@ struct ParticleRenderer {
     int u_base_radius_loc = -1;
     int u_color_loc = -1;
 
-    float base_radius = 0.5f;
+    float base_radius = 0.15f;
     float color[3] = {0.2f, 0.5f, 0.9f};
 
     int allocated_particles = 0;
 
-    flecs::query<const Position, const ParticleIndex, const Mass, const ParticleState> position_query;
+    flecs::query<const Position, const Mass, const ParticleState> position_query;
     std::vector<float> staging_buffer;
+};
+
+struct TriangleRenderer {
+    static constexpr int FLOATS_PER_INSTANCE = 11; // p0(3) + p1(3) + p2(3) + rest_area(1) + flags(1)
+    static constexpr int VERTICES_PER_INSTANCE = 3;
+
+    unsigned int vao = 0;
+    unsigned int instance_vbo = 0;
+
+    // filled shader
+    unsigned int shader_id = 0;
+    int u_viewproj_loc = -1;
+    int u_strain_scale_loc = -1;
+    float strain_scale = 5.0f;
+
+    // wireframe shader (same vao/vbo, 6 verts per instance as GL_LINES)
+    unsigned int wf_shader_id = 0;
+    int wf_viewproj_loc = -1;
+    int wf_color_loc = -1;
+    float wireframe_color[3] = {0.15f, 0.15f, 0.15f};
+    bool show_wireframe = true;
+
+    int allocated_triangles = 0;
+    std::vector<float> staging_buffer;
+    std::vector<float> rest_areas;
 };
 
 #include "graphics.h"
@@ -132,10 +181,6 @@ inline void generate_icosphere(std::vector<float>& vertices, std::vector<unsigne
 namespace detail {
 
 inline void init_spring_renderer(flecs::world world, SpringRenderer& gpu) {
-    gpu.position_query = world.query_builder<const Position, const ParticleIndex>()
-        .cached()
-        .build();
-
     Shader shader = LoadShader(
         graphics::npath("resources/shaders/glsl300es/spring.vs").c_str(),
         graphics::npath("resources/shaders/glsl300es/spring.fs").c_str()
@@ -154,7 +199,7 @@ inline void shutdown_spring_renderer(SpringRenderer& gpu) {
 }
 
 inline void init_particle_renderer(flecs::world world, ParticleRenderer& gpu) {
-    gpu.position_query = world.query_builder<const Position, const ParticleIndex, const Mass, const ParticleState>()
+    gpu.position_query = world.query_builder<const Position, const Mass, const ParticleState>()
         .with<Particle>()
         .term_at<ParticleState>().optional()
         .cached()
@@ -203,6 +248,35 @@ inline void shutdown_particle_renderer(ParticleRenderer& gpu) {
     if (gpu.vao) rlUnloadVertexArray(gpu.vao);
 }
 
+inline void init_triangle_renderer(flecs::world world, TriangleRenderer& gpu) {
+    Shader shader = LoadShader(
+        graphics::npath("resources/shaders/glsl300es/triangle.vs").c_str(),
+        graphics::npath("resources/shaders/glsl300es/triangle.fs").c_str()
+    );
+    if (IsShaderValid(shader)) {
+        gpu.shader_id = shader.id;
+        gpu.u_viewproj_loc = GetShaderLocation(shader, "u_viewproj");
+        gpu.u_strain_scale_loc = GetShaderLocation(shader, "u_strain_scale");
+    }
+
+    Shader wf = LoadShader(
+        graphics::npath("resources/shaders/glsl300es/triangle_wireframe.vs").c_str(),
+        graphics::npath("resources/shaders/glsl300es/triangle_wireframe.fs").c_str()
+    );
+    if (IsShaderValid(wf)) {
+        gpu.wf_shader_id = wf.id;
+        gpu.wf_viewproj_loc = GetShaderLocation(wf, "u_viewproj");
+        gpu.wf_color_loc = GetShaderLocation(wf, "u_color");
+    }
+}
+
+inline void shutdown_triangle_renderer(TriangleRenderer& gpu) {
+    if (gpu.shader_id) UnloadShader({gpu.shader_id});
+    if (gpu.wf_shader_id) UnloadShader({gpu.wf_shader_id});
+    if (gpu.instance_vbo) rlUnloadVertexBuffer(gpu.instance_vbo);
+    if (gpu.vao) rlUnloadVertexArray(gpu.vao);
+}
+
 } // namespace detail
 
 } // namespace render
@@ -211,6 +285,9 @@ namespace components {
 
 inline void register_render_components(flecs::world& ecs) {
     ecs.component<ParticleInteractionState>()
+        .add(flecs::Singleton);
+
+    ecs.component<TriangleInteractionState>()
         .add(flecs::Singleton);
 
     ecs.component<SpringRenderer>()
@@ -228,6 +305,15 @@ inline void register_render_components(flecs::world& ecs) {
         })
         .on_remove([](flecs::entity, ParticleRenderer& gpu) {
             render::detail::shutdown_particle_renderer(gpu);
+        })
+        .add(flecs::Singleton);
+
+    ecs.component<TriangleRenderer>()
+        .on_set([](flecs::entity e, TriangleRenderer& gpu) {
+            render::detail::init_triangle_renderer(e.world(), gpu);
+        })
+        .on_remove([](flecs::entity, TriangleRenderer& gpu) {
+            render::detail::shutdown_triangle_renderer(gpu);
         })
         .add(flecs::Singleton);
 }
