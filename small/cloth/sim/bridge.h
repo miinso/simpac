@@ -25,7 +25,8 @@ struct Bridge {
         pq.each([&](flecs::entity e, const Position& pos, const Velocity& vel, const Mass& mass) {
                 Real m = mass;
                 uint32_t flags = PARTICLE_FLAG_ACTIVE;
-                if (e.has<IsPinned>()) m = Real(0);
+                // pin sets a flag, not zero-mass. inv_mass is derived in finalize.
+                if (e.has<IsPinned>()) flags |= PARTICLE_FLAG_PINNED;
 
                 int idx = mb.add_particle(pos.map(), vel.map(), m, flags);
                 entity_to_index[e.id()] = idx;
