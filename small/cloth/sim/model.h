@@ -110,6 +110,26 @@ struct ModelBuilder {
         spring_damping.push_back(damping);
     }
 
+    // 2D rest pose for a triangle from 3D rest vertices.
+    // local frame: t1 = e1_hat, t2 = (e1 x e2) x t1.
+    static void compute_triangle_pose(const Eigen::Vector3r& x0,
+                                      const Eigen::Vector3r& x1,
+                                      const Eigen::Vector3r& x2,
+                                      Eigen::Matrix2r& dm_inv_out,
+                                      Real& area_out) {
+        Eigen::Vector3r e1 = x1 - x0;
+        Eigen::Vector3r e2 = x2 - x0;
+        area_out = 0.5f * e1.cross(e2).norm();
+        Eigen::Vector3r t1 = e1.normalized();
+        Eigen::Vector3r t2 = e1.cross(e2).normalized().cross(t1);
+        Eigen::Matrix2r Dm;
+        Dm(0, 0) = e1.dot(t1);
+        Dm(1, 0) = e1.dot(t2);
+        Dm(0, 1) = e2.dot(t1);
+        Dm(1, 1) = e2.dot(t2);
+        dm_inv_out = Dm.inverse();
+    }
+
     // computes dm_inv + area from rest positions
     void add_triangle(int i, int j, int k,
                       Real mu, Real lam,
@@ -118,26 +138,11 @@ struct ModelBuilder {
         assert(j >= 0 && j < (int)particle_q.size());
         assert(k >= 0 && k < (int)particle_q.size());
 
-        const auto& x0 = particle_q[i];
-        const auto& x1 = particle_q[j];
-        const auto& x2 = particle_q[k];
-
-        Eigen::Vector3r e1 = x1 - x0;
-        Eigen::Vector3r e2 = x2 - x0;
-
-        Real area = 0.5f * e1.cross(e2).norm();
-
-        // local 2D frame for material coordinates
-        Eigen::Vector3r t1 = e1.normalized();
-        Eigen::Vector3r t2 = e1.cross(e2).normalized().cross(t1);
-
-        Eigen::Matrix2r Dm;
-        Dm(0, 0) = e1.dot(t1);
-        Dm(1, 0) = e1.dot(t2);
-        Dm(0, 1) = e2.dot(t1);
-        Dm(1, 1) = e2.dot(t2);
-
-        add_triangle(i, j, k, Dm.inverse(), area, mu, lam, thickness);
+        Eigen::Matrix2r dm_inv;
+        Real area;
+        compute_triangle_pose(particle_q[i], particle_q[j], particle_q[k],
+                              dm_inv, area);
+        add_triangle(i, j, k, dm_inv, area, mu, lam, thickness);
     }
 
     // pre-computed dm_inv + area (for existing triangles with known rest pose)
