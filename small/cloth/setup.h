@@ -97,6 +97,12 @@ inline void install(flecs::world& ecs) {
         .event(flecs::OnRemove)
         .each([](flecs::iter&, size_t, Spring&) { model_dirty = true; });
 
+    // pin toggles flow through bridge rebuild so b/ solvers see the new inv_mass
+    ecs.observer<IsPinned>()
+        .event(flecs::OnAdd)
+        .event(flecs::OnRemove)
+        .run([](flecs::iter&) { model_dirty = true; });
+
     ecs.system("Rebuild")
         .kind(Simulate)
         .run(rebuild);
