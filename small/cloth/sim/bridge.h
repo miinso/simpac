@@ -44,9 +44,9 @@ struct Bridge {
                               spring.k_s, spring.k_d, spring.rest_length);
             });
 
-        world.query_builder<const Triangle>()
+        world.query_builder<Triangle>()
             .build()
-            .each([&](flecs::entity, const Triangle& tri) {
+            .each([&](flecs::entity, Triangle& tri) {
                 auto it0 = entity_to_index.find(tri.e1.id());
                 auto it1 = entity_to_index.find(tri.e2.id());
                 auto it2 = entity_to_index.find(tri.e3.id());
@@ -54,13 +54,19 @@ struct Bridge {
                     it1 == entity_to_index.end() ||
                     it2 == entity_to_index.end()) return;
 
-                if (tri.dm_inv.isZero())
-                    mb.add_triangle(it0->second, it1->second, it2->second,
-                                    tri.mu, tri.lambda, tri.thickness);
-                else
-                    mb.add_triangle(it0->second, it1->second, it2->second,
-                                    tri.dm_inv, tri.area,
-                                    tri.mu, tri.lambda, tri.thickness);
+                // first build: capture rest pose from current positions, cache on the component.
+                // subsequent builds reuse the cached values so the rest pose isn't tracking deformation.
+                if (tri.dm_inv.isZero()) {
+                    ModelBuilder::compute_triangle_pose(
+                        mb.particle_q[it0->second],
+                        mb.particle_q[it1->second],
+                        mb.particle_q[it2->second],
+                        tri.dm_inv, tri.area);
+                }
+
+                mb.add_triangle(it0->second, it1->second, it2->second,
+                                tri.dm_inv, tri.area,
+                                tri.mu, tri.lambda, tri.thickness);
             });
 
         return mb.finalize();
