@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1776339134880,
+  "lastUpdate": 1777544744039,
   "repoUrl": "https://github.com/miinso/simpac",
   "entries": {
     "cloth-implicit-euler": [
@@ -420,6 +420,48 @@ window.BENCHMARK_DATA = {
             "value": 155.00221933637346,
             "unit": "ms/iter",
             "extra": "iterations: 14\ncpu: 154.98753635714291 ms\nthreads: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "minseo.park.cs@gmail.com",
+            "name": "Minseo Park",
+            "username": "miinso"
+          },
+          "committer": {
+            "email": "minseo.park.cs@gmail.com",
+            "name": "Minseo Park",
+            "username": "miinso"
+          },
+          "distinct": true,
+          "id": "34a38b71416f16c733d4e5d701debbe2085a50e7",
+          "message": "fix(cloth): cache triangle rest pose on first build",
+          "timestamp": "2026-04-30T19:03:32+09:00",
+          "tree_id": "ab72df1de68e05f9d390827d104a127e73d61268",
+          "url": "https://github.com/miinso/simpac/commit/34a38b71416f16c733d4e5d701debbe2085a50e7"
+        },
+        "date": 1777544743570,
+        "tool": "googlecpp",
+        "benches": [
+          {
+            "name": "BM_ClothImplicit/50/real_time",
+            "value": 8.483219906628369,
+            "unit": "ms/iter",
+            "extra": "iterations: 251\ncpu: 8.482331378486055 ms\nthreads: 1"
+          },
+          {
+            "name": "BM_ClothImplicit/100/real_time",
+            "value": 36.015752951304115,
+            "unit": "ms/iter",
+            "extra": "iterations: 60\ncpu: 36.01033873333335 ms\nthreads: 1"
+          },
+          {
+            "name": "BM_ClothImplicit/200/real_time",
+            "value": 157.41572013268103,
+            "unit": "ms/iter",
+            "extra": "iterations: 13\ncpu: 157.40098407692324 ms\nthreads: 1"
           }
         ]
       }
