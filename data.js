@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1777544744039,
+  "lastUpdate": 1777635347671,
   "repoUrl": "https://github.com/miinso/simpac",
   "entries": {
     "cloth-implicit-euler": [
@@ -462,6 +462,48 @@ window.BENCHMARK_DATA = {
             "value": 157.41572013268103,
             "unit": "ms/iter",
             "extra": "iterations: 13\ncpu: 157.40098407692324 ms\nthreads: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "minseo.park.cs@gmail.com",
+            "name": "Minseo Park",
+            "username": "miinso"
+          },
+          "committer": {
+            "email": "minseo.park.cs@gmail.com",
+            "name": "Minseo Park",
+            "username": "miinso"
+          },
+          "distinct": true,
+          "id": "eaf2c37e3f542cb45f6ac8efbf7dc1ce5e31cfbf",
+          "message": "fix(cloth): gate solvers on particle_flags not inv_mass",
+          "timestamp": "2026-05-01T20:33:10+09:00",
+          "tree_id": "9bb1f6ccb3e54ce8d6223f6028161ff22a61ca87",
+          "url": "https://github.com/miinso/simpac/commit/eaf2c37e3f542cb45f6ac8efbf7dc1ce5e31cfbf"
+        },
+        "date": 1777635346311,
+        "tool": "googlecpp",
+        "benches": [
+          {
+            "name": "BM_ClothImplicit/50/real_time",
+            "value": 8.519776405826692,
+            "unit": "ms/iter",
+            "extra": "iterations: 248\ncpu: 8.518623338709677 ms\nthreads: 1"
+          },
+          {
+            "name": "BM_ClothImplicit/100/real_time",
+            "value": 37.3437191758837,
+            "unit": "ms/iter",
+            "extra": "iterations: 56\ncpu: 37.33773987500001 ms\nthreads: 1"
+          },
+          {
+            "name": "BM_ClothImplicit/200/real_time",
+            "value": 158.37458463815543,
+            "unit": "ms/iter",
+            "extra": "iterations: 13\ncpu: 158.3543263846155 ms\nthreads: 1"
           }
         ]
       }
