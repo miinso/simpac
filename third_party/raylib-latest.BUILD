@@ -11,7 +11,6 @@ cc_library(
         "src/rshapes.c",
         "src/rtext.c",
         "src/rtextures.c",
-        "src/utils.c",
     ],
     hdrs = glob([
         "src/*.h",

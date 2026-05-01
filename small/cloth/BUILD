@@ -66,7 +66,7 @@ cc_library(
         "//modules:graphics2",
         "@eigen",
         "@flecs",
-        "@raylib-latest",
+        "@raylib",
     ],
 )
 

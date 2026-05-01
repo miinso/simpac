@@ -113,29 +113,29 @@ http_archive(
 http_archive(
     name = "raylib_macos",
     build_file = "//third_party:raylib.BUILD",
-    strip_prefix = "raylib-5.5_macos",
-    urls = ["https://github.com/raysan5/raylib/releases/download/5.5/raylib-5.5_macos.tar.gz"],
+    strip_prefix = "raylib-6.0_macos",
+    urls = ["https://github.com/raysan5/raylib/releases/download/6.0/raylib-6.0_macos.tar.gz"],
 )
 
 http_archive(
     name = "raylib_windows",
     build_file = "//third_party:raylib.BUILD",
-    strip_prefix = "raylib-5.5_win64_msvc16",
-    urls = ["https://github.com/raysan5/raylib/releases/download/5.5/raylib-5.5_win64_msvc16.zip"],
+    strip_prefix = "raylib-6.0_win64_msvc16",
+    urls = ["https://github.com/raysan5/raylib/releases/download/6.0/raylib-6.0_win64_msvc16.zip"],
 )
 
 http_archive(
     name = "raylib_linux",
     build_file = "//third_party:raylib.BUILD",
-    strip_prefix = "raylib-5.5_linux_amd64",
-    urls = ["https://github.com/raysan5/raylib/releases/download/5.5/raylib-5.5_linux_amd64.tar.gz"],
+    strip_prefix = "raylib-6.0_linux_amd64",
+    urls = ["https://github.com/raysan5/raylib/releases/download/6.0/raylib-6.0_linux_amd64.tar.gz"],
 )
 
 http_archive(
     name = "raylib_emscripten",
     build_file = "//third_party:raylib.BUILD",
-    strip_prefix = "raylib-5.5_webassembly",
-    urls = ["https://github.com/raysan5/raylib/releases/download/5.5/raylib-5.5_webassembly.zip"],
+    strip_prefix = "raylib-6.0_webassembly",
+    urls = ["https://github.com/raysan5/raylib/releases/download/6.0/raylib-6.0_webassembly.zip"],
 )
 
 local_repository = use_repo_rule("@bazel_tools//tools/build_defs/repo:local.bzl", "local_repository")
@@ -174,7 +174,7 @@ git_repository(
     name = "raylib-latest",
     # branch = "master",
     build_file = "//third_party:raylib-latest.BUILD",
-    commit = "cf0d6fc664f1d0775c6b21ed79feaa1e38b2ddb4", # Dec 16, 2025
+    commit = "d768dae402c8fad503aebd24dc17c38dbfa0b1e3", # master HEAD, May 1, 2026
     # depth = 1,
     remote = "https://github.com/raysan5/raylib.git",
 )
