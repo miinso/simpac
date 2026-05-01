@@ -30,8 +30,8 @@ inline void apply_spring_force(flecs::iter&) {
 
         const auto g = physics::spring::grad(sim::model.spring_stiffness[s],
                                              sim::model.spring_damping[s], e);
-        if (sim::model.particle_inv_mass[i] > 0) sim::state_0.f(i) -= g;
-        if (sim::model.particle_inv_mass[j] > 0) sim::state_0.f(j) += g;
+        if (!(sim::model.particle_flags[i] & physics::PARTICLE_FLAG_PINNED)) sim::state_0.f(i) -= g;
+        if (!(sim::model.particle_flags[j] & physics::PARTICLE_FLAG_PINNED)) sim::state_0.f(j) += g;
     }
 }
 

@@ -64,9 +64,8 @@ inline void release_drag_pin(ParticleInteractionState& pick) {
     if (!pick.drag_added_pin) return;
     if (pick.pressed.is_alive()) {
         set_velocity_zero(pick.pressed);
-        if (pick.pressed.has<IsPinned>()) {
+        if (pick.pressed.has<IsPinned>())
             pick.pressed.remove<IsPinned>();
-        }
     }
     pick.drag_added_pin = false;
 }

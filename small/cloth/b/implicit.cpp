@@ -85,8 +85,8 @@ inline void assemble_spring_force(flecs::iter& it) {
 
         const auto g = physics::spring::grad(sim::model.spring_stiffness[s],
                                              sim::model.spring_damping[s], e);
-        if (sim::model.particle_inv_mass[i] > 0) cg::b.segment<3>(i * 3) -= dt * g;
-        if (sim::model.particle_inv_mass[j] > 0) cg::b.segment<3>(j * 3) += dt * g;
+        if (!(sim::model.particle_flags[i] & physics::PARTICLE_FLAG_PINNED)) cg::b.segment<3>(i * 3) -= dt * g;
+        if (!(sim::model.particle_flags[j] & physics::PARTICLE_FLAG_PINNED)) cg::b.segment<3>(j * 3) += dt * g;
     }
 }
 
@@ -111,8 +111,8 @@ inline void assemble_spring_stiffness(flecs::iter& it) {
 
         const Eigen::Matrix3r H = physics::spring::hess(
             sim::model.spring_stiffness[s], sim::model.spring_rest_length[s], e);
-        const bool i_free = sim::model.particle_inv_mass[i] > 0;
-        const bool j_free = sim::model.particle_inv_mass[j] > 0;
+        const bool i_free = !(sim::model.particle_flags[i] & physics::PARTICLE_FLAG_PINNED);
+        const bool j_free = !(sim::model.particle_flags[j] & physics::PARTICLE_FLAG_PINNED);
 
         for (int r = 0; r < 3; r++) {
             for (int c = 0; c < 3; c++) {

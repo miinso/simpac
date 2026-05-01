@@ -44,7 +44,7 @@ struct ImplicitEuler {
         b.setZero(); triplets.clear();
 
         for (int i = 0; i < n; i++) {
-            if (model.particle_inv_mass[i] <= Real(0)) continue;
+            if (model.particle_flags[i] & physics::PARTICLE_FLAG_PINNED) continue;
             const Real mass = model.particle_mass[i];
             b.segment<3>(i*3) += mass * state.qd(i) + dt * mass * gravity;
             for (int d = 0; d < 3; d++) triplets.push_back({i*3+d, i*3+d, mass});
@@ -54,7 +54,8 @@ struct ImplicitEuler {
             physics::spring::Eval e;
             if (!physics::spring::eval(state.q(i), state.q(j), state.qd(i), state.qd(j),
                                        model.spring_rest_length[s], e)) continue;
-            const bool fi = model.particle_inv_mass[i] > 0, fj = model.particle_inv_mass[j] > 0;
+            const bool fi = !(model.particle_flags[i] & physics::PARTICLE_FLAG_PINNED);
+            const bool fj = !(model.particle_flags[j] & physics::PARTICLE_FLAG_PINNED);
             const auto g = physics::spring::grad(model.spring_stiffness[s], model.spring_damping[s], e);
             if (fi) b.segment<3>(i*3) -= dt * g;
             if (fj) b.segment<3>(j*3) += dt * g;
@@ -72,7 +73,7 @@ struct ImplicitEuler {
         x = cg.solveWithGuess(b, x_prev); x_prev = x;
         if (cg.info() != Eigen::Success || !x.allFinite()) { exploded = true; return; }
         for (int i = 0; i < n; i++) {
-            if (model.particle_inv_mass[i] <= Real(0)) continue;
+            if (model.particle_flags[i] & physics::PARTICLE_FLAG_PINNED) continue;
             state.qd(i) = x.segment<3>(i*3); state.q(i) += dt * state.qd(i);
         }
     }

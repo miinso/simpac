@@ -1,4 +1,4 @@
-// Corotational FEM Cloth (implicit euler, triangles for membrane, springs for bending)
+// Corotational FEM Cloth (implicit euler, per-entity, triangles for membrane, springs for bending)
 
 #include "../setup.h"
 #include "../math/corot.h"
@@ -47,18 +47,28 @@ inline void prepare(flecs::iter&) {
     cg::triplets.clear();
 }
 
-inline void assemble_momentum(flecs::iter&) {
-    for (int i : sim::model.free_particles)
-        cg::b.segment<3>(i * 3) += sim::model.particle_mass[i] * sim::state_0.qd(i);
+// -- per-entity assembly --
+
+inline void assemble_momentum(flecs::iter& it, size_t i,
+                             const Mass& m, const Velocity& v) {
+    int idx = sim::bridge.entity_to_index[it.entity(i).id()];
+    cg::b.segment<3>(idx * 3) += (Real)m * v.map();
 }
 
-inline void assemble_external_force(flecs::iter& it) {
-    const Real dt = it.delta_time();
-    for (int i : sim::model.free_particles)
-        cg::b.segment<3>(i * 3) += dt * sim::model.particle_mass[i] * sim::gravity;
+inline void assemble_external_force(flecs::iter& it, size_t i,
+                                   const Mass& m) {
+    int idx = sim::bridge.entity_to_index[it.entity(i).id()];
+    cg::b.segment<3>(idx * 3) += it.delta_time() * (Real)m * sim::gravity;
 }
 
-// -- triangle membrane forces (corotational FEM) --
+inline void assemble_inertia(flecs::iter& it, size_t i,
+                         const Mass& m) {
+    int idx = sim::bridge.entity_to_index[it.entity(i).id()];
+    for (int d = 0; d < 3; d++)
+        cg::triplets.push_back({idx * 3 + d, idx * 3 + d, (Real)m});
+}
+
+// -- triangle membrane forces (corotational FEM, buffer-direct) --
 
 inline void assemble_tri_force(flecs::iter& it) {
     const Real dt = it.delta_time();
@@ -66,6 +76,10 @@ inline void assemble_tri_force(flecs::iter& it) {
         const int i0 = sim::model.tri_indices[t * 3];
         const int i1 = sim::model.tri_indices[t * 3 + 1];
         const int i2 = sim::model.tri_indices[t * 3 + 2];
+        
+        const auto& v0 = sim::bridge.particle_entities[i0];
+        const auto& v1 = sim::bridge.particle_entities[i1];
+        const auto& v2 = sim::bridge.particle_entities[i2];
 
         physics::corot::Eval e;
         physics::corot::eval(sim::state_0.q(i0), sim::state_0.q(i1), sim::state_0.q(i2),
@@ -76,11 +90,10 @@ inline void assemble_tri_force(flecs::iter& it) {
                                  sim::model.tri_mu[t], sim::model.tri_lambda[t],
                                  sim::model.tri_areas[t], g0, g1, g2,
                                  sim::model.tri_thickness[t]);
-        
-        // NOTE: i think i can make this an element-wise mult. to filter out pinned particles maybe
-        if (!(sim::model.particle_flags[i0] & physics::PARTICLE_FLAG_PINNED)) cg::b.segment<3>(i0 * 3) -= dt * g0;
-        if (!(sim::model.particle_flags[i1] & physics::PARTICLE_FLAG_PINNED)) cg::b.segment<3>(i1 * 3) -= dt * g1;
-        if (!(sim::model.particle_flags[i2] & physics::PARTICLE_FLAG_PINNED)) cg::b.segment<3>(i2 * 3) -= dt * g2;
+
+        if (!v0.has<IsPinned>()) cg::b.segment<3>(i0 * 3) -= dt * g0;
+        if (!v1.has<IsPinned>()) cg::b.segment<3>(i1 * 3) -= dt * g1;
+        if (!v2.has<IsPinned>()) cg::b.segment<3>(i2 * 3) -= dt * g2;
     }
 }
 
@@ -93,6 +106,12 @@ inline void assemble_tri_stiffness(flecs::iter& it) {
             sim::model.tri_indices[t * 3 + 2]
         };
 
+        const flecs::entity v[3] = {
+            sim::bridge.particle_entities[idx[0]],
+            sim::bridge.particle_entities[idx[1]],
+            sim::bridge.particle_entities[idx[2]]
+        };
+
         physics::corot::Eval e;
         physics::corot::eval(sim::state_0.q(idx[0]), sim::state_0.q(idx[1]), sim::state_0.q(idx[2]),
                                  sim::model.tri_poses[t], e);
@@ -103,11 +122,10 @@ inline void assemble_tri_stiffness(flecs::iter& it) {
                                  sim::model.tri_areas[t], K,
                                  sim::model.tri_thickness[t]);
 
-        // insert 9 blocks (3x3 each) into triplets
         for (int a = 0; a < 3; a++) {
-            if (sim::model.particle_flags[idx[a]] & physics::PARTICLE_FLAG_PINNED) continue;
+            if (v[a].has<IsPinned>()) continue;
             for (int b = 0; b < 3; b++) {
-                if (sim::model.particle_flags[idx[b]] & physics::PARTICLE_FLAG_PINNED) continue;
+                if (v[b].has<IsPinned>()) continue;
                 for (int r = 0; r < 3; r++) {
                     for (int c = 0; c < 3; c++) {
                         const Real val = h2 * K(a * 3 + r, b * 3 + c);
@@ -120,7 +138,7 @@ inline void assemble_tri_stiffness(flecs::iter& it) {
     }
 }
 
-// -- bending springs (optional, same as b/implicit) --
+// -- bending springs (buffer-direct) --
 
 inline void assemble_spring_force(flecs::iter& it) {
     const Real dt = it.delta_time();
@@ -135,8 +153,8 @@ inline void assemble_spring_force(flecs::iter& it) {
 
         const auto g = physics::spring::grad(sim::model.spring_stiffness[s],
                                              sim::model.spring_damping[s], e);
-        if (!(sim::model.particle_flags[i] & physics::PARTICLE_FLAG_PINNED)) cg::b.segment<3>(i * 3) -= dt * g;
-        if (!(sim::model.particle_flags[j] & physics::PARTICLE_FLAG_PINNED)) cg::b.segment<3>(j * 3) += dt * g;
+        if (!sim::bridge.particle_entities[i].has<IsPinned>()) cg::b.segment<3>(i * 3) -= dt * g;
+        if (!sim::bridge.particle_entities[j].has<IsPinned>()) cg::b.segment<3>(j * 3) += dt * g;
     }
 }
 
@@ -153,8 +171,8 @@ inline void assemble_spring_stiffness(flecs::iter& it) {
 
         const Eigen::Matrix3r H = physics::spring::hess(
             sim::model.spring_stiffness[s], sim::model.spring_rest_length[s], e);
-        const bool i_free = !(sim::model.particle_flags[i] & physics::PARTICLE_FLAG_PINNED);
-        const bool j_free = !(sim::model.particle_flags[j] & physics::PARTICLE_FLAG_PINNED);
+        const bool i_free = !sim::bridge.particle_entities[i].has<IsPinned>();
+        const bool j_free = !sim::bridge.particle_entities[j].has<IsPinned>();
 
         for (int r = 0; r < 3; r++) {
             for (int c = 0; c < 3; c++) {
@@ -167,16 +185,6 @@ inline void assemble_spring_stiffness(flecs::iter& it) {
                 }
             }
         }
-    }
-}
-
-// -- inertia --
-
-inline void assemble_inertia(flecs::iter&) {
-    for (int i : sim::model.free_particles) {
-        const Real mass = sim::model.particle_mass[i];
-        for (int d = 0; d < 3; d++)
-            cg::triplets.push_back({i * 3 + d, i * 3 + d, mass});
     }
 }
 
@@ -195,19 +203,16 @@ inline void solve(flecs::iter&) {
         cg::exploded = true;
 }
 
-// -- integrate --
+// -- per-entity write-back --
 
-inline void update_velocity(flecs::iter&) {
+inline void update_velocity(flecs::iter& it, size_t i, Velocity& v) {
     if (cg::exploded) return;
-    for (int i : sim::model.free_particles)
-        sim::state_0.qd(i) = cg::x.segment<3>(i * 3);
+    int idx = sim::bridge.entity_to_index[it.entity(i).id()];
+    v.map() = cg::x.segment<3>(idx * 3);
 }
 
-inline void integrate_position(flecs::iter& it) {
-    if (cg::exploded) return;
-    const Real dt = it.delta_time();
-    for (int i : sim::model.free_particles)
-        sim::state_0.q(i) += dt * sim::state_0.qd(i);
+inline void integrate_position(flecs::iter& it, size_t, Position& pos, const Velocity& v) {
+    pos.map() += it.delta_time() * v.map();
 }
 
 // -- stats --
@@ -242,7 +247,7 @@ int main() {
     printf("Hi from %s\n", __FILE__);
 
     flecs::world ecs;
-    sim::init(ecs, {640, 480, "Corotational FEM"});
+    sim::init(ecs, {640, 480, "Corotational FEM (ecs)"});
 
     props::cg_max_iter = ecs.entity("Config::Solver::cg_max_iter").set<int>(100).add<Configurable>();
     props::cg_tolerance = ecs.entity("Config::Solver::cg_tolerance").set<Real>(Real(1e-3f)).add<Configurable>();
@@ -257,7 +262,7 @@ int main() {
     flecs::system assemble_inertia;
     flecs::system solve, update_velocity, integrate_position;
 
-    auto integrator = ecs.system("Implicit Euler (corot)")
+    auto integrator = ecs.system("Implicit Euler (corot ecs)")
         .kind(sim::Simulate)
         .run([&](flecs::iter&) {
             const Real dt = props::dt.get<Real>();
@@ -279,11 +284,15 @@ int main() {
         prepare = ecs.system("Prepare")
             .kind(0).run(flow::prepare);
 
-        assemble_momentum = ecs.system("Assemble Momentum")
-            .kind(0).run(flow::assemble_momentum);
+        assemble_momentum = ecs.system<const Mass, const Velocity>("Assemble Momentum")
+            .with<Particle>()
+            .without<IsPinned>()
+            .kind(0).each(flow::assemble_momentum);
 
-        assemble_external_force = ecs.system("Assemble External Force")
-            .kind(0).run(flow::assemble_external_force);
+        assemble_external_force = ecs.system<const Mass>("Assemble External Force")
+            .with<Particle>()
+            .without<IsPinned>()
+            .kind(0).each(flow::assemble_external_force);
 
         assemble_tri_force = ecs.system("Assemble Triangle Force")
             .kind(0).run(flow::assemble_tri_force);
@@ -297,20 +306,26 @@ int main() {
         assemble_spring_stiffness = ecs.system("Assemble Spring Stiffness")
             .kind(0).run(flow::assemble_spring_stiffness);
 
-        assemble_inertia = ecs.system("Assemble Inertia")
-            .kind(0).run(flow::assemble_inertia);
+        assemble_inertia = ecs.system<const Mass>("Assemble Inertia")
+            .with<Particle>()
+            .without<IsPinned>()
+            .kind(0).each(flow::assemble_inertia);
 
         solve = ecs.system("Solve")
             .kind(0).run(flow::solve);
 
-        update_velocity = ecs.system("Update Velocity")
-            .kind(0).run(flow::update_velocity);
+        update_velocity = ecs.system<Velocity>("Update Velocity")
+            .with<Particle>()
+            .without<IsPinned>()
+            .kind(0).each(flow::update_velocity);
 
-        integrate_position = ecs.system("Integrate Position")
-            .kind(0).run(flow::integrate_position);
+        integrate_position = ecs.system<Position, const Velocity>("Integrate Position")
+            .with<Particle>()
+            .without<IsPinned>()
+            .kind(0).each(flow::integrate_position);
     });
 
-    sim::install_scatter(ecs);
+    // no scatter -- per-entity systems write to ECS directly
 
     ecs.system("Stats")
         .kind(sim::Simulate)
