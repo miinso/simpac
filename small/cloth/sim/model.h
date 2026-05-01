@@ -194,13 +194,12 @@ struct ModelBuilder {
 
         m.particle_mass = Eigen::Map<const Eigen::VectorXr>(particle_mass.data(), n);
         m.particle_inv_mass.resize(n);
-        // mass stays as truth; pin-flag and mass>0 jointly decide inv_mass.
-        // free_particles excludes both pinned and legitimately-massless particles.
+        // inv_mass is purely 1/mass. pin state lives in particle_flags only.
         for (int i = 0; i < n; i++) {
+            m.particle_inv_mass[i] = particle_mass[i] > 0
+                ? 1 / particle_mass[i] : 0;
             const bool pinned = (particle_flags[i] & PARTICLE_FLAG_PINNED) != 0;
-            const bool has_mass = particle_mass[i] > 0;
-            m.particle_inv_mass[i] = (!pinned && has_mass) ? 1 / particle_mass[i] : 0;
-            if (!pinned && has_mass)
+            if (!pinned && particle_mass[i] > 0)
                 m.free_particles.push_back(i);
         }
         m.particle_flags = particle_flags;

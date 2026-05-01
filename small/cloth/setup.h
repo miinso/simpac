@@ -9,9 +9,10 @@
 #include "sim/bridge.h"
 #include "queries.h"
 #include "vars.h"
-#include "systems.h"
 #include <cstdio>
 #include <string>
+
+#include "systems.h"
 
 struct InitConfig {
     int width = 800;
