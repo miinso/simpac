@@ -1,5 +1,5 @@
 #pragma once
 
-#include "modules/core.h"
-#include "modules/render.h"
-#include "modules/interaction.h"
+#include "bridge/bridge.h"
+#include "render/render.h"
+#include "interaction/interaction.h"
