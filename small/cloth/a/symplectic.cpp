@@ -1,12 +1,7 @@
 // Mass-Spring Simulator (symplectic euler, per-entity)
 
-#include "flecs.h"
-#include "graphics.h"
-
-#include "../components.h"
+#include "../setup.h"
 #include "../math/spring.h"
-#include "../queries.h"
-#include "../systems.h"
 #include <cstdio>
 #include <string>
 
@@ -17,17 +12,17 @@ inline void clear_force(flecs::iter&, size_t, Force& f) {
 }
 
 inline void apply_spring_force(flecs::iter&, size_t, Spring& spring) {
-    const auto x_a = spring.e1.get<Position>().map();
-    const auto x_b = spring.e2.get<Position>().map();
-    const auto v_a = spring.e1.get<Velocity>().map();
-    const auto v_b = spring.e2.get<Velocity>().map();
+    const auto x_a = spring.v0.get<Position>().map();
+    const auto x_b = spring.v1.get<Position>().map();
+    const auto v_a = spring.v0.get<Velocity>().map();
+    const auto v_b = spring.v1.get<Velocity>().map();
 
     physics::spring::Eval e;
     if (!physics::spring::eval(x_a, x_b, v_a, v_b, spring.rest_length, e)) return;
 
-    const auto g = physics::spring::grad(spring.k_s, spring.k_d, e);
-    if (!spring.e1.has<IsPinned>()) spring.e1.get_mut<Force>().map() -= g;
-    if (!spring.e2.has<IsPinned>()) spring.e2.get_mut<Force>().map() += g;
+    const auto g = physics::spring::grad(spring.stiffness, spring.damping, e);
+    if (!spring.v0.has<IsPinned>()) spring.v0.get_mut<Force>().map() -= g;
+    if (!spring.v1.has<IsPinned>()) spring.v1.get_mut<Force>().map() += g;
 }
 
 // symplectic: velocity first, then position with new velocity
@@ -50,32 +45,17 @@ int main() {
 
     flecs::world ecs;
 
-    components::register_particle_components(ecs);
-    components::register_constraint_components(ecs);
-    components::register_render_components(ecs);
-
-    queries::seed(ecs);
-    props::seed(ecs);
-    state::seed(ecs);
-
-    props::dt.set<Real>(Real(1.0f / 60.0f));
-    props::gravity.set<vec3r>({0.0f, -9.81f, 0.0f});
-    props::paused.set<bool>(false);
-
-    ecs.set<ParticleInteractionState>({});
-
+    ecs.import<cloth::particle>();
+    ecs.import<cloth::element>();
+    ecs.import<cloth::bridge>();
     graphics::init(ecs, {800, 600, "Symplectic Euler (ecs)"});
-    ecs.set<SpringRenderer>({});
-    ecs.set<ParticleRenderer>({});
-
-    systems::install_scene_systems(ecs);
-    systems::install_render_systems(ecs);
+    ecs.import<cloth::render>();
+    ecs.import<cloth::interaction>();
 
     ecs.observer<Particle>()
         .event(flecs::OnAdd)
         .each([](flecs::entity e, const Particle&) {
             e.add<Force>();
-            e.add<ParticleState>();
         });
 
     // -- symplectic euler -----------------------------------------------------
@@ -128,17 +108,7 @@ int main() {
 
     // -------------------------------------------------------------------------
 
-    const std::string scene_path = graphics::npath("assets/spring3.flecs");
-    if (!scene_path.empty()) {
-        auto script = ecs.script("SceneScript").filename(scene_path.c_str()).run();
-        if (!script) {
-            std::printf("[Scene] Failed to load %s\n", scene_path.c_str());
-        } else if (const EcsScript* data = script.try_get<EcsScript>(); data && data->error) {
-            std::printf("[Scene] Script error for %s: %s\n", scene_path.c_str(), data->error);
-        } else {
-            std::printf("[Scene] Loaded %s\n", scene_path.c_str());
-        }
-    }
+    sim::load_scene(ecs, "assets/spring3.flecs");
 
     ecs.app()
         .enable_rest()
