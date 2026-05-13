@@ -183,6 +183,58 @@ inline void stats(flecs::iter& it) {
 } // namespace flow
 
 // =========================================================================
+// module: mass-spring implicit euler solver
+// =========================================================================
+
+namespace cloth {
+
+struct implicit_euler {
+    implicit_euler(flecs::world& ecs) {
+        props::cg_max_iter = ecs.entity("Config::Solver::cg_max_iter")
+            .set<int>(100).add<Configurable>();
+        props::cg_tolerance = ecs.entity("Config::Solver::cg_tolerance")
+            .set<Real>(Real(1e-3f)).add<Configurable>();
+
+        flecs::system prepare, assemble_momentum, assemble_external_force;
+        flecs::system assemble_spring_force, assemble_inertia, assemble_spring_stiffness;
+        flecs::system solve, update_velocity, integrate_position;
+
+        auto solver_parent = ecs.entity("Implicit Euler");
+        ecs.scope(solver_parent, [&] {
+            prepare = ecs.system("Prepare").kind(0).run(flow::prepare);
+            assemble_momentum = ecs.system("Assemble Momentum").kind(0).run(flow::assemble_momentum);
+            assemble_external_force = ecs.system("Assemble External Force").kind(0).run(flow::assemble_external_force);
+            assemble_spring_force = ecs.system("Assemble Spring Force").kind(0).run(flow::assemble_spring_force);
+            assemble_inertia = ecs.system("Assemble Inertia").kind(0).run(flow::assemble_inertia);
+            assemble_spring_stiffness = ecs.system("Assemble Spring Stiffness").kind(0).run(flow::assemble_spring_stiffness);
+            solve = ecs.system("Solve").kind(0).run(flow::solve);
+            update_velocity = ecs.system("Update Velocity").kind(0).run(flow::update_velocity);
+            integrate_position = ecs.system("Integrate Position").kind(0).run(flow::integrate_position);
+        });
+
+        ecs.system("Step")
+            .kind(sim::Simulate)
+            .run([=](flecs::iter&) {
+                const Real dt = props::dt.get<Real>();
+                sim::gravity = props::gravity.get<vec3f>().map();
+                prepare.run(dt);
+                assemble_momentum.run(dt);
+                assemble_external_force.run(dt);
+                assemble_spring_force.run(dt);
+                assemble_inertia.run(dt);
+                assemble_spring_stiffness.run(dt);
+                solve.run(dt);
+                update_velocity.run(dt);
+                integrate_position.run(dt);
+            });
+
+        ecs.system("Stats").kind(sim::Simulate).run(flow::stats);
+    }
+};
+
+} // namespace cloth
+
+// =========================================================================
 // main
 // =========================================================================
 
@@ -191,85 +243,11 @@ int main() {
 
     flecs::world ecs;
 
-    sim::init(ecs, {800, 600, "Implicit Euler"});
-
-    props::cg_max_iter = ecs.entity("Config::Solver::cg_max_iter").set<int>(100).add<Configurable>();
-    props::cg_tolerance = ecs.entity("Config::Solver::cg_tolerance").set<Real>(Real(1e-3f)).add<Configurable>();
-
-    sim::install(ecs);
-
-    // -- implicit euler -------------------------------------------------------
-
-    flecs::system prepare, assemble_momentum, assemble_external_force;
-    flecs::system assemble_spring_force, assemble_inertia, assemble_spring_stiffness;
-    flecs::system solve, update_velocity, integrate_position;
-
-    auto integrator = ecs.system("Implicit Euler")
-        .kind(sim::Simulate)
-        .run([&](flecs::iter&) {
-            const Real dt = props::dt.get<Real>();
-            sim::gravity = props::gravity.get<vec3f>().map();
-            prepare.run(dt);
-            assemble_momentum.run(dt);
-            assemble_external_force.run(dt);
-            assemble_spring_force.run(dt);
-            assemble_inertia.run(dt);
-            assemble_spring_stiffness.run(dt);
-            solve.run(dt);
-            update_velocity.run(dt);
-            integrate_position.run(dt);
-        });
-
-    ecs.scope(integrator, [&] {
-        prepare = ecs.system("Prepare")
-            .kind(0)
-            .run(flow::prepare);
-
-        assemble_momentum = ecs.system("Assemble Momentum")
-            .kind(0)
-            .run(flow::assemble_momentum);
-
-        assemble_external_force = ecs.system("Assemble External Force")
-            .kind(0)
-            .run(flow::assemble_external_force);
-
-        assemble_spring_force = ecs.system("Assemble Spring Force")
-            .kind(0)
-            .run(flow::assemble_spring_force);
-
-        assemble_inertia = ecs.system("Assemble Inertia")
-            .kind(0)
-            .run(flow::assemble_inertia);
-
-        assemble_spring_stiffness = ecs.system("Assemble Spring Stiffness")
-            .kind(0)
-            .run(flow::assemble_spring_stiffness);
-
-        solve = ecs.system("Solve")
-            .kind(0)
-            .run(flow::solve);
-
-        update_velocity = ecs.system("Update Velocity")
-            .kind(0)
-            .run(flow::update_velocity);
-
-        integrate_position = ecs.system("Integrate Position")
-            .kind(0)
-            .run(flow::integrate_position);
-    });
-
-    // -------------------------------------------------------------------------
-
-    sim::install_scatter(ecs);
-
-    ecs.system("Stats")
-        .kind(sim::Simulate)
-        .run(flow::stats);
-
-    ecs.system("graphics::DrawSolveHistory")
-        .kind(graphics::PostRender)
-        .run(render::draw_solve_history)
-        .disable(0);
+    ecs.import<cloth::core>();
+    graphics::init(ecs, {800, 600, "Implicit Euler"});
+    ecs.import<cloth::render>();
+    ecs.import<cloth::interaction>();
+    ecs.import<cloth::implicit_euler>();
 
     sim::load_scene(ecs, "assets/spring3.flecs");
 

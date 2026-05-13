@@ -6,7 +6,7 @@
 #include <Eigen/Sparse>
 
 // =========================================================================
-// props
+// props (file-scope, assigned by module on import)
 // =========================================================================
 
 namespace props {
@@ -14,7 +14,10 @@ inline flecs::entity cg_max_iter;
 inline flecs::entity cg_tolerance;
 } // namespace props
 
-// cg solver
+// =========================================================================
+// cg solver state (file-scope, persists across frames)
+// =========================================================================
+
 namespace cg {
 inline Eigen::SparseMatrix<Real> A;
 inline Eigen::VectorXr b, x, x_prev;
@@ -26,7 +29,7 @@ inline Real error = 0;
 } // namespace cg
 
 // =========================================================================
-// flow
+// flow (assembly + solve steps, called by orchestrator)
 // =========================================================================
 
 namespace flow {
@@ -58,8 +61,6 @@ inline void assemble_external_force(flecs::iter& it) {
         cg::b.segment<3>(i * 3) += dt * sim::model.particle_mass[i] * sim::gravity;
 }
 
-// -- triangle membrane forces (corotational FEM) --
-
 inline void assemble_tri_force(flecs::iter& it) {
     const Real dt = it.delta_time();
     for (int t = 0; t < sim::model.tri_count; t++) {
@@ -76,8 +77,7 @@ inline void assemble_tri_force(flecs::iter& it) {
                                  sim::model.tri_mu[t], sim::model.tri_lambda[t],
                                  sim::model.tri_areas[t], g0, g1, g2,
                                  sim::model.tri_thickness[t]);
-        
-        // NOTE: i think i can make this an element-wise mult. to filter out pinned particles maybe
+
         if (!(sim::model.particle_flags[i0] & physics::PARTICLE_FLAG_PINNED)) cg::b.segment<3>(i0 * 3) -= dt * g0;
         if (!(sim::model.particle_flags[i1] & physics::PARTICLE_FLAG_PINNED)) cg::b.segment<3>(i1 * 3) -= dt * g1;
         if (!(sim::model.particle_flags[i2] & physics::PARTICLE_FLAG_PINNED)) cg::b.segment<3>(i2 * 3) -= dt * g2;
@@ -103,7 +103,6 @@ inline void assemble_tri_stiffness(flecs::iter& it) {
                                  sim::model.tri_areas[t], K,
                                  sim::model.tri_thickness[t]);
 
-        // insert 9 blocks (3x3 each) into triplets
         for (int a = 0; a < 3; a++) {
             if (sim::model.particle_flags[idx[a]] & physics::PARTICLE_FLAG_PINNED) continue;
             for (int b = 0; b < 3; b++) {
@@ -119,8 +118,6 @@ inline void assemble_tri_stiffness(flecs::iter& it) {
         }
     }
 }
-
-// -- bending springs (optional, same as b/implicit) --
 
 inline void assemble_spring_force(flecs::iter& it) {
     const Real dt = it.delta_time();
@@ -170,8 +167,6 @@ inline void assemble_spring_stiffness(flecs::iter& it) {
     }
 }
 
-// -- inertia --
-
 inline void assemble_inertia(flecs::iter&) {
     for (int i : sim::model.free_particles) {
         const Real mass = sim::model.particle_mass[i];
@@ -179,8 +174,6 @@ inline void assemble_inertia(flecs::iter&) {
             cg::triplets.push_back({i * 3 + d, i * 3 + d, mass});
     }
 }
-
-// -- solve --
 
 inline void solve(flecs::iter&) {
     cg::A.setFromTriplets(cg::triplets.begin(), cg::triplets.end());
@@ -195,8 +188,6 @@ inline void solve(flecs::iter&) {
         cg::exploded = true;
 }
 
-// -- integrate --
-
 inline void update_velocity(flecs::iter&) {
     if (cg::exploded) return;
     for (int i : sim::model.free_particles)
@@ -209,8 +200,6 @@ inline void integrate_position(flecs::iter& it) {
     for (int i : sim::model.free_particles)
         sim::state_0.q(i) += dt * sim::state_0.qd(i);
 }
-
-// -- stats --
 
 inline void stats(flecs::iter& it) {
     auto& ui = it.world().ensure<Solver>();
@@ -235,6 +224,64 @@ inline void stats(flecs::iter& it) {
 } // namespace flow
 
 // =========================================================================
+// module: corot implicit euler solver
+// =========================================================================
+
+namespace cloth {
+
+struct corot_implicit {
+    corot_implicit(flecs::world& ecs) {
+        props::cg_max_iter = ecs.entity("Config::Solver::cg_max_iter")
+            .set<int>(100).add<Configurable>();
+        props::cg_tolerance = ecs.entity("Config::Solver::cg_tolerance")
+            .set<Real>(Real(1e-3f)).add<Configurable>();
+
+        flecs::system prepare, assemble_momentum, assemble_external_force;
+        flecs::system assemble_tri_force, assemble_tri_stiffness;
+        flecs::system assemble_spring_force, assemble_spring_stiffness;
+        flecs::system assemble_inertia;
+        flecs::system solve, update_velocity, integrate_position;
+
+        auto solver_parent = ecs.entity("Implicit Euler (corot)");
+        ecs.scope(solver_parent, [&] {
+            prepare = ecs.system("Prepare").kind(0).run(flow::prepare);
+            assemble_momentum = ecs.system("Assemble Momentum").kind(0).run(flow::assemble_momentum);
+            assemble_external_force = ecs.system("Assemble External Force").kind(0).run(flow::assemble_external_force);
+            assemble_tri_force = ecs.system("Assemble Triangle Force").kind(0).run(flow::assemble_tri_force);
+            assemble_tri_stiffness = ecs.system("Assemble Triangle Stiffness").kind(0).run(flow::assemble_tri_stiffness);
+            assemble_spring_force = ecs.system("Assemble Spring Force").kind(0).run(flow::assemble_spring_force);
+            assemble_spring_stiffness = ecs.system("Assemble Spring Stiffness").kind(0).run(flow::assemble_spring_stiffness);
+            assemble_inertia = ecs.system("Assemble Inertia").kind(0).run(flow::assemble_inertia);
+            solve = ecs.system("Solve").kind(0).run(flow::solve);
+            update_velocity = ecs.system("Update Velocity").kind(0).run(flow::update_velocity);
+            integrate_position = ecs.system("Integrate Position").kind(0).run(flow::integrate_position);
+        });
+
+        ecs.system("Step")
+            .kind(sim::Simulate)
+            .run([=](flecs::iter&) {
+                const Real dt = props::dt.get<Real>();
+                sim::gravity = props::gravity.get<vec3f>().map();
+                prepare.run(dt);
+                assemble_momentum.run(dt);
+                assemble_external_force.run(dt);
+                assemble_tri_force.run(dt);
+                assemble_tri_stiffness.run(dt);
+                assemble_spring_force.run(dt);
+                assemble_spring_stiffness.run(dt);
+                assemble_inertia.run(dt);
+                solve.run(dt);
+                update_velocity.run(dt);
+                integrate_position.run(dt);
+            });
+
+        ecs.system("Stats").kind(sim::Simulate).run(flow::stats);
+    }
+};
+
+} // namespace cloth
+
+// =========================================================================
 // main
 // =========================================================================
 
@@ -242,84 +289,12 @@ int main() {
     printf("Hi from %s\n", __FILE__);
 
     flecs::world ecs;
-    sim::init(ecs, {640, 480, "Corotational FEM"});
 
-    props::cg_max_iter = ecs.entity("Config::Solver::cg_max_iter").set<int>(100).add<Configurable>();
-    props::cg_tolerance = ecs.entity("Config::Solver::cg_tolerance").set<Real>(Real(1e-3f)).add<Configurable>();
-
-    sim::install(ecs);
-
-    // -- implicit euler with corotational triangles + bending springs ----------
-
-    flecs::system prepare, assemble_momentum, assemble_external_force;
-    flecs::system assemble_tri_force, assemble_tri_stiffness;
-    flecs::system assemble_spring_force, assemble_spring_stiffness;
-    flecs::system assemble_inertia;
-    flecs::system solve, update_velocity, integrate_position;
-
-    auto integrator = ecs.system("Implicit Euler (corot)")
-        .kind(sim::Simulate)
-        .run([&](flecs::iter&) {
-            const Real dt = props::dt.get<Real>();
-            sim::gravity = props::gravity.get<vec3f>().map();
-            prepare.run(dt);
-            assemble_momentum.run(dt);
-            assemble_external_force.run(dt);
-            assemble_tri_force.run(dt);
-            assemble_tri_stiffness.run(dt);
-            assemble_spring_force.run(dt);
-            assemble_spring_stiffness.run(dt);
-            assemble_inertia.run(dt);
-            solve.run(dt);
-            update_velocity.run(dt);
-            integrate_position.run(dt);
-        });
-
-    ecs.scope(integrator, [&] {
-        prepare = ecs.system("Prepare")
-            .kind(0).run(flow::prepare);
-
-        assemble_momentum = ecs.system("Assemble Momentum")
-            .kind(0).run(flow::assemble_momentum);
-
-        assemble_external_force = ecs.system("Assemble External Force")
-            .kind(0).run(flow::assemble_external_force);
-
-        assemble_tri_force = ecs.system("Assemble Triangle Force")
-            .kind(0).run(flow::assemble_tri_force);
-
-        assemble_tri_stiffness = ecs.system("Assemble Triangle Stiffness")
-            .kind(0).run(flow::assemble_tri_stiffness);
-
-        assemble_spring_force = ecs.system("Assemble Spring Force")
-            .kind(0).run(flow::assemble_spring_force);
-
-        assemble_spring_stiffness = ecs.system("Assemble Spring Stiffness")
-            .kind(0).run(flow::assemble_spring_stiffness);
-
-        assemble_inertia = ecs.system("Assemble Inertia")
-            .kind(0).run(flow::assemble_inertia);
-
-        solve = ecs.system("Solve")
-            .kind(0).run(flow::solve);
-
-        update_velocity = ecs.system("Update Velocity")
-            .kind(0).run(flow::update_velocity);
-
-        integrate_position = ecs.system("Integrate Position")
-            .kind(0).run(flow::integrate_position);
-    });
-
-    sim::install_scatter(ecs);
-
-    ecs.system("Stats")
-        .kind(sim::Simulate)
-        .run(flow::stats);
-
-    ecs.system("graphics::DrawSolveHistory")
-        .kind(graphics::PostRender)
-        .run(render::draw_solve_history)
-        .disable(0);
+    ecs.import<cloth::core>();
+    graphics::init(ecs, {640, 480, "Corotational FEM"});
+    ecs.import<cloth::render>();
+    ecs.import<cloth::interaction>();
+    ecs.import<cloth::corot_implicit>();
 
     sim::load_scene(ecs, "assets/corot.flecs");
 
