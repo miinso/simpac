@@ -2,7 +2,7 @@
 
 #include <benchmark/benchmark.h>
 
-#include "../modules/core.h"
+#include "../bridge/bridge.h"
 #include "../math/spring.h"
 #include <Eigen/Sparse>
 
@@ -166,7 +166,7 @@ struct bench_solver {
             .kind(sim::Simulate)
             .run([=](flecs::iter&) {
                 const Real dt = props::dt.get<Real>();
-                sim::gravity = props::gravity.get<vec3f>().map();
+                sim::gravity = props::gravity.get<vec3r>().map();
                 prepare.run(dt);
                 assemble_momentum.run(dt);
                 assemble_external_force.run(dt);
@@ -176,6 +176,7 @@ struct bench_solver {
                 solve.run(dt);
                 update_velocity.run(dt);
                 integrate_position.run(dt);
+sim::bridge.scatter(sim::state_0);
             });
     }
 };
@@ -234,7 +235,9 @@ static void BM_ClothImplicit(benchmark::State& state) {
     const int size = (int)state.range(0);
 
     flecs::world ecs;
-    ecs.import<cloth::core>();
+    ecs.import<cloth::particle>();
+    ecs.import<cloth::element>();
+    ecs.import<cloth::bridge>();
     ecs.import<cloth::bench_solver>();
 
     std::string error;

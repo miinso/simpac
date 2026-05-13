@@ -261,7 +261,7 @@ struct corot_implicit {
             .kind(sim::Simulate)
             .run([=](flecs::iter&) {
                 const Real dt = props::dt.get<Real>();
-                sim::gravity = props::gravity.get<vec3f>().map();
+                sim::gravity = props::gravity.get<vec3r>().map();
                 prepare.run(dt);
                 assemble_momentum.run(dt);
                 assemble_external_force.run(dt);
@@ -273,6 +273,7 @@ struct corot_implicit {
                 solve.run(dt);
                 update_velocity.run(dt);
                 integrate_position.run(dt);
+sim::bridge.scatter(sim::state_0);
             });
 
         ecs.system("Stats").kind(sim::Simulate).run(flow::stats);
@@ -290,7 +291,9 @@ int main() {
 
     flecs::world ecs;
 
-    ecs.import<cloth::core>();
+    ecs.import<cloth::particle>();
+    ecs.import<cloth::element>();
+    ecs.import<cloth::bridge>();
     graphics::init(ecs, {640, 480, "Corotational FEM"});
     ecs.import<cloth::render>();
     ecs.import<cloth::interaction>();

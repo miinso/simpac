@@ -1,8 +1,6 @@
 #pragma once
 
-#include "../components.h"
-#include "../queries.h"
-#include "../vars.h"
+#include "../bridge/bridge.h"
 #include "graphics.h"
 #include "flecs.h"
 
@@ -13,11 +11,11 @@
 #include <cmath>
 #include <string>
 
-namespace render {
+namespace draw {
 
 inline void draw_spring(Spring& spring) {
-    const auto a = spring.e1.get<Position>().map();
-    const auto b = spring.e2.get<Position>().map();
+    const auto a = spring.v0.get<Position>().map();
+    const auto b = spring.v1.get<Position>().map();
     const auto diff = a - b;
     const float current_length = (float)diff.norm();
     const float strain = (current_length - (float)spring.rest_length) / (float)spring.rest_length;
@@ -32,7 +30,7 @@ inline void draw_spring(Spring& spring) {
     }
 
     float base_thickness = 0.005f;
-    float thickness = base_thickness * std::pow((float)spring.k_s, 1.0f / 3.0f);
+    float thickness = base_thickness * std::pow((float)spring.stiffness, 1.0f / 3.0f);
     DrawCylinderEx(vec3f(a), vec3f(b), thickness, thickness, 5, color);
 }
 
@@ -65,8 +63,11 @@ inline void draw_timing_info(flecs::iter& it) {
     const char* cg_prefix = solver ? "" : "N/A ";
     const int cg_iterations = solver ? solver->cg_iterations : 0;
     const float cg_error = solver ? (float)solver->cg_error : 0.0f;
-    const int cg_max_iter = solver ? it.world().lookup("Config::Solver::cg_max_iter").get<int>() : 0;
-    const float cg_tolerance = solver ? (float)it.world().lookup("Config::Solver::cg_tolerance").get<Real>() : 0.0f;
+
+    int cg_max_iter = 0;
+    float cg_tolerance = 0;
+    if (auto e = it.world().lookup("Config::Solver::cg_max_iter")) cg_max_iter = e.get<int>();
+    if (auto e = it.world().lookup("Config::Solver::cg_tolerance")) cg_tolerance = (float)e.get<Real>();
 
     snprintf(buf, sizeof(buf),
         "Wall time: %.2fs  |  Sim time: %.2fs  (dt=%.4f)\n"
@@ -105,5 +106,5 @@ inline void draw_solve_history(flecs::iter& it) {
     DrawTextEx(font, history_text.c_str(), {x, y}, font_size, 0, BLACK);
 }
 
-} // namespace render
+} // namespace draw
 

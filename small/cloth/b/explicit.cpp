@@ -59,7 +59,9 @@ int main() {
 
     flecs::world ecs;
 
-    ecs.import<cloth::core>();
+    ecs.import<cloth::particle>();
+    ecs.import<cloth::element>();
+    ecs.import<cloth::bridge>();
     graphics::init(ecs, {800, 600, "Explicit Euler (buffer)"});
     ecs.import<cloth::render>();
     ecs.import<cloth::interaction>();
@@ -73,11 +75,12 @@ int main() {
         .kind(sim::Simulate)
         .run([&](flecs::iter&) {
             const Real dt = props::dt.get<Real>();
-            sim::gravity = props::gravity.get<vec3f>().map();
+            sim::gravity = props::gravity.get<vec3r>().map();
             clear_forces.run(dt);
             apply_gravity.run(dt);
             apply_spring_force.run(dt);
             integrate_position.run(dt);
+sim::bridge.scatter(sim::state_0);
             integrate_velocity.run(dt);
         });
 
