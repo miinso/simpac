@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1778664950436,
+  "lastUpdate": 1778677035364,
   "repoUrl": "https://github.com/miinso/simpac",
   "entries": {
     "cloth-implicit-euler": [
@@ -672,6 +672,48 @@ window.BENCHMARK_DATA = {
             "value": 165.55001185490534,
             "unit": "ms/iter",
             "extra": "iterations: 13\ncpu: 165.53293592307688 ms\nthreads: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "minseo.park.cs@gmail.com",
+            "name": "Minseo Park",
+            "username": "miinso"
+          },
+          "committer": {
+            "email": "minseo.park.cs@gmail.com",
+            "name": "Minseo Park",
+            "username": "miinso"
+          },
+          "distinct": true,
+          "id": "47e1767f9d1e6b5b1909c8239caa2c1113019a86",
+          "message": "refactor(cloth): remove Scatter system from bridge",
+          "timestamp": "2026-05-13T21:52:55+09:00",
+          "tree_id": "5a94df77d73f0c8d1d491adfd829bd63119c753e",
+          "url": "https://github.com/miinso/simpac/commit/47e1767f9d1e6b5b1909c8239caa2c1113019a86"
+        },
+        "date": 1778677034198,
+        "tool": "googlecpp",
+        "benches": [
+          {
+            "name": "BM_ClothImplicit/50/real_time",
+            "value": 0,
+            "unit": "ms/iter",
+            "extra": "iterations: 0\ncpu: 0 ms\nthreads: 1"
+          },
+          {
+            "name": "BM_ClothImplicit/100/real_time",
+            "value": 0,
+            "unit": "ms/iter",
+            "extra": "iterations: 0\ncpu: 0 ms\nthreads: 1"
+          },
+          {
+            "name": "BM_ClothImplicit/200/real_time",
+            "value": 0,
+            "unit": "ms/iter",
+            "extra": "iterations: 0\ncpu: 0 ms\nthreads: 1"
           }
         ]
       }
