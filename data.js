@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1778664289322,
+  "lastUpdate": 1778664950436,
   "repoUrl": "https://github.com/miinso/simpac",
   "entries": {
     "cloth-implicit-euler": [
@@ -630,6 +630,48 @@ window.BENCHMARK_DATA = {
             "value": 183.72994661331177,
             "unit": "ms/iter",
             "extra": "iterations: 12\ncpu: 183.71504533333336 ms\nthreads: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "minseo.park.cs@gmail.com",
+            "name": "Minseo Park",
+            "username": "miinso"
+          },
+          "committer": {
+            "email": "46559594+miinso@users.noreply.github.com",
+            "name": "Minseo Park",
+            "username": "miinso"
+          },
+          "distinct": true,
+          "id": "ae5d1c268e921bc0781c9b21eeaa9b075f391893",
+          "message": "refactor(cloth): module-wrap solvers and bench",
+          "timestamp": "2026-05-13T04:33:32-05:00",
+          "tree_id": "0e880e10c8b069fdb8566b97a1bd73cf61cc711a",
+          "url": "https://github.com/miinso/simpac/commit/ae5d1c268e921bc0781c9b21eeaa9b075f391893"
+        },
+        "date": 1778664949532,
+        "tool": "googlecpp",
+        "benches": [
+          {
+            "name": "BM_ClothImplicit/50/real_time",
+            "value": 8.834887747984052,
+            "unit": "ms/iter",
+            "extra": "iterations: 239\ncpu: 8.833682623430962 ms\nthreads: 1"
+          },
+          {
+            "name": "BM_ClothImplicit/100/real_time",
+            "value": 37.67952748707363,
+            "unit": "ms/iter",
+            "extra": "iterations: 56\ncpu: 37.67447194642856 ms\nthreads: 1"
+          },
+          {
+            "name": "BM_ClothImplicit/200/real_time",
+            "value": 165.55001185490534,
+            "unit": "ms/iter",
+            "extra": "iterations: 13\ncpu: 165.53293592307688 ms\nthreads: 1"
           }
         ]
       }
