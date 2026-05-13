@@ -1,13 +1,15 @@
 #pragma once
 
-#include "core.h"
-#include "../components/render.h"
+#include "components.h"
+#include "../render/render.h"
 #include "../render/interaction.h"
+#include "graphics.h"
 
 namespace cloth {
 
 struct interaction {
     interaction(flecs::world& ecs) {
+        ecs.import<cloth::render>();
         ecs.component<ParticleInteractionState>()
             .add(flecs::Singleton);
         ecs.component<TriangleInteractionState>()
@@ -18,42 +20,42 @@ struct interaction {
 
         ecs.system("PickParticles")
             .kind(flecs::OnLoad)
-            .run(systems::interaction::pick_particles)
+            .run(systems::pick_particles)
             .disable(0);
 
         ecs.system("DragParticlesKinematic")
             .kind(graphics::PreRender)
-            .run(systems::interaction::drag_particles_kinematic)
+            .run(systems::drag_particles_kinematic)
             .disable(0);
 
         ecs.system("DragParticlesSpring")
             .kind(graphics::PreRender)
-            .run(systems::interaction::drag_particles_spring)
+            .run(systems::drag_particles_spring)
             .disable();
 
         ecs.system("DrawDragPlane")
             .kind(graphics::OnRender)
-            .run(systems::interaction::draw_drag_plane_debug)
+            .run(systems::draw_drag_plane_debug)
             .disable(0);
 
         ecs.system("PickTriangles")
             .kind(flecs::OnLoad)
-            .run(systems::interaction::pick_triangles)
+            .run(systems::pick_triangles)
             .disable(0);
 
         ecs.system("DragTrianglesKinematic")
             .kind(graphics::PreRender)
-            .run(systems::interaction::drag_triangles_kinematic)
+            .run(systems::drag_triangles_kinematic)
             .disable(0);
 
         ecs.system("DragTrianglesSpring")
             .kind(graphics::PreRender)
-            .run(systems::interaction::drag_triangles_spring)
+            .run(systems::drag_triangles_spring)
             .disable();
 
         ecs.system("DrawDragPlaneTri")
             .kind(graphics::OnRender)
-            .run(systems::interaction::draw_drag_plane_debug_tri)
+            .run(systems::draw_drag_plane_debug_tri)
             .disable(0);
     }
 };

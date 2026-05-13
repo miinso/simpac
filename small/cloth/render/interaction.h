@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../components/render.h"
-#include "../queries.h"
-#include "../vars.h"
+#include "../interaction/components.h"
+#include "components.h"
+#include "../bridge/bridge.h"
 #include "graphics.h"
 
 #include <raylib.h>
@@ -74,7 +74,7 @@ inline void release_drag_pins_tri(TriangleInteractionState& pick) {
     if (!pick.drag_added_pins) return;
     if (pick.pressed.is_alive() && pick.pressed.has<Triangle>()) {
         const auto& tri = pick.pressed.get<Triangle>();
-        flecs::entity verts[3] = {tri.e1, tri.e2, tri.e3};
+        flecs::entity verts[3] = {tri.v0, tri.v1, tri.v2};
         for (auto& v : verts) {
             if (v.is_alive()) {
                 set_velocity_zero(v);
@@ -87,7 +87,6 @@ inline void release_drag_pins_tri(TriangleInteractionState& pick) {
 
 } // namespace detail
 
-namespace interaction {
 
 // input/state stage:
 // - updates hovered/pressed/selected
@@ -328,10 +327,10 @@ inline void pick_triangles(flecs::iter& it) {
     flecs::entity hovered = flecs::entity::null();
 
     queries::triangle_query.each([&](flecs::entity e, const Triangle& tri) {
-        if (!tri.e1.is_alive() || !tri.e2.is_alive() || !tri.e3.is_alive()) return;
-        const vec3f v0 = vec3f(tri.e1.get<Position>().map());
-        const vec3f v1 = vec3f(tri.e2.get<Position>().map());
-        const vec3f v2 = vec3f(tri.e3.get<Position>().map());
+        if (!tri.v0.is_alive() || !tri.v1.is_alive() || !tri.v2.is_alive()) return;
+        const vec3f v0 = vec3f(tri.v0.get<Position>().map());
+        const vec3f v1 = vec3f(tri.v1.get<Position>().map());
+        const vec3f v2 = vec3f(tri.v2.get<Position>().map());
 
         // test both winding orders (two-sided cloth)
         RayCollision hit = GetRayCollisionTriangle(ray, v0, v1, v2);
@@ -359,13 +358,13 @@ inline void pick_triangles(flecs::iter& it) {
         if (hovered.is_alive()) {
             const auto& tri = hovered.get<Triangle>();
             // skip if any vertex is pinned
-            bool any_pinned = (tri.e1.has<IsPinned>() || tri.e2.has<IsPinned>() || tri.e3.has<IsPinned>());
+            bool any_pinned = (tri.v0.has<IsPinned>() || tri.v1.has<IsPinned>() || tri.v2.has<IsPinned>());
             if (!any_pinned) {
                 pick.pressed = hovered;
 
-                const auto& p0 = tri.e1.get<Position>();
-                const auto& p1 = tri.e2.get<Position>();
-                const auto& p2 = tri.e3.get<Position>();
+                const auto& p0 = tri.v0.get<Position>();
+                const auto& p1 = tri.v1.get<Position>();
+                const auto& p2 = tri.v2.get<Position>();
                 Eigen::Vector3f centroid = (p0.map() + p1.map() + p2.map()) / 3.0f;
                 pick.drag_plane_point.map() = centroid;
                 pick.drag_vertex_offsets[0].map() = p0.map() - centroid;
@@ -436,7 +435,7 @@ inline void drag_triangles_kinematic(flecs::iter& it) {
     if (!pick.dragging || !pick.pressed.is_alive()) return;
 
     const auto& tri = pick.pressed.get<Triangle>();
-    flecs::entity verts[3] = {tri.e1, tri.e2, tri.e3};
+    flecs::entity verts[3] = {tri.v0, tri.v1, tri.v2};
 
     if (!pick.drag_added_pins) {
         for (auto& v : verts) {
@@ -480,7 +479,7 @@ inline void drag_triangles_spring(flecs::iter& it) {
 
     Eigen::Vector3f new_centroid = hit.map() + pick.drag_offset.map();
     const auto& tri = pick.pressed.get<Triangle>();
-    flecs::entity verts[3] = {tri.e1, tri.e2, tri.e3};
+    flecs::entity verts[3] = {tri.v0, tri.v1, tri.v2};
     for (int i = 0; i < 3; i++) {
         Eigen::Vector3f target = new_centroid + pick.drag_vertex_offsets[i].map();
         detail::apply_virtual_spring(
@@ -532,6 +531,5 @@ inline void draw_drag_plane_debug_tri(flecs::iter& it) {
     DrawLine3D(pick.drag_plane_point, tip, RED);
 }
 
-} // namespace interaction
 
 } // namespace systems

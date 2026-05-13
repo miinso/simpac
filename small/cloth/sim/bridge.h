@@ -1,8 +1,7 @@
 #pragma once
 
 #include "model.h"
-#include "../components/particle.h"
-#include "../components/constraint.h"
+#include "../element/element.h"
 #include <unordered_map>
 
 namespace physics {
@@ -36,20 +35,20 @@ struct Bridge {
         world.query_builder<const Spring>()
             .build()
             .each([&](flecs::entity, const Spring& spring) {
-                auto it_a = entity_to_index.find(spring.e1.id());
-                auto it_b = entity_to_index.find(spring.e2.id());
+                auto it_a = entity_to_index.find(spring.v0.id());
+                auto it_b = entity_to_index.find(spring.v1.id());
                 if (it_a == entity_to_index.end() || it_b == entity_to_index.end()) return;
 
                 mb.add_spring(it_a->second, it_b->second,
-                              spring.k_s, spring.k_d, spring.rest_length);
+                              spring.stiffness, spring.damping, spring.rest_length);
             });
 
         world.query_builder<Triangle>()
             .build()
             .each([&](flecs::entity, Triangle& tri) {
-                auto it0 = entity_to_index.find(tri.e1.id());
-                auto it1 = entity_to_index.find(tri.e2.id());
-                auto it2 = entity_to_index.find(tri.e3.id());
+                auto it0 = entity_to_index.find(tri.v0.id());
+                auto it1 = entity_to_index.find(tri.v1.id());
+                auto it2 = entity_to_index.find(tri.v2.id());
                 if (it0 == entity_to_index.end() ||
                     it1 == entity_to_index.end() ||
                     it2 == entity_to_index.end()) return;

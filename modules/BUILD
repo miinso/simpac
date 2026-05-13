@@ -6,7 +6,6 @@ load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_test")
 cc_library(
     name = "engine",
     hdrs = [
-        "engine/components.h",
         "engine/types.h",
         "engine/real.h",
         "engine/tags.h",

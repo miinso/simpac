@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../components.h"
-#include "../queries.h"
+#include "../bridge/bridge.h"
+#include "../interaction/components.h"
 #include "graphics.h"
 
 #include <raylib.h>
@@ -18,7 +18,7 @@
 
 #include <vector>
 
-namespace render {
+namespace gpu {
 namespace detail {
 
 inline void draw_arrays_instanced(GLenum mode, GLint first, GLsizei count, GLsizei instances) {
@@ -93,8 +93,8 @@ inline void upload_spring_positions_to_gpu(const flecs::world&, SpringRenderer& 
 
     int inst_idx = 0;
     queries::spring_query.each([&](const Spring& s) {
-        const auto& a = s.e1.get<Position>();
-        const auto& b = s.e2.get<Position>();
+        const auto& a = s.v0.get<Position>();
+        const auto& b = s.v1.get<Position>();
         detail::pack_spring_instance(
             gpu.staging_buffer, inst_idx,
             vec3f(a.map()), vec3f(b.map()), (float)s.rest_length
@@ -240,9 +240,9 @@ inline void upload_triangle_positions_to_gpu(const flecs::world& ecs, TriangleRe
         // cache rest areas on first allocation
         int tidx = 0;
         queries::triangle_query.each([&](const Triangle& tri) {
-            const auto p0 = tri.e1.get<Position>().map();
-            const auto p1 = tri.e2.get<Position>().map();
-            const auto p2 = tri.e3.get<Position>().map();
+            const auto p0 = tri.v0.get<Position>().map();
+            const auto p1 = tri.v1.get<Position>().map();
+            const auto p2 = tri.v2.get<Position>().map();
             Eigen::Vector3r e1 = p1 - p0;
             Eigen::Vector3r e2 = p2 - p0;
             gpu.rest_areas[tidx] = 0.5f * (float)e1.cross(e2).norm();
@@ -258,9 +258,9 @@ inline void upload_triangle_positions_to_gpu(const flecs::world& ecs, TriangleRe
     int inst = 0;
     int tidx = 0;
     queries::triangle_query.each([&](flecs::entity e, const Triangle& tri) {
-        const auto& p0 = tri.e1.get<Position>();
-        const auto& p1 = tri.e2.get<Position>();
-        const auto& p2 = tri.e3.get<Position>();
+        const auto& p0 = tri.v0.get<Position>();
+        const auto& p1 = tri.v1.get<Position>();
+        const auto& p2 = tri.v2.get<Position>();
         gpu.staging_buffer[inst++] = p0.x;
         gpu.staging_buffer[inst++] = p0.y;
         gpu.staging_buffer[inst++] = p0.z;
@@ -320,4 +320,4 @@ inline void draw_triangles_gpu(const TriangleRenderer& gpu) {
     rlDisableShader();
 }
 
-} // namespace render
+} // namespace gpu

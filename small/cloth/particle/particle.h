@@ -84,29 +84,46 @@ struct ParticleState {
 struct IsPinned {};
 struct Particle {};
 
-namespace components {
-
-inline void register_particle_components(flecs::world& ecs) {
-    engine::register_vec3_component<vec3f>(ecs, "::vec3f");
-    engine::register_vec3_component<vec3d>(ecs, "::vec3d");
-    engine::register_vec3_component<vec3r>(ecs, "::vec3r");
-    engine::register_vec3_component<Position>(ecs, "::Position");
-    engine::register_vec3_component<Velocity>(ecs, "::Velocity");
-    engine::register_vec3_component<Acceleration>(ecs, "::Acceleration");
-    engine::register_vec3_component<Force>(ecs, "::Force");
-    engine::register_vec3_component<OldPosition>(ecs, "::OldPosition");
-
-    ecs.component<Mass>("::Mass");
-    ecs.component<InverseMass>("::InverseMass");
-    const flecs::entity_t real_meta = std::is_same_v<Real, double> ? flecs::F64 : flecs::F32;
-    engine::register_scalar_component<Mass>(ecs, real_meta);
-    engine::register_scalar_component<InverseMass>(ecs, real_meta);
-
-    ecs.component<Particle>("::Particle");
-    ecs.component<IsPinned>("::IsPinned");
-
-    ecs.component<ParticleState>("::ParticleState");
-    ParticleState::meta(ecs);
+namespace sim {
+inline bool model_dirty = true;
 }
 
-} // namespace components
+namespace cloth {
+
+struct particle {
+    particle(flecs::world& ecs) {
+        engine::register_vec3_component<vec3f>(ecs, "vec3f");
+        engine::register_vec3_component<vec3d>(ecs, "vec3d");
+        engine::register_vec3_component<vec3r>(ecs, "vec3r");
+        engine::register_vec3_component<Position>(ecs);
+        engine::register_vec3_component<Velocity>(ecs);
+        engine::register_vec3_component<Acceleration>(ecs);
+        engine::register_vec3_component<Force>(ecs);
+        engine::register_vec3_component<OldPosition>(ecs);
+
+        const flecs::entity_t real_meta = std::is_same_v<Real, double> ? flecs::F64 : flecs::F32;
+        engine::register_scalar_component<Mass>(ecs, real_meta);
+        engine::register_scalar_component<InverseMass>(ecs, real_meta);
+
+        ecs.component<Particle>();
+        ecs.component<IsPinned>();
+
+        ParticleState::meta(ecs);
+
+        ecs.observer<Particle>()
+            .event(flecs::OnAdd)
+            .each([](flecs::entity e, const Particle&) { e.add<ParticleState>(); });
+
+        ecs.observer<Particle>()
+            .event(flecs::OnAdd)
+            .event(flecs::OnRemove)
+            .run([](flecs::iter&) { sim::model_dirty = true; });
+
+        ecs.observer<IsPinned>()
+            .event(flecs::OnAdd)
+            .event(flecs::OnRemove)
+            .run([](flecs::iter&) { sim::model_dirty = true; });
+    }
+};
+
+} // namespace cloth
