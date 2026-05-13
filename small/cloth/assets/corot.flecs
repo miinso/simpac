@@ -1,4 +1,6 @@
 // corotational FEM cloth (triangles for membrane, bending springs for out-of-plane)
+using cloth.particle
+using cloth.element
 
 Config.Scene {
   dt { f32: { 1 / 60 } }
@@ -46,9 +48,9 @@ for y in 0..($height - 1) {
   for x in 0..($width - 1) {
     "t_a_{$y}_{$x}" {
       Triangle: {
-        e1: "p_{$y}_{$x}",
-        e2: "p_{$y}_{$x + 1}",
-        e3: "p_{$y + 1}_{$x}",
+        v0: "p_{$y}_{$x}",
+        v1: "p_{$y}_{$x + 1}",
+        v2: "p_{$y + 1}_{$x}",
         mu: $mu,
         lambda: $lam,
         thickness: $thick
@@ -56,9 +58,9 @@ for y in 0..($height - 1) {
     }
     "t_b_{$y}_{$x}" {
       Triangle: {
-        e1: "p_{$y}_{$x + 1}",
-        e2: "p_{$y + 1}_{$x + 1}",
-        e3: "p_{$y + 1}_{$x}",
+        v0: "p_{$y}_{$x + 1}",
+        v1: "p_{$y + 1}_{$x + 1}",
+        v2: "p_{$y + 1}_{$x}",
         mu: $mu,
         lambda: $lam,
         thickness: $thick
@@ -72,11 +74,11 @@ for y in 0..$height {
   for x in 0..($width - 2) {
     "s_bh_{$y}_{$x}" {
       Spring: {
-        e1: "p_{$y}_{$x}",
-        e2: "p_{$y}_{$x + 2}",
+        v0: "p_{$y}_{$x}",
+        v1: "p_{$y}_{$x + 2}",
         rest_length: $spacing * 2.0,
-        k_s: $k_bending,
-        k_d: $k_d * 0.5
+        stiffness: $k_bending,
+        damping: $k_d * 0.5
       }
     }
   }
@@ -87,11 +89,11 @@ for y in 0..($height - 2) {
   for x in 0..$width {
     "s_bv_{$y}_{$x}" {
       Spring: {
-        e1: "p_{$y}_{$x}",
-        e2: "p_{$y + 2}_{$x}",
+        v0: "p_{$y}_{$x}",
+        v1: "p_{$y + 2}_{$x}",
         rest_length: $spacing * 2.0,
-        k_s: $k_bending,
-        k_d: $k_d * 0.5
+        stiffness: $k_bending,
+        damping: $k_d * 0.5
       }
     }
   }

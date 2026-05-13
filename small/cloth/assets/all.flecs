@@ -1,3 +1,5 @@
+using cloth.element
+using cloth.particle
 Config.Scene {
   dt { f32: { 0.0166666 } }
   gravity { vec3r: { x: 0, y: -9.81, z: 0 } }
@@ -22,11 +24,11 @@ p2 {
 
 s1 {
   Spring: {
-    e1: p1,
-    e2: p2,
+    v0: p1,
+    v1: p2,
     rest_length: 1.0,
-    k_s: 1000.0,
-    k_d: 0.1
+    stiffness: 1000.0,
+    damping: 0.1
   }
 }
 
@@ -66,11 +68,11 @@ for y in 0..$height {
   for x in 0..($width - 1) {
     "cs_h_{$y}_{$x}" {
       Spring: {
-        e1: "cp_{$y}_{$x}",
-        e2: "cp_{$y}_{$x + 1}",
+        v0: "cp_{$y}_{$x}",
+        v1: "cp_{$y}_{$x + 1}",
         rest_length: $spacing,
-        k_s: $k_struct,
-        k_d: $k_d
+        stiffness: $k_struct,
+        damping: $k_d
       }
     }
   }
@@ -81,11 +83,11 @@ for y in 0..($height - 1) {
   for x in 0..$width {
     "cs_v_{$y}_{$x}" {
       Spring: {
-        e1: "cp_{$y}_{$x}",
-        e2: "cp_{$y + 1}_{$x}",
+        v0: "cp_{$y}_{$x}",
+        v1: "cp_{$y + 1}_{$x}",
         rest_length: $spacing,
-        k_s: $k_struct,
-        k_d: $k_d
+        stiffness: $k_struct,
+        damping: $k_d
       }
     }
   }
@@ -96,21 +98,21 @@ for y in 0..($height - 1) {
   for x in 0..($width - 1) {
     "cs_d1_{$y}_{$x}" {
       Spring: {
-        e1: "cp_{$y}_{$x}",
-        e2: "cp_{$y + 1}_{$x + 1}",
+        v0: "cp_{$y}_{$x}",
+        v1: "cp_{$y + 1}_{$x + 1}",
         rest_length: $spacing * 1.41421356,
-        k_s: $k_shear,
-        k_d: $k_d
+        stiffness: $k_shear,
+        damping: $k_d
       }
     }
 
     "cs_d2_{$y}_{$x}" {
       Spring: {
-        e1: "cp_{$y + 1}_{$x}",
-        e2: "cp_{$y}_{$x + 1}",
+        v0: "cp_{$y + 1}_{$x}",
+        v1: "cp_{$y}_{$x + 1}",
         rest_length: $spacing * 1.41421356,
-        k_s: $k_shear,
-        k_d: $k_d
+        stiffness: $k_shear,
+        damping: $k_d
       }
     }
   }
@@ -121,11 +123,11 @@ for y in 0..$height {
   for x in 0..($width - 2) {
     "cs_bh_{$y}_{$x}" {
       Spring: {
-        e1: "cp_{$y}_{$x}",
-        e2: "cp_{$y}_{$x + 2}",
+        v0: "cp_{$y}_{$x}",
+        v1: "cp_{$y}_{$x + 2}",
         rest_length: $spacing * 2.0,
-        k_s: $k_bending,
-        k_d: $k_d * 0.5
+        stiffness: $k_bending,
+        damping: $k_d * 0.5
       }
     }
   }
@@ -136,11 +138,11 @@ for y in 0..($height - 2) {
   for x in 0..$width {
     "cs_bv_{$y}_{$x}" {
       Spring: {
-        e1: "cp_{$y}_{$x}",
-        e2: "cp_{$y + 2}_{$x}",
+        v0: "cp_{$y}_{$x}",
+        v1: "cp_{$y + 2}_{$x}",
         rest_length: $spacing * 2.0,
-        k_s: $k_bending,
-        k_d: $k_d * 0.5
+        stiffness: $k_bending,
+        damping: $k_d * 0.5
       }
     }
   }

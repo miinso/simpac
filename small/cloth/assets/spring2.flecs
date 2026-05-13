@@ -1,4 +1,6 @@
 // a rope.
+using cloth.particle
+using cloth.element
 
 Config.Scene {
   dt { f32: { 1 / 60 } }
@@ -33,11 +35,11 @@ for i in 1..$count {
 for i in 0..($count - 1) {
   "s_$i" {
     Spring: {
-      e1: "p_$i",
-      e2: "p_{$i + 1}",
+      v0: "p_$i",
+      v1: "p_{$i + 1}",
       rest_length: $spacing,
-      k_s: $k_s,
-      k_d: $k_d
+      stiffness: $k_s,
+      damping: $k_d
     }
   }
 }
