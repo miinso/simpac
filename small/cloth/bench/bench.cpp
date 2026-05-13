@@ -176,7 +176,7 @@ struct bench_solver {
                 solve.run(dt);
                 update_velocity.run(dt);
                 integrate_position.run(dt);
-sim::bridge.scatter(sim::state_0);
+                sim::bridge.scatter(sim::state_0);
             });
     }
 };

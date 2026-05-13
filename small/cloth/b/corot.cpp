@@ -273,7 +273,7 @@ struct corot_implicit {
                 solve.run(dt);
                 update_velocity.run(dt);
                 integrate_position.run(dt);
-sim::bridge.scatter(sim::state_0);
+                sim::bridge.scatter(sim::state_0);
             });
 
         ecs.system("Stats").kind(sim::Simulate).run(flow::stats);
