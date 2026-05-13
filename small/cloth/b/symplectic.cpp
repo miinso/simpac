@@ -58,8 +58,10 @@ int main() {
 
     flecs::world ecs;
 
-    sim::init(ecs, {800, 600, "Symplectic Euler"});
-    sim::install(ecs);
+    ecs.import<cloth::core>();
+    graphics::init(ecs, {800, 600, "Symplectic Euler"});
+    ecs.import<cloth::render>();
+    ecs.import<cloth::interaction>();
 
     // -- symplectic euler -----------------------------------------------------
 
@@ -101,8 +103,6 @@ int main() {
     });
 
     // -------------------------------------------------------------------------
-
-    sim::install_scatter(ecs);
 
     sim::load_scene(ecs, "assets/spring3.flecs");
 
