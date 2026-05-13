@@ -22,7 +22,7 @@ inline void draw_directional(const graphics::DirectionalLight& dl) {
 
 // --- point light helpers ---
 
-inline void draw_point(const graphics::PointLight& pl, const graphics::Position& pos) {
+inline void draw_point(const graphics::PointLight& pl, const Position& pos) {
     Color c = graphics::to_color(pl.color);
     Vector3 p = {pos.x, pos.y, pos.z};
     if (pl.enabled) {
@@ -34,7 +34,7 @@ inline void draw_point(const graphics::PointLight& pl, const graphics::Position&
 
 // --- spot light helpers ---
 
-inline void draw_spot(const graphics::SpotLight& sl, const graphics::Position& pos) {
+inline void draw_spot(const graphics::SpotLight& sl, const Position& pos) {
     Color c = graphics::to_color(sl.color);
     Vector3 p = {pos.x, pos.y, pos.z};
     if (sl.enabled) {

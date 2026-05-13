@@ -20,6 +20,7 @@ cc_library(
     srcs = [
         "components.h",
         "components/particle.h",
+        "components/element.h",
         "components/constraint.h",
         "components/render.h",
         "sim/model.h",
@@ -31,6 +32,9 @@ cc_library(
         "vars.h",
         "systems.h",
         "setup.h",
+        "modules/core.h",
+        "modules/render.h",
+        "modules/interaction.h",
         "render/systems.h",
         "render/draw.h",
         "render/gpu.h",
@@ -63,7 +67,7 @@ cc_library(
         ],
     }),
     deps = [
-        "//modules:graphics2",
+        "//modules:graphics",
         "@eigen",
         "@flecs",
         "@raylib",

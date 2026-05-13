@@ -10,10 +10,10 @@
 #include <type_traits>
 
 template <typename Derived>
-using vec3 = graphics::vec3<Derived, Real>;
+using vec3 = engine::vec3<Derived, Real>;
 
 template <typename Derived>
-using vec4 = graphics::vec4<Derived, Real>;
+using vec4 = engine::vec4<Derived, Real>;
 
 template <typename Derived, typename Value>
 struct scalar {
@@ -33,10 +33,6 @@ struct scalar {
     operator const Value&() const { return value; }
 };
 
-struct Position : vec3<Position> {
-    using vec3<Position>::vec3;
-};
-
 struct Velocity : vec3<Velocity> {
     using vec3<Velocity>::vec3;
 };
@@ -52,10 +48,6 @@ struct Force : vec3<Force> {
 struct OldPosition : vec3<OldPosition> {
     using vec3<OldPosition>::vec3;
 };
-
-using vec3f = graphics::vec3f;
-using vec3d = graphics::vec3d;
-using vec3r = graphics::vec3r;
 
 using Gravity = vec3r;
 
@@ -95,22 +87,25 @@ struct Particle {};
 namespace components {
 
 inline void register_particle_components(flecs::world& ecs) {
-    graphics::register_vec3_component<vec3f>(ecs, "vec3f");
-    graphics::register_vec3_component<vec3d>(ecs, "vec3d");
-    graphics::register_vec3_component<vec3r>(ecs, "vec3r");
-    graphics::register_vec3_component<Position>(ecs);
-    graphics::register_vec3_component<Velocity>(ecs);
-    graphics::register_vec3_component<Acceleration>(ecs);
-    graphics::register_vec3_component<Force>(ecs);
-    graphics::register_vec3_component<OldPosition>(ecs);
+    engine::register_vec3_component<vec3f>(ecs, "::vec3f");
+    engine::register_vec3_component<vec3d>(ecs, "::vec3d");
+    engine::register_vec3_component<vec3r>(ecs, "::vec3r");
+    engine::register_vec3_component<Position>(ecs, "::Position");
+    engine::register_vec3_component<Velocity>(ecs, "::Velocity");
+    engine::register_vec3_component<Acceleration>(ecs, "::Acceleration");
+    engine::register_vec3_component<Force>(ecs, "::Force");
+    engine::register_vec3_component<OldPosition>(ecs, "::OldPosition");
 
+    ecs.component<Mass>("::Mass");
+    ecs.component<InverseMass>("::InverseMass");
     const flecs::entity_t real_meta = std::is_same_v<Real, double> ? flecs::F64 : flecs::F32;
-    graphics::register_scalar_component<Mass>(ecs, real_meta);
-    graphics::register_scalar_component<InverseMass>(ecs, real_meta);
+    engine::register_scalar_component<Mass>(ecs, real_meta);
+    engine::register_scalar_component<InverseMass>(ecs, real_meta);
 
-    ecs.component<Particle>();
-    ecs.component<IsPinned>();
+    ecs.component<Particle>("::Particle");
+    ecs.component<IsPinned>("::IsPinned");
 
+    ecs.component<ParticleState>("::ParticleState");
     ParticleState::meta(ecs);
 }
 

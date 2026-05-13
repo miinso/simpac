@@ -2,7 +2,6 @@
 
 #include <Eigen/Dense>
 
-// matches graphics::scalar_real
 using Real = float;
 
 namespace Eigen {

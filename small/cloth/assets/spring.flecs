@@ -26,7 +26,7 @@ s1 {
 }
 
 MainCamera {
-  graphics.Position: {x: 0, y: 0, z: 3}
+  Position: {x: 0, y: 0, z: 3}
     graphics.Camera: {
     target: { x: 0, y: 0, z: 0 }
     fovy: 60

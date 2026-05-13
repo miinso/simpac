@@ -11,12 +11,12 @@ Config.Solver {
   cg_tolerance { f32: { 0.00001 } }
 }
 
-const width = 10
-const height = 5
+const width = 50
+const height = 50
 const spacing = 0.9
 const mass = 1.0
-const mu = 4000.0
-const lam = 4000.0
+const mu = 400000.0
+const lam = 40000.0
 const thick = 0.01
 const k_bending = 360.0
 const k_d = 0.12
@@ -98,7 +98,7 @@ for y in 0..($height - 2) {
 }
 
 DefaultCamera {
-  graphics.Position: { x: 0, y: 3, z: 10 }
+  Position: { x: 0, y: 3, z: 10 }
   graphics.Camera: {
     target: { x: 0, y: 1.5, z: -2 }
     fovy: 60

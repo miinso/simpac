@@ -10,7 +10,7 @@ DefaultCamera {
     fovy: 60
     projection: 0
   }
-  graphics.Position: { x: 0, y: 5, z: 10 }
+  Position: { x: 0, y: 5, z: 10 }
 }
 
 graphics.ActiveCameraSource {

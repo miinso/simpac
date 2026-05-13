@@ -2,9 +2,27 @@ load("@emsdk//emscripten_toolchain:wasm_rules.bzl", "wasm_cc_binary")
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_test")
 
-# graphics module - shared many time accross the projects
+# engine -- shared types and math primitives (vec3, Real, Position, etc.)
 cc_library(
-    name = "graphics2",
+    name = "engine",
+    hdrs = [
+        "engine/components.h",
+        "engine/types.h",
+        "engine/real.h",
+        "engine/tags.h",
+    ],
+    strip_include_prefix = "engine",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@eigen",
+        "@flecs",
+        "@raylib",
+    ],
+)
+
+# graphics -- raylib rendering, camera, lights, shadows, materials
+cc_library(
+    name = "graphics",
     srcs = [
         "graphics/fonts.cpp",
         "graphics/graphics.cpp",
@@ -13,8 +31,6 @@ cc_library(
         "//conditions:default": ["graphics/graphics_platform_native.cpp"],
     }),
     hdrs = [
-        "graphics/types.h",
-        "graphics/real.h",
         "graphics/camera.h",
         "graphics/components.h",
         "graphics/fonts.h",
@@ -27,7 +43,6 @@ cc_library(
         "graphics/resources.h",
         "graphics/shadows.h",
         "graphics/systems.h",
-        "graphics/tags.h",
         "graphics/vars.h",
     ],
     copts = select({
@@ -46,6 +61,7 @@ cc_library(
     strip_include_prefix = "graphics",
     visibility = ["//visibility:public"],
     deps = [
+        ":engine",
         "//third_party/par_shapes",
         "@flecs",
         "@raylib-latest",
@@ -56,11 +72,17 @@ cc_library(
     }),
 )
 
+alias(
+    name = "graphics2",
+    actual = ":graphics",
+    visibility = ["//visibility:public"],
+)
+
 cc_test(
     name = "graphics_test",
     srcs = ["graphics/graphics_test.cpp"],
     deps = [
-        ":graphics2",
+        ":graphics",
         "@googletest//:gtest_main",
     ],
 )
@@ -96,7 +118,7 @@ cc_binary(
     }),
     tags = ["manual"],
     deps = [
-        ":graphics2",
+        ":graphics",
         "@googletest//:gtest_main",
     ],
 )
@@ -173,7 +195,7 @@ cc_library(
     strip_include_prefix = "rlights",
     visibility = ["//visibility:public"],
     deps = [
-        # "@raylib",
+        # "@raylib-latest",
         "@raylib-latest",
     ],
 )
