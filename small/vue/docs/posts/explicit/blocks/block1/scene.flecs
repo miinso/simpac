@@ -1,4 +1,5 @@
 using cloth.particle
+
 Config.Scene {
   dt { f32: { 1 / 60 } }
   // gravity { vec3f: { x: 0, y: 9.81, z: 0 } }

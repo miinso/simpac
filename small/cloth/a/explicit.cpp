@@ -11,7 +11,7 @@ inline void clear_force(flecs::iter&, size_t, Force& f) {
     f.map().setZero();
 }
 
-inline void apply_spring_force(Spring& spring, Real k_s, Real k_d) {
+inline void apply_spring_force(Spring& spring, Real stiffness, Real damping) {
     const auto x_a = spring.v0.get<Position>().map();
     const auto x_b = spring.v1.get<Position>().map();
     const auto v_a = spring.v0.get<Velocity>().map();
@@ -20,7 +20,7 @@ inline void apply_spring_force(Spring& spring, Real k_s, Real k_d) {
     physics::spring::Eval e;
     if (!physics::spring::eval(x_a, x_b, v_a, v_b, spring.rest_length, e)) return;
 
-    const auto g = physics::spring::grad(k_s, k_d, e);
+    const auto g = physics::spring::grad(stiffness, damping, e);
     if (!spring.v0.has<IsPinned>()) spring.v0.get_mut<Force>().map() -= g;
     if (!spring.v1.has<IsPinned>()) spring.v1.get_mut<Force>().map() += g;
 }

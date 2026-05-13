@@ -80,7 +80,7 @@ int main() {
             apply_spring_force.run(dt);
             integrate_velocity.run(dt);
             integrate_position.run(dt);
-sim::bridge.scatter(sim::state_0);
+            sim::bridge.scatter(sim::state_0);
         });
 
     ecs.scope(integrator, [&] {
