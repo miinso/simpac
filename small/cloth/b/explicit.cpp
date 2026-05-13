@@ -59,8 +59,10 @@ int main() {
 
     flecs::world ecs;
 
-    sim::init(ecs, {800, 600, "Explicit Euler (buffer)"});
-    sim::install(ecs);
+    ecs.import<cloth::core>();
+    graphics::init(ecs, {800, 600, "Explicit Euler (buffer)"});
+    ecs.import<cloth::render>();
+    ecs.import<cloth::interaction>();
 
     // -- explicit euler -------------------------------------------------------
 
@@ -101,7 +103,6 @@ int main() {
             .run(flow::integrate_velocity);
     });
 
-    sim::install_scatter(ecs);
     sim::load_scene(ecs, "assets/spring3.flecs");
 
     ecs.app()

@@ -247,12 +247,14 @@ int main() {
     printf("Hi from %s\n", __FILE__);
 
     flecs::world ecs;
-    sim::init(ecs, {640, 480, "Corotational FEM (ecs)"});
+    ecs.import<cloth::core>();
+    ecs.lookup("cloth::core::Scatter").disable();
+    graphics::init(ecs, {640, 480, "Corotational FEM (ecs)"});
+    ecs.import<cloth::render>();
+    ecs.import<cloth::interaction>();
 
     props::cg_max_iter = ecs.entity("Config::Solver::cg_max_iter").set<int>(100).add<Configurable>();
     props::cg_tolerance = ecs.entity("Config::Solver::cg_tolerance").set<Real>(Real(1e-3f)).add<Configurable>();
-
-    sim::install(ecs);
 
     // -- implicit euler with corotational triangles + bending springs ----------
 
