@@ -1,5 +1,7 @@
 #pragma once
 
+#include "real.h"
+
 #include <Eigen/Dense>
 #include <flecs.h>
 #include <raylib.h>
@@ -8,13 +10,9 @@
 #include <cstddef>
 #include <type_traits>
 
-namespace graphics {
+namespace engine {
 
-// default scalar for real vector aliases
-using scalar_real = float;
-
-// crtp base for 3d vectors with plain x y z storage
-template <typename Derived, typename Scalar = scalar_real>
+template <typename Derived, typename Scalar = Real>
 struct vec3 {
     using scalar_type = Scalar;
 
@@ -25,7 +23,6 @@ struct vec3 {
     vec3() = default;
     vec3(Scalar x_, Scalar y_, Scalar z_) : x(x_), y(y_), z(z_) {}
 
-    // construct from eigen vectors and matrices
     template <typename DerivedEigen>
     vec3(const Eigen::MatrixBase<DerivedEigen>& v)
         : x((Scalar)v.x()), y((Scalar)v.y()), z((Scalar)v.z()) {}
@@ -36,7 +33,6 @@ struct vec3 {
     Scalar& operator[](size_t i) { return data()[i]; }
     const Scalar& operator[](size_t i) const { return data()[i]; }
 
-    // non owning eigen view for math ops without copies
     Eigen::Map<Eigen::Matrix<Scalar, 3, 1, Eigen::DontAlign>> map() {
         return Eigen::Map<Eigen::Matrix<Scalar, 3, 1, Eigen::DontAlign>>(data());
     }
@@ -45,8 +41,7 @@ struct vec3 {
     }
 };
 
-// crtp base for 4d vectors with plain x y z w storage
-template <typename Derived, typename Scalar = scalar_real>
+template <typename Derived, typename Scalar = Real>
 struct vec4 {
     using scalar_type = Scalar;
 
@@ -58,7 +53,6 @@ struct vec4 {
     vec4() = default;
     vec4(Scalar x_, Scalar y_, Scalar z_, Scalar w_) : x(x_), y(y_), z(z_), w(w_) {}
 
-    // construct from eigen vectors and matrices
     template <typename DerivedEigen>
     vec4(const Eigen::MatrixBase<DerivedEigen>& v)
         : x((Scalar)v.x()), y((Scalar)v.y()), z((Scalar)v.z()), w((Scalar)v.w()) {}
@@ -69,14 +63,12 @@ struct vec4 {
     Scalar& operator[](size_t i) { return data()[i]; }
     const Scalar& operator[](size_t i) const { return data()[i]; }
 
-    // non owning eigen view for math ops without copies
     Eigen::Map<Eigen::Matrix<Scalar, 4, 1, Eigen::DontAlign>> map() {
         return Eigen::Map<Eigen::Matrix<Scalar, 4, 1, Eigen::DontAlign>>(data());
     }
     Eigen::Map<const Eigen::Matrix<Scalar, 4, 1, Eigen::DontAlign>> map() const {
         return Eigen::Map<const Eigen::Matrix<Scalar, 4, 1, Eigen::DontAlign>>(data());
     }
-    // NOTE: we offload vector ops to eigens'
 };
 
 template <typename T>
@@ -138,53 +130,46 @@ inline void register_scalar_component(flecs::world& ecs, flecs::entity_t scalar_
     }
 }
 
-// f32 vector with raylib vector3 interop
-struct vec3f : vec3<vec3f, float> {
-    using vec3<vec3f, float>::vec3;
-    vec3f(const Vector3& v)
-        : vec3<vec3f, float>((float)v.x, (float)v.y, (float)v.z) {}
+} // namespace engine
+
+struct vec3f : engine::vec3<vec3f, float> {
+    using engine::vec3<vec3f, float>::vec3;
+    vec3f(const Vector3& v) : engine::vec3<vec3f, float>(v.x, v.y, v.z) {}
     operator Vector3() const { return Vector3{x, y, z}; }
 };
 
-struct vec3d : vec3<vec3d, double> {
-    using vec3<vec3d, double>::vec3;
+struct vec3d : engine::vec3<vec3d, double> {
+    using engine::vec3<vec3d, double>::vec3;
 };
 
-// real vector bound to scalar_real project default precision
-struct vec3r : vec3<vec3r, scalar_real> {
-    using vec3<vec3r, scalar_real>::vec3;
+struct vec3r : engine::vec3<vec3r, Real> {
+    using engine::vec3<vec3r, Real>::vec3;
     vec3r(const Vector3& v)
-        : vec3<vec3r, scalar_real>((scalar_real)v.x, (scalar_real)v.y, (scalar_real)v.z) {}
+        : engine::vec3<vec3r, Real>((Real)v.x, (Real)v.y, (Real)v.z) {}
     operator Vector3() const { return Vector3{(float)x, (float)y, (float)z}; }
 };
 
-// f32 vector with raylib vector4 interop
-struct vec4f : vec4<vec4f, float> {
-    using vec4<vec4f, float>::vec4;
-    vec4f(const Vector4& v)
-        : vec4<vec4f, float>((float)v.x, (float)v.y, (float)v.z, (float)v.w) {}
+struct vec4f : engine::vec4<vec4f, float> {
+    using engine::vec4<vec4f, float>::vec4;
+    vec4f(const Vector4& v) : engine::vec4<vec4f, float>(v.x, v.y, v.z, v.w) {}
     operator Vector4() const { return Vector4{x, y, z, w}; }
 };
 
-struct vec4d : vec4<vec4d, double> {
-    using vec4<vec4d, double>::vec4;
+struct vec4d : engine::vec4<vec4d, double> {
+    using engine::vec4<vec4d, double>::vec4;
 };
 
-// real 4d vector bound to scalar_real
-struct vec4r : vec4<vec4r, scalar_real> {
-    using vec4<vec4r, scalar_real>::vec4;
+struct vec4r : engine::vec4<vec4r, Real> {
+    using engine::vec4<vec4r, Real>::vec4;
     vec4r(const Vector4& v)
-        : vec4<vec4r, scalar_real>((scalar_real)v.x, (scalar_real)v.y, (scalar_real)v.z, (scalar_real)v.w) {}
+        : engine::vec4<vec4r, Real>((Real)v.x, (Real)v.y, (Real)v.z, (Real)v.w) {}
     operator Vector4() const { return Vector4{(float)x, (float)y, (float)z, (float)w}; }
 };
 
-// f32 quaternion with eigen quaternion interop
-struct quatf : vec4<quatf, float> {
-    using vec4<quatf, float>::vec4;
-    quatf(const Vector4& v)
-        : vec4<quatf, float>(v.x, v.y, v.z, v.w) {}
+struct quatf : engine::vec4<quatf, float> {
+    using engine::vec4<quatf, float>::vec4;
+    quatf(const Vector4& v) : engine::vec4<quatf, float>(v.x, v.y, v.z, v.w) {}
 
-    // eigen quaternion handle (xyzw layout matches eigen's internal order)
     Eigen::Map<Eigen::Quaternion<float>, Eigen::DontAlign> map() {
         return Eigen::Map<Eigen::Quaternion<float>, Eigen::DontAlign>(data());
     }
@@ -193,4 +178,4 @@ struct quatf : vec4<quatf, float> {
     }
 };
 
-} // namespace graphics
+#include "components.h"

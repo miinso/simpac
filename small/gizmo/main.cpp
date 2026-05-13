@@ -91,7 +91,7 @@ int main() {
     // renderable entities — ECS-visible, tweakable from explorer
     ecs.entity("Box")
         .set<graphics::ModelRef>({&box, 1.0f, {0.5f, 0.5f}})
-        .set<graphics::Position>({0, 0, 0})
+        .set<Position>({0, 0, 0})
         .set<graphics::Albedo>({{1, 1, 1, 1}})
         .set<graphics::Surface>({1.0f, 1.0f, 1.0f})
         .set<graphics::Emissive>({graphics::to_rgba({255, 162, 0, 255}), 0.01f})
@@ -99,7 +99,7 @@ int main() {
 
     ecs.entity("Floor")
         .set<graphics::ModelRef>({&floor, 5.0f, {0.5f, 0.5f}})
-        .set<graphics::Position>({0, 0, 0})
+        .set<Position>({0, 0, 0})
         .set<graphics::Albedo>({{1, 1, 1, 1}})
         .set<graphics::Surface>({0.0f, 0.0f, 1.0f})
         .set<graphics::Emissive>({{0, 0, 0, 1}, 0.0f})
@@ -117,7 +117,7 @@ int main() {
     gt_yellow.translation = {-1.0f, 1.0f, -2.0f};
     auto yellow = ecs.entity("Light::Yellow")
         .set<graphics::PointLight>({true, graphics::to_rgba(YELLOW), 4.0f, 4.0f, 2.0f})
-        .set<graphics::Position>({-1.0f, 1.0f, -2.0f})
+        .set<Position>({-1.0f, 1.0f, -2.0f})
         .set<graphics::Emissive>({graphics::to_rgba(YELLOW), 1.0f})
         .set<GizmoTransform>({gt_yellow});
 
@@ -125,7 +125,7 @@ int main() {
     gt_green.translation = {2.0f, 1.0f, 1.0f};
     auto green = ecs.entity("Light::Green")
         .set<graphics::PointLight>({true, graphics::to_rgba(GREEN), 3.3f, 4.0f, 2.0f})
-        .set<graphics::Position>({2.0f, 1.0f, 1.0f})
+        .set<Position>({2.0f, 1.0f, 1.0f})
         .set<graphics::Emissive>({graphics::to_rgba(GREEN), 1.0f})
         .set<GizmoTransform>({gt_green});
 
@@ -133,7 +133,7 @@ int main() {
     gt_red.translation = {-2.0f, 1.0f, 1.0f};
     auto red = ecs.entity("Light::Red")
         .set<graphics::PointLight>({true, graphics::to_rgba(RED), 8.3f, 4.0f, 2.0f})
-        .set<graphics::Position>({-2.0f, 1.0f, 1.0f})
+        .set<Position>({-2.0f, 1.0f, 1.0f})
         .set<graphics::Emissive>({graphics::to_rgba(RED), 1.0f})
         .set<GizmoTransform>({gt_red});
 
@@ -141,7 +141,7 @@ int main() {
     gt_blue.translation = {1.0f, 1.0f, -2.0f};
     auto blue = ecs.entity("Light::Blue")
         .set<graphics::PointLight>({true, graphics::to_rgba(BLUE), 2.0f, 4.0f, 2.0f})
-        .set<graphics::Position>({1.0f, 1.0f, -2.0f})
+        .set<Position>({1.0f, 1.0f, -2.0f})
         .set<graphics::Emissive>({graphics::to_rgba(BLUE), 1.0f})
         .set<GizmoTransform>({gt_blue});
 
@@ -149,7 +149,7 @@ int main() {
     gt_spot.translation = {0.0f, 5.0f, 0.0f};
     auto spot = ecs.entity("Light::Spot")
         .set<graphics::SpotLight>({true, {1, 1, 1, 1}, 5.0f, {0, -1, 0}, 15.0f, 2.0f, 25.0f, 35.0f})
-        .set<graphics::Position>({0.0f, 5.0f, 0.0f})
+        .set<Position>({0.0f, 5.0f, 0.0f})
         .set<graphics::Emissive>({{1, 1, 1, 1}, 1.0f})
         .set<GizmoTransform>({gt_spot});
 
@@ -202,7 +202,7 @@ int main() {
                 graphics::queries::directional.each([&](const graphics::DirectionalLight& dl) {
                     if (!dl.enabled) return;
                     ss.begin(dl, 10.0f);
-                    graphics::queries::shadow_casters.each([&](const graphics::ModelRef& ref, const graphics::Position& pos) {
+                    graphics::queries::shadow_casters.each([&](const graphics::ModelRef& ref, const Position& pos) {
                         ss.draw(*ref.model, pos, ref.scale, WHITE);
                     });
                     ss.end(ls);
@@ -211,10 +211,10 @@ int main() {
 
             // spot shadow (single FBO — only last enabled light's map survives)
             if (ss.spot_fbo) {
-                graphics::queries::spot.each([&](const graphics::SpotLight& sl, const graphics::Position& pos) {
+                graphics::queries::spot.each([&](const graphics::SpotLight& sl, const Position& pos) {
                     if (!sl.enabled) return;
                     ss.begin_spot(sl, pos, 0.1f);
-                    graphics::queries::shadow_casters.each([&](const graphics::ModelRef& ref, const graphics::Position& pos) {
+                    graphics::queries::shadow_casters.each([&](const graphics::ModelRef& ref, const Position& pos) {
                         ss.draw(*ref.model, pos, ref.scale, WHITE);
                     });
                     ss.end_spot(ls);
@@ -231,7 +231,7 @@ int main() {
             const auto& ls = it.world().get<graphics::LightRenderer>();
             const auto& ml = ls.mat_locs;
 
-            graphics::queries::renderables.each([&](flecs::entity e, const graphics::ModelRef& ref, const graphics::Position& pos) {
+            graphics::queries::renderables.each([&](flecs::entity e, const graphics::ModelRef& ref, const Position& pos) {
                 SetShaderValue(ml.shader, ml.tiling, &ref.tiling, SHADER_UNIFORM_VEC2);
                 ml.upload(e);
                 DrawModel(*ref.model, pos, ref.scale, WHITE);
@@ -257,9 +257,9 @@ int main() {
         });
 
     // draw point light vis + gizmo
-    ecs.system<graphics::PointLight, graphics::Position, GizmoTransform>("DrawPointLights")
+    ecs.system<graphics::PointLight, Position, GizmoTransform>("DrawPointLights")
         .kind(graphics::OnRenderOverlay)
-        .each([&](graphics::PointLight& pl, graphics::Position& pos, GizmoTransform& gt) {
+        .each([&](graphics::PointLight& pl, Position& pos, GizmoTransform& gt) {
             systems::draw_point(pl, pos);
             graphics::input::capture_mouse_left |=
                 DrawGizmo3D(GIZMO_TRANSLATE, &gt.value);
@@ -269,19 +269,19 @@ int main() {
         });
 
     // draw spot light vis + gizmo
-    ecs.system<graphics::SpotLight, graphics::Position, GizmoTransform>("DrawSpotLights")
+    ecs.system<graphics::SpotLight, Position, GizmoTransform>("DrawSpotLights")
         .kind(graphics::OnRenderOverlay)
-        .each([&](graphics::SpotLight& sl, graphics::Position& pos, GizmoTransform& gt) {
+        .each([&](graphics::SpotLight& sl, Position& pos, GizmoTransform& gt) {
             systems::draw_spot(sl, pos);
             graphics::input::capture_mouse_left |=
                 DrawGizmo3D(GIZMO_TRANSLATE | GIZMO_ROTATE, &gt.value);
             pos.x = gt.value.translation.x;
             pos.y = gt.value.translation.y;
             pos.z = gt.value.translation.z;
-            graphics::quatf q(gt.value.rotation.x, gt.value.rotation.y,
+            quatf q(gt.value.rotation.x, gt.value.rotation.y,
                               gt.value.rotation.z, gt.value.rotation.w);
             Eigen::Vector3f fwd = q.map() * Eigen::Vector3f(0, -1, 0);
-            sl.direction = graphics::vec3f(fwd);
+            sl.direction = vec3f(fwd);
         });
 
     // shadow frustum wireframe (3D overlay)

@@ -24,21 +24,14 @@ struct Camera {
     bool was_touching = false;
 };
 
-struct Position : vec3<Position, scalar_real> {
-    Position() : vec3<Position, scalar_real>((scalar_real)5.0, (scalar_real)5.0, (scalar_real)5.0) {}
-    using vec3<Position, scalar_real>::vec3;
-    Position(const Vector3& v)
-        : vec3<Position, scalar_real>((scalar_real)v.x, (scalar_real)v.y, (scalar_real)v.z) {}
-    operator Vector3() const { return Vector3{(float)x, (float)y, (float)z}; }
-};
-
 struct ActiveCamera {};
 
-struct color4f : vec4<color4f, scalar_real> {
-    color4f() : vec4<color4f, scalar_real>((scalar_real)1.0, (scalar_real)1.0, (scalar_real)1.0, (scalar_real)1.0) {}
+struct color4f : engine::vec4<color4f, Real> {
+    using Base = engine::vec4<color4f, Real>;
+    color4f() : Base((Real)1.0, (Real)1.0, (Real)1.0, (Real)1.0) {}
     color4f(float r_, float g_, float b_, float a_)
-        : vec4<color4f, scalar_real>((scalar_real)r_, (scalar_real)g_, (scalar_real)b_, (scalar_real)a_) {}
-    using vec4<color4f, scalar_real>::vec4;
+        : Base((Real)r_, (Real)g_, (Real)b_, (Real)a_) {}
+    using Base::vec4;
 
     static inline void meta(flecs::world& ecs) {
         ecs.component<color4f>("color4f")
@@ -59,8 +52,8 @@ struct color4f : vec4<color4f, scalar_real> {
 }
 
 [[nodiscard]] inline Color to_color(const color4f& color) {
-    auto to_byte = [](scalar_real v) -> unsigned char {
-        scalar_real clamped = v < (scalar_real)0 ? (scalar_real)0 : (v > (scalar_real)1 ? (scalar_real)1 : v);
+    auto to_byte = [](Real v) -> unsigned char {
+        Real clamped = v < (Real)0 ? (Real)0 : (v > (Real)1 ? (Real)1 : v);
         return (unsigned char)(clamped * 255.0f);
     };
     return {to_byte(color.x), to_byte(color.y), to_byte(color.z), to_byte(color.w)};
@@ -80,10 +73,12 @@ struct ShadowCaster {};
 namespace components {
 
 inline void register_camera_components(flecs::world& ecs) {
-    register_vec3_component<vec3f>(ecs, "vec3f");
-    register_vec3_component<Position>(ecs);
+    engine::register_vec3_component<vec3f>(ecs, "::vec3f");
+    engine::register_vec3_component<vec3d>(ecs, "::vec3d");
+    engine::register_vec3_component<vec3r>(ecs, "::vec3r");
+    engine::register_vec3_component<::Position>(ecs, "::Position");
 
-    ecs.component<Camera>()
+    ecs.component<Camera>("::graphics::Camera")
         .member<vec3f>("target")
         .member<vec3f>("up")
         .member<float>("fovy")
@@ -92,7 +87,7 @@ inline void register_camera_components(flecs::world& ecs) {
         .member<float>("rotation_speed")
         .member<float>("zoom_speed");
 
-    ecs.component<ActiveCamera>()
+    ecs.component<ActiveCamera>("::graphics::ActiveCamera")
         .add(flecs::Exclusive)
         .add(flecs::PairIsTag);
 }
