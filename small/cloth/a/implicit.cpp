@@ -178,8 +178,9 @@ int main() {
     printf("Hi from %s\n", __FILE__);
 
     flecs::world ecs;
-    ecs.import<cloth::core>();
-    ecs.lookup("cloth::core::Scatter").disable();
+    ecs.import<cloth::particle>();
+    ecs.import<cloth::element>();
+    ecs.import<cloth::bridge>();
     graphics::init(ecs, {800, 600, "Implicit Euler (ecs)"});
     ecs.import<cloth::render>();
     ecs.import<cloth::interaction>();
@@ -197,7 +198,7 @@ int main() {
         .kind(sim::Simulate)
         .run([&](flecs::iter&) {
             const Real dt = props::dt.get<Real>();
-            sim::gravity = props::gravity.get<vec3f>().map();
+            sim::gravity = props::gravity.get<vec3r>().map();
             prepare.run(dt);
             assemble_momentum.run(dt);
             assemble_external_force.run(dt);
