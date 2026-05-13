@@ -73,12 +73,12 @@ struct ShadowCaster {};
 namespace components {
 
 inline void register_camera_components(flecs::world& ecs) {
-    engine::register_vec3_component<vec3f>(ecs, "::vec3f");
-    engine::register_vec3_component<vec3d>(ecs, "::vec3d");
-    engine::register_vec3_component<vec3r>(ecs, "::vec3r");
-    engine::register_vec3_component<::Position>(ecs, "::Position");
+    engine::register_vec3_component<vec3f>(ecs, "vec3f");
+    engine::register_vec3_component<vec3d>(ecs, "vec3d");
+    engine::register_vec3_component<vec3r>(ecs, "vec3r");
+    engine::register_vec3_component<Position>(ecs);
 
-    ecs.component<Camera>("::graphics::Camera")
+    ecs.component<Camera>("graphics::Camera")
         .member<vec3f>("target")
         .member<vec3f>("up")
         .member<float>("fovy")
@@ -87,7 +87,7 @@ inline void register_camera_components(flecs::world& ecs) {
         .member<float>("rotation_speed")
         .member<float>("zoom_speed");
 
-    ecs.component<ActiveCamera>("::graphics::ActiveCamera")
+    ecs.component<ActiveCamera>("graphics::ActiveCamera")
         .add(flecs::Exclusive)
         .add(flecs::PairIsTag);
 }
