@@ -12,10 +12,10 @@ const width = 200
 const height = 200
 const spacing = 1.0
 const mass = 1.0
-const k_struct = 10000.0
-const k_shear = 10000.0
-const k_bending = 10.0
-const k_d = 0.05
+const spring_stretch = 10000.0
+const spring_shear = 10000.0
+const spring_bend = 10.0
+const spring_damping = 0.05
 
 const start_x = -5.0
 const start_y = 25.0
@@ -45,8 +45,8 @@ for y in 0..$height {
         v0: "p_{$y}_{$x}",
         v1: "p_{$y}_{$x + 1}",
         rest_length: $spacing,
-        stiffness: $k_struct,
-        damping: $k_d
+        stiffness: $spring_stretch,
+        damping: $spring_damping
       }
     }
   }
@@ -60,8 +60,8 @@ for y in 0..($height - 1) {
         v0: "p_{$y}_{$x}",
         v1: "p_{$y + 1}_{$x}",
         rest_length: $spacing,
-        stiffness: $k_struct,
-        damping: $k_d
+        stiffness: $spring_stretch,
+        damping: $spring_damping
       }
     }
   }
@@ -75,8 +75,8 @@ for y in 0..($height - 1) {
         v0: "p_{$y}_{$x}",
         v1: "p_{$y + 1}_{$x + 1}",
         rest_length: $spacing * 1.41421356,
-        stiffness: $k_shear,
-        damping: $k_d
+        stiffness: $spring_shear,
+        damping: $spring_damping
       }
     }
 
@@ -85,8 +85,8 @@ for y in 0..($height - 1) {
         v0: "p_{$y + 1}_{$x}",
         v1: "p_{$y}_{$x + 1}",
         rest_length: $spacing * 1.41421356,
-        stiffness: $k_shear,
-        damping: $k_d
+        stiffness: $spring_shear,
+        damping: $spring_damping
       }
     }
   }
@@ -100,8 +100,8 @@ for y in 0..$height {
         v0: "p_{$y}_{$x}",
         v1: "p_{$y}_{$x + 2}",
         rest_length: $spacing * 2.0,
-        stiffness: $k_bending,
-        damping: $k_d * 0.5
+        stiffness: $spring_bend,
+        damping: $spring_damping * 0.5
       }
     }
   }
@@ -115,8 +115,8 @@ for y in 0..($height - 2) {
         v0: "p_{$y}_{$x}",
         v1: "p_{$y + 2}_{$x}",
         rest_length: $spacing * 2.0,
-        stiffness: $k_bending,
-        damping: $k_d * 0.5
+        stiffness: $spring_bend,
+        damping: $spring_damping * 0.5
       }
     }
   }

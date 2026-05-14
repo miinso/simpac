@@ -11,8 +11,8 @@ Config.Scene {
 const count = 12
 const spacing = 0.8
 const mass = 1.0
-const k_s = 1200.0
-const k_d = 0.12
+const stiffness = 1200.0
+const spring_damping = 0.12
 const start_y = 3.0
 
 p_0 {
@@ -38,8 +38,8 @@ for i in 0..($count - 1) {
       v0: "p_$i",
       v1: "p_{$i + 1}",
       rest_length: $spacing,
-      stiffness: $k_s,
-      damping: $k_d
+      stiffness: $stiffness,
+      damping: $spring_damping
     }
   }
 }
