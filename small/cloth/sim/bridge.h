@@ -2,6 +2,8 @@
 
 #include "model.h"
 #include "../element/element.h"
+#include "../math/bending.h"
+#include "../math/adjacency.h"
 #include <unordered_map>
 
 namespace physics {
@@ -11,7 +13,8 @@ struct Bridge {
     std::vector<flecs::entity> particle_entities; // [particle_count]
     std::unordered_map<uint64_t, int> entity_to_index; // internal, for resolving Spring/Triangle refs
 
-    // build Model from current ECS world state
+    Real default_bending_stiffness = Real(1.0);
+
     Model build(flecs::world& world) {
         particle_entities.clear();
         entity_to_index.clear();
@@ -67,6 +70,56 @@ struct Bridge {
                                 tri.dm_inv, tri.area,
                                 tri.mu, tri.lambda, tri.thickness);
             });
+
+        // hinges: explicit entities take priority, auto-generate from triangle adjacency if none
+        int hinge_count = 0;
+        world.query_builder<Hinge>()
+            .build()
+            .each([&](flecs::entity, Hinge& hinge) {
+                auto it0 = entity_to_index.find(hinge.v0.id());
+                auto it1 = entity_to_index.find(hinge.v1.id());
+                auto it2 = entity_to_index.find(hinge.v2.id());
+                auto it3 = entity_to_index.find(hinge.v3.id());
+                if (it0 == entity_to_index.end() ||
+                    it1 == entity_to_index.end() ||
+                    it2 == entity_to_index.end() ||
+                    it3 == entity_to_index.end()) return;
+
+                if (hinge.rest_angle == 0) {
+                    bending::Eval e;
+                    if (bending::eval(
+                            mb.particle_q[it0->second],
+                            mb.particle_q[it1->second],
+                            mb.particle_q[it2->second],
+                            mb.particle_q[it3->second], e)) {
+                        hinge.rest_angle = e.angle;
+                    }
+                }
+
+                mb.add_edge(it0->second, it1->second,
+                            it2->second, it3->second,
+                            hinge.rest_angle, hinge.stiffness, 0);
+                hinge_count++;
+            });
+
+        // auto-generate from triangle adjacency if no explicit hinges
+        if (hinge_count == 0 && !mb.tri_indices.empty()) {
+            const Real k_bend = default_bending_stiffness;
+            auto edges = build_adjacency(mb.tri_indices.data(),
+                                         (int)mb.tri_indices.size() / 3);
+            for (const auto& e : edges) {
+                if (e.f1 == -1) continue; // skip boundary edges
+
+                bending::Eval ev;
+                Real rest = 0;
+                if (bending::eval(mb.particle_q[e.o0], mb.particle_q[e.o1],
+                                  mb.particle_q[e.v0], mb.particle_q[e.v1], ev)) {
+                    rest = ev.angle;
+                }
+
+                mb.add_edge(e.o0, e.o1, e.v0, e.v1, rest, k_bend, 0);
+            }
+        }
 
         return mb.finalize();
     }
