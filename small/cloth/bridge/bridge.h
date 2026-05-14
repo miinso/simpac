@@ -50,16 +50,24 @@ namespace props {
 inline flecs::entity dt;
 inline flecs::entity gravity;
 inline flecs::entity paused;
+inline flecs::entity substeps;
+inline flecs::entity default_dihedral_bending_stiffness;
 
 inline void seed(flecs::world& ecs) {
-    dt = ecs.entity("Config::Scene::dt")
+    dt = ecs.entity("::Config::Scene::dt")
         .set<Real>(Real(1.0f / 60.0f))
         .add<Configurable>();
-    gravity = ecs.entity("Config::Scene::gravity")
+    gravity = ecs.entity("::Config::Scene::gravity")
         .set<vec3r>({0.0f, -9.81f, 0.0f})
         .add<Configurable>();
-    paused = ecs.entity("Config::Scene::paused")
+    paused = ecs.entity("::Config::Scene::paused")
         .set<bool>(false)
+        .add<Configurable>();
+    substeps = ecs.entity("::Config::Scene::substeps")
+        .set<int>(1)
+        .add<Configurable>();
+    default_dihedral_bending_stiffness = ecs.entity("::Config::Scene::default_dihedral_bending_stiffness")
+        .set<Real>(Real(1.0))
         .add<Configurable>();
 }
 } // namespace props
@@ -71,10 +79,10 @@ inline flecs::entity frame_count;
 inline flecs::entity dirty;
 
 inline void seed(flecs::world& ecs) {
-    wall_time = ecs.entity("Scene::wall_time").set<Real>(Real(0.0f));
-    sim_time = ecs.entity("Scene::sim_time").set<Real>(Real(0.0f));
-    frame_count = ecs.entity("Scene::frame_count").set<int>(0);
-    dirty = ecs.entity("Scene::dirty").set<bool>(false);
+    wall_time = ecs.entity("::Scene::wall_time").set<Real>(Real(0.0f));
+    sim_time = ecs.entity("::Scene::sim_time").set<Real>(Real(0.0f));
+    frame_count = ecs.entity("::Scene::frame_count").set<int>(0);
+    dirty = ecs.entity("::Scene::dirty").set<bool>(false);
 }
 } // namespace state
 
@@ -139,11 +147,14 @@ struct bridge {
             .run([](flecs::iter& it) {
                 if (!sim::model_dirty) return;
                 auto world = it.world();
+                sim::bridge.default_bending_stiffness = props::default_dihedral_bending_stiffness.get<Real>();
                 sim::model = sim::bridge.build(world);
                 sim::state_0 = sim::model.state();
                 sim::model_dirty = false;
-                printf("[Solver] rebuilt: %d particles, %d springs\n",
-                       sim::model.particle_count, sim::model.spring_count);
+                printf("[Solver] rebuilt: %d particles, %d springs, %d hinges (k_bend=%.4f)\n",
+                       sim::model.particle_count, sim::model.spring_count,
+                       sim::model.edge_count,
+                       (float)props::default_dihedral_bending_stiffness.get<Real>());
             });
 
         ecs.system("Gather")

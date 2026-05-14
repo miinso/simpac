@@ -62,6 +62,25 @@ struct Triangle {
     }
 };
 
+struct Hinge {
+    flecs::entity v0;  // opposite vertex (triangle 0)
+    flecs::entity v1;  // opposite vertex (triangle 1)
+    flecs::entity v2;  // shared edge vertex
+    flecs::entity v3;  // shared edge vertex
+    Real rest_angle = 0;
+    Real stiffness = 0;
+
+    static void meta(flecs::world& ecs) {
+        ecs.component<Hinge>()
+            .member("v0", &Hinge::v0)
+            .member("v1", &Hinge::v1)
+            .member("v2", &Hinge::v2)
+            .member("v3", &Hinge::v3)
+            .member("rest_angle", &Hinge::rest_angle)
+            .member("stiffness", &Hinge::stiffness);
+    }
+};
+
 namespace cloth {
 
 struct element {
@@ -70,12 +89,19 @@ struct element {
         DistanceConstraint::meta(ecs);
         Spring::meta(ecs);
         Triangle::meta(ecs);
+        Hinge::meta(ecs);
 
         ecs.observer<Spring>()
             .event(flecs::OnSet)
             .event(flecs::OnAdd)
             .event(flecs::OnRemove)
             .each([](flecs::iter&, size_t, Spring&) { sim::model_dirty = true; });
+
+        ecs.observer<Hinge>()
+            .event(flecs::OnSet)
+            .event(flecs::OnAdd)
+            .event(flecs::OnRemove)
+            .each([](flecs::iter&, size_t, Hinge&) { sim::model_dirty = true; });
     }
 };
 
