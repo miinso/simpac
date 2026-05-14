@@ -74,14 +74,15 @@ inline void draw_timing_info(flecs::iter& it) {
         "Frame: %d  |  Speed: %.2fx\n"
         "CG: %s%d/%d iter, tol=%.0e, err=%.2e\n"
         "\n"
-        "Particles: %d  Springs: %d\n"
+        "Particles: %d  Springs: %d  Triangles: %d  Hinges: %d\n"
         "\n"
         "Strain: Red (tension), Green (rest), Blue (compression)\n"
         "Camera: WASDQE / Arrows / MouseDrag / MouseScroll",
         wall_time, sim_time, sim_dt,
         frame_count, realtime_speed,
         cg_prefix, cg_iterations, cg_max_iter, cg_tolerance, cg_error,
-        queries::num_particles(), queries::num_springs());
+        queries::num_particles(), queries::num_springs(),
+        (int)queries::triangle_query.count(), sim::model.edge_count);
     DrawTextEx(font, buf, {21, 41}, font_size, 0, WHITE);
     DrawTextEx(font, buf, {20, 40}, font_size, 0, DARKGRAY);
 }
