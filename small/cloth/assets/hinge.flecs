@@ -1,0 +1,99 @@
+// minimal hinge test: the unit case! 2 triangles sharing an edge, 1 explicit hinge
+using cloth.particle
+using cloth.element
+
+Config.Scene {
+  dt { f32: { 1 / 60 } }
+  gravity { vec3r: { x: 0, y: 0, z: 0 } }
+  paused { bool: { false } }
+}
+
+const mu = 10000.0
+const lam = 10000.0
+const thick = 0.01
+const dihedral_bending_stiffness = 10.0
+
+// 4 particles forming a diamond
+//     p0
+//    / | \
+//  p2--+--p3
+//    \ | /
+//     p1
+p0 {
+  Position: { x: 0, y: 3, z: 0 }
+  Velocity: { x: 0, y: 0, z: 0 }
+  Mass: { 1.0 }
+  Particle
+  IsPinned
+}
+
+p1 {
+  Position: { x: 0, y: 3, z: -2 }
+  Velocity: { x: 0, y: 0, z: 0 }
+  Mass: { 1.0 }
+  Particle
+}
+
+p2 {
+  Position: { x: -1, y: 3, z: -1 }
+  Velocity: { x: 0, y: 0, z: 0 }
+  Mass: { 1.0 }
+  Particle
+  IsPinned
+}
+
+p3 {
+  Position: { x: 1, y: 3, z: -1 }
+  Velocity: { x: 0, y: 0, z: 0 }
+  Mass: { 1.0 }
+  Particle
+  IsPinned
+}
+
+// two triangles sharing edge p2-p3
+tri_a {
+  Triangle: {
+    v0: p0, v1: p2, v2: p3,
+    mu: $mu, lambda: $lam, thickness: $thick
+  }
+}
+
+tri_b {
+  Triangle: {
+    v0: p1, v1: p3, v2: p2,
+    mu: $mu, lambda: $lam, thickness: $thick
+  }
+}
+
+// explicit hinge on the shared edge
+// v0=p0 (opposite in tri_a), v1=p1 (opposite in tri_b), v2=p2, v3=p3 (shared edge)
+hinge_0 {
+  Hinge: {
+    v0: p0, v1: p1, v2: p2, v3: p3,
+    stiffness: $dihedral_bending_stiffness
+  }
+}
+
+// reference free-fall particle (no triangles, no hinges, pure gravity)
+p_free {
+  Position: { x: 3, y: 3, z: -1 }
+  Velocity: { x: 0, y: 0, z: 0 }
+  Mass: { 1.0 }
+  Particle
+}
+
+DefaultCamera {
+  Position: { x: 0, y: 5, z: 5 }
+  graphics.Camera: {
+    target: { x: 0, y: 3, z: -1 }
+    fovy: 60
+    projection: 0
+    move_speed: 0.1
+    rotation_speed: 0.2
+    zoom_speed: 1.0
+  }
+}
+
+graphics.ActiveCameraSource {
+  (graphics.ActiveCamera, DefaultCamera)
+}

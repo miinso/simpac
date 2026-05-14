@@ -1,4 +1,4 @@
-// corotational FEM cloth (triangles for membrane, bending springs for out-of-plane)
+// corotational FEM cloth (triangles for membrane, dihedral hinges for bending)
 using cloth.particle
 using cloth.element
 
@@ -6,6 +6,7 @@ Config.Scene {
   dt { f32: { 1 / 60 } }
   gravity { vec3r: { x: 0, y: -9.81, z: 0 } }
   paused { bool: { false } }
+  default_dihedral_bending_stiffness { f32: { 0.0 } }
 }
 
 Config.Solver {
@@ -13,15 +14,13 @@ Config.Solver {
   cg_tolerance { f32: { 0.00001 } }
 }
 
-const width = 50
-const height = 50
+const width = 20
+const height = 20
 const spacing = 0.9
 const mass = 1.0
-const mu = 400000.0
-const lam = 40000.0
+const mu = 100000.0
+const lam = 100000.0
 const thick = 0.01
-const k_bending = 360.0
-const k_d = 0.12
 const start_x = -($width - 1) * $spacing * 0.5
 const start_y = 3.0
 const start_z = 0.0
@@ -39,11 +38,16 @@ for y in 0..$height {
 }
 
 // pin top row
-for x in 0..$width {
-  "p_0_{$x}" { IsPinned }
-}
+// for x in 0..$width {
+//   "p_0_{$x}" { IsPinned }
+// }
+
+// or pin corners
+p_0_0 { IsPinned }
+"p_0_{$width - 1}" { IsPinned }
 
 // triangles (each quad = 2 tris)
+// hinges auto-generated from triangle adjacency (interior edges)
 for y in 0..($height - 1) {
   for x in 0..($width - 1) {
     "t_a_{$y}_{$x}" {
@@ -69,35 +73,21 @@ for y in 0..($height - 1) {
   }
 }
 
-// bending springs (horizontal, skip one)
-for y in 0..$height {
-  for x in 0..($width - 2) {
-    "s_bh_{$y}_{$x}" {
-      Spring: {
-        v0: "p_{$y}_{$x}",
-        v1: "p_{$y}_{$x + 2}",
-        rest_length: $spacing * 2.0,
-        stiffness: $k_bending,
-        damping: $k_d * 0.5
-      }
-    }
-  }
-}
-
-// bending springs (vertical, skip one)
-for y in 0..($height - 2) {
-  for x in 0..$width {
-    "s_bv_{$y}_{$x}" {
-      Spring: {
-        v0: "p_{$y}_{$x}",
-        v1: "p_{$y + 2}_{$x}",
-        rest_length: $spacing * 2.0,
-        stiffness: $k_bending,
-        damping: $k_d * 0.5
-      }
-    }
-  }
-}
+// explicit hinges (uncomment to override auto-generation)
+// const dihedral_bending_stiffness = 1.0
+// for y in 0..($height - 1) {
+//   for x in 0..($width - 1) {
+//     "h_{$y}_{$x}" {
+//       Hinge: {
+//         v0: "p_{$y}_{$x}",
+//         v1: "p_{$y + 1}_{$x + 1}",
+//         v2: "p_{$y}_{$x + 1}",
+//         v3: "p_{$y + 1}_{$x}",
+//         stiffness: $dihedral_bending_stiffness
+//       }
+//     }
+//   }
+// }
 
 DefaultCamera {
   Position: { x: 0, y: 3, z: 10 }

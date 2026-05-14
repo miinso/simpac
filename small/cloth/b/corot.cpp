@@ -1,8 +1,9 @@
-// Corotational FEM Cloth (implicit euler, triangles for membrane, springs for bending)
+// Corotational FEM Cloth (implicit euler, triangles for membrane, hinges for bending)
 
 #include "../setup.h"
 #include "../math/corot.h"
 #include "../math/spring.h"
+#include "../math/bending.h"
 #include <Eigen/Sparse>
 
 // =========================================================================
@@ -167,6 +168,63 @@ inline void assemble_spring_stiffness(flecs::iter& it) {
     }
 }
 
+inline void assemble_bending_force(flecs::iter& it) {
+    const Real dt = it.delta_time();
+    for (int h = 0; h < sim::model.edge_count; h++) {
+        const int i0 = sim::model.edge_indices[h * 4];
+        const int i1 = sim::model.edge_indices[h * 4 + 1];
+        const int i2 = sim::model.edge_indices[h * 4 + 2];
+        const int i3 = sim::model.edge_indices[h * 4 + 3];
+
+        physics::bending::Eval e;
+        if (!physics::bending::eval(sim::state_0.q(i0), sim::state_0.q(i1),
+                                    sim::state_0.q(i2), sim::state_0.q(i3), e)) continue;
+
+        Eigen::Vector3r g0, g1, g2, g3;
+        physics::bending::grad(sim::model.edge_bending_stiffness[h],
+                               sim::model.edge_rest_angle[h], e, g0, g1, g2, g3);
+
+        if (!(sim::model.particle_flags[i0] & physics::PARTICLE_FLAG_PINNED)) cg::b.segment<3>(i0 * 3) -= dt * g0;
+        if (!(sim::model.particle_flags[i1] & physics::PARTICLE_FLAG_PINNED)) cg::b.segment<3>(i1 * 3) -= dt * g1;
+        if (!(sim::model.particle_flags[i2] & physics::PARTICLE_FLAG_PINNED)) cg::b.segment<3>(i2 * 3) -= dt * g2;
+        if (!(sim::model.particle_flags[i3] & physics::PARTICLE_FLAG_PINNED)) cg::b.segment<3>(i3 * 3) -= dt * g3;
+    }
+}
+
+inline void assemble_bending_stiffness(flecs::iter& it) {
+    const Real h2 = it.delta_time() * it.delta_time();
+    for (int h = 0; h < sim::model.edge_count; h++) {
+        const int idx[4] = {
+            sim::model.edge_indices[h * 4],
+            sim::model.edge_indices[h * 4 + 1],
+            sim::model.edge_indices[h * 4 + 2],
+            sim::model.edge_indices[h * 4 + 3]
+        };
+
+        physics::bending::Eval e;
+        if (!physics::bending::eval(sim::state_0.q(idx[0]), sim::state_0.q(idx[1]),
+                                    sim::state_0.q(idx[2]), sim::state_0.q(idx[3]), e)) continue;
+
+        Eigen::Matrix<Real, 12, 12> H;
+        physics::bending::hess(sim::model.edge_bending_stiffness[h],
+                               sim::model.edge_rest_angle[h], e, H);
+
+        for (int a = 0; a < 4; a++) {
+            if (sim::model.particle_flags[idx[a]] & physics::PARTICLE_FLAG_PINNED) continue;
+            for (int b = 0; b < 4; b++) {
+                if (sim::model.particle_flags[idx[b]] & physics::PARTICLE_FLAG_PINNED) continue;
+                for (int r = 0; r < 3; r++) {
+                    for (int c = 0; c < 3; c++) {
+                        const Real val = h2 * H(a * 3 + r, b * 3 + c);
+                        if (val != 0)
+                            cg::triplets.push_back({idx[a] * 3 + r, idx[b] * 3 + c, val});
+                    }
+                }
+            }
+        }
+    }
+}
+
 inline void assemble_inertia(flecs::iter&) {
     for (int i : sim::model.free_particles) {
         const Real mass = sim::model.particle_mass[i];
@@ -239,6 +297,7 @@ struct corot_implicit {
         flecs::system prepare, assemble_momentum, assemble_external_force;
         flecs::system assemble_tri_force, assemble_tri_stiffness;
         flecs::system assemble_spring_force, assemble_spring_stiffness;
+        flecs::system assemble_bending_force, assemble_bending_stiffness;
         flecs::system assemble_inertia;
         flecs::system solve, update_velocity, integrate_position;
 
@@ -251,6 +310,8 @@ struct corot_implicit {
             assemble_tri_stiffness = ecs.system("Assemble Triangle Stiffness").kind(0).run(flow::assemble_tri_stiffness);
             assemble_spring_force = ecs.system("Assemble Spring Force").kind(0).run(flow::assemble_spring_force);
             assemble_spring_stiffness = ecs.system("Assemble Spring Stiffness").kind(0).run(flow::assemble_spring_stiffness);
+            assemble_bending_force = ecs.system("Assemble Bending Force").kind(0).run(flow::assemble_bending_force);
+            assemble_bending_stiffness = ecs.system("Assemble Bending Stiffness").kind(0).run(flow::assemble_bending_stiffness);
             assemble_inertia = ecs.system("Assemble Inertia").kind(0).run(flow::assemble_inertia);
             solve = ecs.system("Solve").kind(0).run(flow::solve);
             update_velocity = ecs.system("Update Velocity").kind(0).run(flow::update_velocity);
@@ -267,8 +328,10 @@ struct corot_implicit {
                 assemble_external_force.run(dt);
                 assemble_tri_force.run(dt);
                 assemble_tri_stiffness.run(dt);
-                assemble_spring_force.run(dt);
-                assemble_spring_stiffness.run(dt);
+                // assemble_spring_force.run(dt);
+                // assemble_spring_stiffness.run(dt);
+                assemble_bending_force.run(dt);     // dihedral bending
+                assemble_bending_stiffness.run(dt); // dihedral bending
                 assemble_inertia.run(dt);
                 solve.run(dt);
                 update_velocity.run(dt);
@@ -299,7 +362,7 @@ int main() {
     ecs.import<cloth::interaction>();
     ecs.import<cloth::corot_implicit>();
 
-    sim::load_scene(ecs, "assets/corot.flecs");
+    sim::load_scene(ecs, "assets/hinge.flecs");
 
     ecs.app()
         .enable_rest()
