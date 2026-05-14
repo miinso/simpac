@@ -151,10 +151,9 @@ struct bridge {
                 sim::model = sim::bridge.build(world);
                 sim::state_0 = sim::model.state();
                 sim::model_dirty = false;
-                printf("[Solver] rebuilt: %d particles, %d springs, %d hinges (k_bend=%.4f)\n",
+                printf("[Solver] rebuilt: %d particles, %d springs, %d hinges\n",
                        sim::model.particle_count, sim::model.spring_count,
-                       sim::model.edge_count,
-                       (float)props::default_dihedral_bending_stiffness.get<Real>());
+                       sim::model.edge_count);
             });
 
         ecs.system("Gather")
