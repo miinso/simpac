@@ -24,6 +24,8 @@ cc_library(
         "sim/model.h",
         "sim/state.h",
         "sim/bridge.h",
+        "math/adjacency.h",
+        "math/bending.h",
         "math/corot.h",
         "math/spring.h",
         "render/render.h",
