@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1778767937967,
+  "lastUpdate": 1778842962327,
   "repoUrl": "https://github.com/miinso/simpac",
   "entries": {
     "cloth-implicit-euler": [
@@ -924,6 +924,48 @@ window.BENCHMARK_DATA = {
             "value": 175.02212524414062,
             "unit": "ms/iter",
             "extra": "iterations: 12\ncpu: 175.00842808333343 ms\nthreads: 1"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "minseo.park.cs@gmail.com",
+            "name": "Minseo Park",
+            "username": "miinso"
+          },
+          "committer": {
+            "email": "minseo.park.cs@gmail.com",
+            "name": "Minseo Park",
+            "username": "miinso"
+          },
+          "distinct": true,
+          "id": "245cbb6c9e315d3eb1d319a7d690f2d596607606",
+          "message": "docs(cloth): add todo for analytic bending hessian",
+          "timestamp": "2026-05-15T20:00:30+09:00",
+          "tree_id": "367dfd505e2006297773682bfa2e629f110b977c",
+          "url": "https://github.com/miinso/simpac/commit/245cbb6c9e315d3eb1d319a7d690f2d596607606"
+        },
+        "date": 1778842961241,
+        "tool": "googlecpp",
+        "benches": [
+          {
+            "name": "BM_ClothImplicit/50/real_time",
+            "value": 9.157387347056948,
+            "unit": "ms/iter",
+            "extra": "iterations: 232\ncpu: 9.156012137931036 ms\nthreads: 1"
+          },
+          {
+            "name": "BM_ClothImplicit/100/real_time",
+            "value": 37.90759188788278,
+            "unit": "ms/iter",
+            "extra": "iterations: 56\ncpu: 37.90463160714285 ms\nthreads: 1"
+          },
+          {
+            "name": "BM_ClothImplicit/200/real_time",
+            "value": 163.95189211918756,
+            "unit": "ms/iter",
+            "extra": "iterations: 13\ncpu: 163.934691153846 ms\nthreads: 1"
           }
         ]
       }
