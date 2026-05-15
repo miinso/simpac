@@ -122,13 +122,17 @@ inline void hess2(Real stiffness, Real rest_angle, const Eval& e,
     for (int i = 0; i < 12; i++) H(i, i) += eps;
 }
 
-// TODO: go analytic, like the one from tamstorf2013 Eq. 5.
-// VegaFEM (clothBW.cpp:618) also computes both terms analytically.
+// TODO: full analytical Hess(theta) from Tamstorf-Grinspun 2013
+// "Discrete bending forces and their Jacobians" Graphical Models 75.6.
+// VegaFEM (clothBW.cpp:618) computes both terms analytically.
 
 // default: hess1
 inline void hess(Real stiffness, Real rest_angle, const Eval& e,
                  Eigen::Matrix<Real, 12, 12>& H) {
     hess1(stiffness, rest_angle, e, H);
 }
+
+// lineage (2003~2013) is well described here:
+// https://wanghmin.github.io/publication/wang-2023-sdb/Wang-2023-SDB.pdf
 
 } // namespace physics::bending
